@@ -25,3 +25,12 @@ node --check website/catalog.js
 The dependency-free check covers 24 route cases, bilingual data and rendered links, actual search/filter/favorite functions, corrupt saved data, local resource references, source mapping, thirteen original JPEG checksums and ten RGBA device PNG headers/checksums. See the script for exact assertions.
 
 Device files are AI-assisted background-extraction edits, with exact prompts and checksums in `sources.json`. They are not a new inventory or a guarantee of product condition/color. Prices, stock, warranties, store hours and service terms must still be confirmed directly with Trio. Physical iOS/Android devices were not used; responsive checks ran in the available Chromium browser.
+
+## Mobile home refinement — 17 October 2026
+
+- Removed the repeated slogan and service line from the hero in both languages. The actual business bio and contact details remain in their dedicated sections.
+- Compact mobile heading and spacing show the entire hero and the start of categories at 390 × 844. The main device stage increased from 280 to 300px, with contain sizing and no image padding; category and featured-device padding also decreased.
+- Arabic and English home layouts checked at 320, 390, 768 and 1280px; document width matches the viewport. All four hero categories switch correctly. At 320px, all four category buttons fit one row with wrapped labels.
+- Catalog checked at all four widths: two/three/four columns as appropriate, without horizontal overflow. Phone fields use 16px type; favorites, hero category controls, menu and catalog tabs have 44px touch targets.
+- English MacBook search returns two devices; Huawei filter returns Watch GT 6; Arabic سامسونج search returns Galaxy S25 FE. Favorites survive reload, appear on the favorites route and can be removed. Menu opens, navigates and closes; phone links retain the verified number. No browser console warnings or errors.
+- Re-ran the dependency-free validation and JavaScript syntax checks successfully. Responsive testing uses the available Chromium browser; no physical device testing.
