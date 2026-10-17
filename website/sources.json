@@ -1,0 +1,124 @@
+{
+  "verifiedAt": "2026-10-17",
+  "profile": "https://www.instagram.com/trio_mobile.jo/",
+  "access": "Verified through the signed-in browser. Only public profile and posts were used.",
+  "bio": {
+    "ar": "TRIO Mobile ⚡️💚\nمش بس محل موبايلات.. إحنا اللعبة الجديدة.\nبيع | شراء | تبديل | صيانة احترافية 🛠️\nجهزوا حالكم للحدث الأكبر.. الجاي نار 🔥",
+    "used": "The evergreen slogan and service line are used; the undated launch teaser is omitted."
+  },
+  "contacts": {
+    "phone": {
+      "display": "0796999292",
+      "href": "tel:+962796999292",
+      "source": "Repeated in public product captions and artwork"
+    },
+    "location": {
+      "ar": "خلدا، أم السماق، بالقرب من دوار السكر",
+      "en": "Khalda, Umm Al Summaq, near Al Sukkar Circle",
+      "source": "Public product captions"
+    },
+    "maps": {
+      "url": "https://maps.app.goo.gl/ccgJ9DKUXMP6c3L39",
+      "source": "Instagram profile Links → Location"
+    },
+    "facebook": {
+      "url": "https://www.facebook.com/906142119255608",
+      "source": "Instagram profile Links → Trio Mobile Facebook Page"
+    }
+  },
+  "layoutReference": "https://github.com/yallarideapp/flickmobile",
+  "imagePolicy": "Original downloaded JPEGs are stored locally without image alteration. CSS crops emphasize devices in cards; dialogs show full originals. Published artwork may contain historical prices. No live price, stock or warranty is inferred.",
+  "images": [
+    {
+      "file": "assets/instagram/logo.jpg",
+      "source": "https://www.instagram.com/trio_mobile.jo/",
+      "description": "Profile picture — actual Trio logo",
+      "bytes": 4623,
+      "sha256": "4e4fb86d26e66a6161fdfd48fba2e3ed526b76c93c3705fbeee23d870c30dfd5"
+    },
+    {
+      "file": "assets/instagram/iphone-17-pro-max.jpg",
+      "source": "https://www.instagram.com/p/DePAvISCpM6/",
+      "description": "iPhone 17 Pro Max — carousel image 1",
+      "bytes": 336233,
+      "sha256": "36ebc755a763f1610221072aeaec4c898f222c1b39a1b8a4728b788b87a43096"
+    },
+    {
+      "file": "assets/instagram/iphone-17.jpg",
+      "source": "https://www.instagram.com/p/DePAvISCpM6/?img_index=2",
+      "description": "iPhone 17 — carousel image 2",
+      "bytes": 327074,
+      "sha256": "8ab1c9dd08d99a500dc3cf066c47b22e27963fc89a89dfcdb9608b8e0dc85d9d"
+    },
+    {
+      "file": "assets/instagram/galaxy-s25-fe.jpg",
+      "source": "https://www.instagram.com/p/DeW9T5hCrvs/",
+      "description": "Galaxy S25 FE — carousel image 1",
+      "bytes": 254655,
+      "sha256": "1e33bf47132a92948cb22a30b8197a2cb9e809a69af5277888850539426d9785"
+    },
+    {
+      "file": "assets/instagram/apple-watch.jpg",
+      "source": "https://www.instagram.com/p/DeMrVwtCino/",
+      "description": "Apple Watch S11 — carousel image 1",
+      "bytes": 308824,
+      "sha256": "527314d906cd01c428574235b1d3b98b140bff638a4ea26f72642a623b1b9407"
+    },
+    {
+      "file": "assets/instagram/huawei-watch-gt6.jpg",
+      "source": "https://www.instagram.com/p/DeEkfeJqfKw/",
+      "description": "Huawei Watch GT 6 — post artwork",
+      "bytes": 451781,
+      "sha256": "deecb1090d46985a348e224d3fe2e610853e043be31233584cc39c68af098d1e"
+    },
+    {
+      "file": "assets/instagram/airpods-max.jpg",
+      "source": "https://www.instagram.com/reel/DemNhmENpEF/",
+      "description": "Original reel cover; caption names AirPods Max 2",
+      "bytes": 230194,
+      "sha256": "12b15b8bf33f6a897ab395944c9b23dbc4d21cac9a3622b1d7797a2267d9828e"
+    },
+    {
+      "file": "assets/instagram/store.jpg",
+      "source": "https://www.instagram.com/reel/DekDjiFKN3j/",
+      "description": "Original reel cover showing the store",
+      "bytes": 235494,
+      "sha256": "c5480fa03824485ed4194baf56d03b9baa10177a331ed7bbf00d23574a074d95"
+    },
+    {
+      "file": "assets/instagram/macbook-air.jpg",
+      "source": "https://www.instagram.com/reel/DeKDsmlqxwu/",
+      "description": "Original reel cover; caption names 15-inch MacBook Air M5, 16GB, 512GB",
+      "bytes": 112952,
+      "sha256": "0f11d5c75673d899674e43e43f5c2c24c05e23df33d147ea1bc38b0d68f73dcf"
+    },
+    {
+      "file": "assets/instagram/macbook-pro.jpg",
+      "source": "https://www.instagram.com/p/Dd9NX2lCtXe/",
+      "description": "16-inch MacBook Pro M5 Max, 64GB, 2TB — carousel image 1",
+      "bytes": 312233,
+      "sha256": "a64a7b94f25081038d2085dbcaefdbac19a3a21123755158632ebe0be4c19fa0"
+    },
+    {
+      "file": "assets/instagram/ipad.jpg",
+      "source": "https://www.instagram.com/p/DcQLqhgFUXL/",
+      "description": "iPad A16 128GB — carousel image 1",
+      "bytes": 164233,
+      "sha256": "bd5bd1a2690db6f46a871f1feefe06f5b96dd76b3cb83b16ee3b00110d60279c"
+    },
+    {
+      "file": "assets/instagram/airtag.jpg",
+      "source": "https://www.instagram.com/p/Dd6o2o9Krho/",
+      "description": "AirTag — post artwork",
+      "bytes": 386204,
+      "sha256": "dd321ceb86925d91b59232f14cb2bb9734b9535c445d8240dc617eaa426069da"
+    },
+    {
+      "file": "assets/instagram/university.jpg",
+      "source": "https://www.instagram.com/reel/DecSmUWKB4M/",
+      "description": "Original university essentials reel cover",
+      "bytes": 231338,
+      "sha256": "4e6e9d3d7940c964b0152bcaccff0b60b7ba46d42cb5b811eecc9898c6b6c4d2"
+    }
+  ]
+}

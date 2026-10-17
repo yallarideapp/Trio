@@ -1,46 +1,31 @@
-# Trio website
+# Trio Mobile website
 
-This folder contains the static Trio Mobile storefront for [@trio_mobile.jo](https://www.instagram.com/trio_mobile.jo/). Its layout and illustrative device imagery follow the [Flick Mobile reference project](https://github.com/yallarideapp/flickmobile).
+This rebuild continues the existing static HTML/CSS/JavaScript website. Layout inspiration comes from [Flickmobile](https://github.com/yallarideapp/flickmobile): a dark header, bright brand hero, large device image, category cards and responsive catalog. Trio’s real green-and-black identity replaces the sample yellow branding.
 
-## Run locally
+## Content
 
-From the repository root:
+Instagram access was verified in the browser on 17 October 2026. The actual profile logo, bio, public phone, location, Facebook and map links were read from [@trio_mobile.jo](https://www.instagram.com/trio_mobile.jo/). Thirteen original JPEGs are stored locally, including product posts and store/reel photos. See [sources.json](sources.json) for each source, description and checksum. No Instagram credentials or temporary CDN links are included.
+
+Ten product entries are based on named or pictured devices in those posts. Search, category filters, sort, saved favorites and product dialogs work in Arabic (RTL) and English (LTR). Language and favorites persist in localStorage, with graceful storage-error handling. Calls, Instagram, Facebook and directions use the verified public destinations.
+
+This is a browse-and-contact website. Current prices, stock levels, store hours, delivery, payment terms and warranties are not invented. Original graphics can contain historical offers; the catalog and dialogs explain that customers must confirm current price, condition and availability with Trio. CSS crops emphasize devices; opening a product shows its full, unaltered source image and post link.
+
+## Run
+
+Serve this directory with any static HTTP server, for example:
 
 ```sh
-python3 -m http.server 4173 --bind 0.0.0.0 --directory website
+python3 -m http.server 4173 --directory website
 ```
 
-Open <http://localhost:4173>. Stop the server with `Ctrl+C`. The site uses plain HTML, CSS, and JavaScript; no dependency install or build step is needed.
+Open http://localhost:4173. There is no build step or package installation. All images, scripts, CSS and fonts are local and relative, so the same folder works under a GitHub Pages project path. The existing repository workflow deploys the complete website folder.
 
-## Edit the site
+## Checks
 
-| File | Purpose |
-| --- | --- |
-| `index.html` | Page structure, navigation, and storefront content. |
-| `styles.css` | Responsive styling and Arabic/English layout. |
-| `app.js` | Language switching, search, filters, saved products, and product dialogs. |
-| `catalog.js` | Product names, categories, images, and other catalog content. |
-| `assets/` | Locally served images and other visual assets. |
+```sh
+node website/tests/check.mjs
+node --check website/app.js
+node --check website/catalog.js
+```
 
-To update products, edit the existing entries in `catalog.js` or add entries with the same fields. Add new photos to `assets/` and use their relative paths in the catalog. Maintain both Arabic and English product content where provided, and check that every referenced image exists.
-
-The catalog is illustrative. Confirm product names, specifications, prices, availability, and business contact details with Trio before treating this as an operational store. The Instagram profile is the supplied contact destination. There is no backend, payment processing, or checkout; saved products are a browser feature.
-
-## Image provenance
-
-The AI-generated device illustrations were copied from the user-supplied [yallarideapp/flickmobile](https://github.com/yallarideapp/flickmobile) reference repository to match its image style. They were not downloaded from Instagram. See [asset provenance](assets/README.md) for the exact source commit and font licenses. Keep this source information when replacing or redistributing the images, and use photos the business is permitted to publish.
-
-## Check changes
-
-Preview the site at desktop and mobile widths. Check both languages, category filters, search, saved products, product dialogs, image loading, and the Instagram links. Because this is a static site, local preview does not require credentials or external services.
-
-## Publish on GitHub Pages
-
-The repository workflow at `.github/workflows/pages.yml` uploads this directory directly and deploys it to GitHub Pages. It runs on pushes to `main` and supports a manual run from **Actions**.
-
-1. Push the website folder and workflow to the repository.
-2. Open **Settings → Pages**, and set **Source** to **GitHub Actions**.
-3. Run the Pages workflow or push a new commit to `main`.
-4. Open the deployment URL shown in the completed workflow's `github-pages` environment.
-
-No custom domain is configured. A GitHub upload alone does not establish that the site is live; confirm a successful Pages deployment before sharing its address.
+See [TESTING.md](TESTING.md) for browser coverage and verification limits. Fonts and their existing licenses remain in assets/fonts/.

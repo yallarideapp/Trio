@@ -1,15 +1,7 @@
-# Asset sources
+# Assets
 
-Device illustrations and the hero luminance mask are reused from the user-selected
-[yallarideapp/flickmobile](https://github.com/yallarideapp/flickmobile) repository,
-commit `d8ad4b393c37f323d8905744582f9e2340414a06`, under `assets/products/`.
-These are AI-generated illustrative images, not verified photographs of Trio's
-inventory. The website discloses this beside the catalog and in the FAQ.
+All product and store visuals and the profile logo in instagram/ are original public media from Trio’s Instagram account, downloaded on 17 October 2026. [../sources.json](../sources.json) maps every JPEG to the original post or profile and records its SHA-256 checksum. Originals are not retouched. Cards use CSS crops; product dialogs show the complete image.
 
-Images are served unchanged. CSS selects individual quadrants of the source
-sheets; the hero uses the reference's existing luminance mask in an SVG.
+The former sample device illustrations, artificial wordmark/favicon and matte image have been removed. No Flickmobile image is used. The reference informs layout and centered device presentation only.
 
-IBM Plex Sans Arabic and Lalezar fonts are served locally from their Fontsource
-packages. Their SIL Open Font License texts are retained in `fonts/`.
-The TRIO text wordmark and favicon were made for this website; they do not claim
-to reproduce an official logo from Instagram.
+The existing self-hosted IBM Plex Sans Arabic and Lalezar fonts remain, with their original licenses in fonts/.

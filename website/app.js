@@ -1,4 +1,4 @@
-import { categories, instagramUrl, products } from './catalog.js';
+import { categories, instagramUrl, phoneUrl, products } from './catalog.js';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -28,9 +28,9 @@ const messages = {
     count: (count) => `${new Intl.NumberFormat('ar-JO').format(count)} من المنتجات`,
     empty: 'لم نجد نتائج. جرّب كلمة أخرى أو تصنيفًا مختلفًا.',
     emptySaved: 'لا توجد منتجات محفوظة تطابق بحثك. احفظ ما يعجبك من الكتالوج.',
-    note: 'الصور توضيحية. راسلنا لتأكيد الموديل والمواصفات والسعر والتوفّر قبل الطلب.',
+    source: 'شاهد المنشور الأصلي ↗', call: 'اتصل بتريو', note: 'هذا هو منشور تريو الأصلي. الأسعار والعروض والحالة الظاهرة فيه تخص وقت النشر وقد تتغير. اتصل بالمحل لتأكيد السعر والتوفر الحالي قبل الطلب.',
     switch: 'Switch to English', menuOpen: 'فتح القائمة', menuClose: 'إغلاق القائمة',
-    close: 'إغلاق التفاصيل', title: 'TRIO Mobile | تكنولوجيا على ذوقك',
+    close: 'إغلاق التفاصيل', title: 'TRIO Mobile | تريو موبايل — خلدا',
   },
   en: {
     view: 'Explore details', save: 'Save', unsave: 'Unsave',
@@ -38,9 +38,9 @@ const messages = {
     count: (count) => `${count} ${count === 1 ? 'product' : 'products'}`,
     empty: 'No matches yet. Try another search or category.',
     emptySaved: 'No saved products match your search. Save your favorites from the collection.',
-    note: 'Images are illustrative. Message us to confirm the model, specifications, price and availability before ordering.',
+    source: 'View original post ↗', call: 'Call Trio', note: 'This is Trio’s original post. Prices, offers and condition shown refer to the time of posting and may have changed. Confirm current price and availability with the store before ordering.',
     switch: 'التبديل إلى العربية', menuOpen: 'Open menu', menuClose: 'Close menu',
-    close: 'Close details', title: 'TRIO Mobile | Your tech. Your way.',
+    close: 'Close details', title: 'TRIO Mobile | Khalda, Amman',
   },
 };
 
@@ -72,6 +72,7 @@ function heartIcon() {
 
 function setArtwork(node, product) {
   node.style.backgroundImage = `url("${product.image}")`;
+  node.style.setProperty('--art-size', product.size || 'cover');
   node.style.setProperty('--art-x', product.x);
   node.style.setProperty('--art-y', product.y);
 }
@@ -118,11 +119,15 @@ function createCard(product) {
   const name = element('h3', 'product-name', localized(product.name));
   name.dir = 'auto';
   const caption = element('p', 'product-caption', localized(product.caption));
+  const source = element('a', 'card-source', state.language === 'ar' ? 'من صفحة تريو ↗' : 'From Trio’s Instagram ↗');
+  source.href = product.source;
+  source.target = '_blank';
+  source.rel = 'noopener noreferrer';
   const action = element('button', 'product-action', t('view'));
   action.type = 'button';
   action.setAttribute('aria-label', `${t('view')}: ${localized(product.name)}`);
   action.addEventListener('click', () => openProduct(product));
-  body.append(brand, name, caption, action);
+  body.append(brand, name, caption, action, source);
   card.append(visual, body);
   return card;
 }
@@ -153,6 +158,8 @@ function renderProducts() {
   if (!grid) return;
   const visible = visibleProducts();
   grid.replaceChildren(...visible.map(createCard));
+  const reset = $('#reset-filters');
+  if (reset) reset.hidden = !state.query && state.category === 'all' && !state.savedOnly;
   const count = $('#result-count');
   if (count) count.textContent = t('count')(visible.length);
   const empty = $('#empty-state');
@@ -178,10 +185,11 @@ function renderDialog(product) {
   const content = $('#dialog-content');
   if (!content) return;
   const wrapper = element('div', 'dialog-product');
-  const artwork = element('div', 'product-art');
-  artwork.setAttribute('role', 'img');
-  artwork.setAttribute('aria-label', localized(product.name));
-  setArtwork(artwork, product);
+  const artwork = element('img', 'original-post');
+  artwork.src = product.image;
+  artwork.alt = `${localized(product.name)} — @trio_mobile.jo`;
+  artwork.width = 1080;
+  artwork.height = 1350;
   const details = element('div', 'dialog-details');
   const brand = element('p', 'product-brand', brandName(product));
   const title = element('h2', '', localized(product.name));
@@ -194,7 +202,13 @@ function renderDialog(product) {
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
   link.setAttribute('aria-label', `${t('inquiry')}: ${localized(product.name)}`);
-  details.append(brand, title, description, note, link);
+  const source = element('a', 'source-link', t('source'));
+  source.href = product.source;
+  source.target = '_blank';
+  source.rel = 'noopener noreferrer';
+  const call = element('a', 'button button-outline dialog-call', t('call'));
+  call.href = phoneUrl;
+  details.append(brand, title, description, note, link, call, source);
   wrapper.append(artwork, details);
   content.replaceChildren(wrapper);
 }
@@ -236,7 +250,7 @@ function applyLanguage() {
   document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
   document.title = t('title');
   $$('[data-ar][data-en]').forEach((node) => { node.textContent = node.dataset[language]; });
-  const attributes = [['label', 'aria-label'], ['placeholder', 'placeholder'], ['title', 'title']];
+  const attributes = [['label', 'aria-label'], ['placeholder', 'placeholder'], ['title', 'title'], ['alt', 'alt']];
   attributes.forEach(([key, attribute]) => {
     $$(`[data-ar-${key}][data-en-${key}]`).forEach((node) => {
       node.setAttribute(attribute, node.getAttribute(`data-${language}-${key}`));
@@ -287,6 +301,13 @@ $('#product-search')?.addEventListener('input', (event) => {
 
 $('#sort-order')?.addEventListener('change', (event) => {
   state.sort = event.target.value === 'name' ? 'name' : 'featured';
+  renderProducts();
+});
+
+$('#reset-filters')?.addEventListener('click', () => {
+  state.category = 'all'; state.query = ''; state.savedOnly = false;
+  $('#product-search').value = '';
+  $('#saved-only').setAttribute('aria-pressed', 'false');
   renderProducts();
 });
 
