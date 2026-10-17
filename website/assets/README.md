@@ -1,7 +1,9 @@
-# Assets
+# Asset provenance
 
-All product and store visuals and the profile logo in instagram/ are original public media from Trio’s Instagram account, downloaded on 17 October 2026. [../sources.json](../sources.json) maps every JPEG to the original post or profile and records its SHA-256 checksum. Originals are not retouched. Cards use CSS crops; product dialogs show the complete image.
+`instagram/` contains thirteen unchanged originals from Trio Mobile's public Instagram profile/posts, collected 17 October 2026: its actual profile logo, product graphics and reel/store imagery. `../sources.json` maps originals to their source URLs and SHA-256 checksums.
 
-The former sample device illustrations, artificial wordmark/favicon and matte image have been removed. No Flickmobile image is used. The reference informs layout and centered device presentation only.
+`devices/` contains ten transparent PNGs made with the built-in image_gen background-extraction editor from those originals. The prompts request preserving the pictured devices while removing all poster text, pricing, packaging and surroundings. The tool outputs were copied without further pixel editing. Every source relationship, full prompt, method, byte count and checksum is in `../sources.json` under `deviceImages`. These are AI-assisted edits of supplied Trio imagery, not manufacturer-certified product photographs. Original post links remain available for comparison.
 
-The existing self-hosted IBM Plex Sans Arabic and Lalezar fonts remain, with their original licenses in fonts/.
+The device assets serve hero, category, catalog and detail views with `object-fit: contain`. The storefront does not display full advertising posters as product images. No Flick illustration is used.
+
+The existing IBM Plex Sans Arabic and Lalezar fonts and their licenses remain in `fonts/`.

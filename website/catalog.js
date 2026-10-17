@@ -4,6 +4,7 @@
  */
 export const instagramUrl = 'https://www.instagram.com/trio_mobile.jo/';
 export const phoneUrl = 'tel:+962796999292';
+export const facebookUrl = 'https://www.facebook.com/906142119255608';
 export const mapsUrl = 'https://maps.app.goo.gl/ccgJ9DKUXMP6c3L39';
 export const categories = {
   "all": {
@@ -44,12 +45,11 @@ export const products = [
       "ar": "الموديل الظاهر في منشور تريو: iPhone 17 Pro Max. تواصل مع المحل لتأكيد الحالة والسعة واللون والسعر الحالي.",
       "en": "Featured in Trio’s iPhone post. Contact the store to confirm condition, storage, color and current price."
     },
-    "image": "assets/instagram/iphone-17-pro-max.jpg",
+    "image": "assets/devices/iphone-17-pro-max.png",
     "source": "https://www.instagram.com/p/DePAvISCpM6/",
     "keywords": "ايفون آيفون برو ماكس هاتف موبايل iphone pro max",
-    "size": "155%",
-    "x": "20%",
-    "y": "42%"
+    "originalImage": "assets/instagram/iphone-17-pro-max.jpg",
+    "specs": []
   },
   {
     "id": "galaxy-s25-fe",
@@ -67,12 +67,16 @@ export const products = [
       "ar": "Galaxy S25 FE بسعة 128GB كما يظهر في منشور تريو. اسأل المحل عن الخيارات الحالية.",
       "en": "Galaxy S25 FE, shown with 128GB in Trio’s post. Ask the store about current options."
     },
-    "image": "assets/instagram/galaxy-s25-fe.jpg",
+    "image": "assets/devices/galaxy-s25-fe.png",
     "source": "https://www.instagram.com/p/DeW9T5hCrvs/",
     "keywords": "سامسونج جالكسي جالاكسي samsung galaxy s25 fe هاتف موبايل",
-    "size": "155%",
-    "x": "20%",
-    "y": "43%"
+    "originalImage": "assets/instagram/galaxy-s25-fe.jpg",
+    "specs": [
+      {
+        "ar": "السعة في المنشور: 128GB",
+        "en": "Storage in the post: 128GB"
+      }
+    ]
   },
   {
     "id": "iphone-17",
@@ -90,12 +94,16 @@ export const products = [
       "ar": "iPhone 17 بسعة 256GB، من الصورة الثانية في منشور iPhone لدى تريو. تأكد من الحالة والمواصفات الحالية مع المحل.",
       "en": "iPhone 17, shown with 256GB in the second image of Trio’s iPhone post. Confirm current condition and specifications with the store."
     },
-    "image": "assets/instagram/iphone-17.jpg",
+    "image": "assets/devices/iphone-17.png",
     "source": "https://www.instagram.com/p/DePAvISCpM6/?img_index=2",
     "keywords": "ايفون آيفون ابل apple iphone 17 هاتف موبايل",
-    "size": "155%",
-    "x": "20%",
-    "y": "42%"
+    "originalImage": "assets/instagram/iphone-17.jpg",
+    "specs": [
+      {
+        "ar": "السعة في المنشور: 256GB",
+        "en": "Storage in the post: 256GB"
+      }
+    ]
   },
   {
     "id": "apple-watch-s11",
@@ -113,12 +121,16 @@ export const products = [
       "ar": "Apple Watch S11 كما تظهر في منشور تريو، مع مقاسي 42mm و46mm. اسأل عن المقاس والخيارات الحالية.",
       "en": "Apple Watch S11 as shown in Trio’s post, with 42mm and 46mm sizes. Ask about current sizes and options."
     },
-    "image": "assets/instagram/apple-watch.jpg",
+    "image": "assets/devices/apple-watch.png",
     "source": "https://www.instagram.com/p/DeMrVwtCino/",
     "keywords": "ساعة ساعات ابل آبل apple watch s11 series 11",
-    "size": "150%",
-    "x": "10%",
-    "y": "44%"
+    "originalImage": "assets/instagram/apple-watch.jpg",
+    "specs": [
+      {
+        "ar": "المقاسات في المنشور: 42mm و46mm",
+        "en": "Sizes in the post: 42mm and 46mm"
+      }
+    ]
   },
   {
     "id": "huawei-watch-gt6",
@@ -136,12 +148,11 @@ export const products = [
       "ar": "Huawei Watch GT 6 من منشور تريو. تواصل مع المحل لمعرفة الخيارات والسعر الحالي.",
       "en": "Huawei Watch GT 6 from Trio’s post. Contact the store for current options and price."
     },
-    "image": "assets/instagram/huawei-watch-gt6.jpg",
+    "image": "assets/devices/huawei-watch-gt6.png",
     "source": "https://www.instagram.com/p/DeEkfeJqfKw/",
     "keywords": "هواوي ساعة ساعات huawei watch gt6 gt 6",
-    "size": "150%",
-    "x": "10%",
-    "y": "43%"
+    "originalImage": "assets/instagram/huawei-watch-gt6.jpg",
+    "specs": []
   },
   {
     "id": "airpods-max",
@@ -159,12 +170,11 @@ export const products = [
       "ar": "AirPods Max 2 كما ورد اسمها في فيديو تريو. شاهد المنشور الأصلي واسأل المحل عن التفاصيل الحالية.",
       "en": "Named AirPods Max 2 in Trio’s video. View the original post and ask the store for current details."
     },
-    "image": "assets/instagram/airpods-max.jpg",
+    "image": "assets/devices/airpods-max.png",
     "source": "https://www.instagram.com/reel/DemNhmENpEF/",
     "keywords": "ايربودز ايربود سماعات apple airpods max audio",
-    "size": "cover",
-    "x": "50%",
-    "y": "45%"
+    "originalImage": "assets/instagram/airpods-max.jpg",
+    "specs": []
   },
   {
     "id": "macbook-pro",
@@ -182,12 +192,20 @@ export const products = [
       "ar": "MacBook Pro M5 Max بقياس 16 بوصة، مع 64GB و2TB كما تظهر في منشور تريو. اسأل المحل عن المواصفات والخيارات الحالية.",
       "en": "16-inch MacBook Pro M5 Max, shown with 64GB and 2TB in Trio’s post. Ask the store about current specifications and options."
     },
-    "image": "assets/instagram/macbook-pro.jpg",
+    "image": "assets/devices/macbook-pro.png",
     "source": "https://www.instagram.com/p/Dd9NX2lCtXe/",
     "keywords": "ماك بوك ماكبوك لابتوب كمبيوتر macbook pro m5 max laptop",
-    "size": "145%",
-    "x": "12%",
-    "y": "46%"
+    "originalImage": "assets/instagram/macbook-pro.jpg",
+    "specs": [
+      {
+        "ar": "الشاشة في المنشور: 16 بوصة",
+        "en": "Screen in the post: 16-inch"
+      },
+      {
+        "ar": "الذاكرة والسعة في المنشور: 64GB · 2TB",
+        "en": "Memory and storage in the post: 64GB · 2TB"
+      }
+    ]
   },
   {
     "id": "ipad-a16",
@@ -205,12 +223,16 @@ export const products = [
       "ar": "iPad A16 بسعة 128GB كما يظهر في منشور تريو. تواصل مع المحل لتأكيد الموديل واللون والسعر الحالي.",
       "en": "iPad A16, shown with 128GB in Trio’s post. Contact the store to confirm the current model, color and price."
     },
-    "image": "assets/instagram/ipad.jpg",
+    "image": "assets/devices/ipad.png",
     "source": "https://www.instagram.com/p/DcQLqhgFUXL/",
     "keywords": "ايباد آيباد ابل تابلت جهاز لوحي ipad a16 tablet",
-    "size": "120%",
-    "x": "50%",
-    "y": "42%"
+    "originalImage": "assets/instagram/ipad.jpg",
+    "specs": [
+      {
+        "ar": "السعة في المنشور: 128GB",
+        "en": "Storage in the post: 128GB"
+      }
+    ]
   },
   {
     "id": "macbook-air",
@@ -228,12 +250,20 @@ export const products = [
       "ar": "MacBook Air M5 بقياس 15 بوصة، وذاكرة 16GB وسعة 512GB، كما ورد في فيديو تريو. تأكد من السعر والتوفر الحالي مع المحل.",
       "en": "15-inch MacBook Air M5 with 16GB memory and 512GB storage, as described in Trio’s video. Confirm current price and availability with the store."
     },
-    "image": "assets/instagram/macbook-air.jpg",
+    "image": "assets/devices/macbook-air.png",
     "source": "https://www.instagram.com/reel/DeKDsmlqxwu/",
     "keywords": "ماك بوك ماكبوك لابتوب كمبيوتر macbook air m5 laptop",
-    "size": "cover",
-    "x": "50%",
-    "y": "45%"
+    "originalImage": "assets/instagram/macbook-air.jpg",
+    "specs": [
+      {
+        "ar": "الشاشة في المنشور: 15 بوصة",
+        "en": "Screen in the post: 15-inch"
+      },
+      {
+        "ar": "الذاكرة والسعة في المنشور: 16GB · 512GB",
+        "en": "Memory and storage in the post: 16GB · 512GB"
+      }
+    ]
   },
   {
     "id": "airtag",
@@ -251,11 +281,10 @@ export const products = [
       "ar": "AirTag من منشور تريو للإكسسوارات. تواصل مع المحل لتأكيد التوافق والسعر والتوفر الحالي.",
       "en": "AirTag from Trio’s accessories post. Contact the store to confirm compatibility, current price and availability."
     },
-    "image": "assets/instagram/airtag.jpg",
+    "image": "assets/devices/airtag.png",
     "source": "https://www.instagram.com/p/Dd6o2o9Krho/",
     "keywords": "ايرتاغ اير تاج تعقب اكسسوارات إكسسوارات apple airtag accessories",
-    "size": "150%",
-    "x": "12%",
-    "y": "45%"
+    "originalImage": "assets/instagram/airtag.jpg",
+    "specs": []
   }
 ];

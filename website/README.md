@@ -1,31 +1,33 @@
-# Trio Mobile website
+# Trio Mobile storefront
 
-This rebuild continues the existing static HTML/CSS/JavaScript website. Layout inspiration comes from [Flickmobile](https://github.com/yallarideapp/flickmobile): a dark header, bright brand hero, large device image, category cards and responsive catalog. Trio’s real green-and-black identity replaces the sample yellow branding.
+This continues the existing static website with a storefront modeled on [Flickmobile](https://github.com/yallarideapp/flickmobile): home, category browsing, a focused catalog, native product detail pages, and fixed mobile navigation. Trio keeps its verified green-and-black branding, actual logo, products and public contact details.
 
-## Content
+## Device images
 
-Instagram access was verified in the browser on 17 October 2026. The actual profile logo, bio, public phone, location, Facebook and map links were read from [@trio_mobile.jo](https://www.instagram.com/trio_mobile.jo/). Thirteen original JPEGs are stored locally, including product posts and store/reel photos. See [sources.json](sources.json) for each source, description and checksum. No Instagram credentials or temporary CDN links are included.
+The hero, category cards, product cards and product detail pages show standalone devices on transparent backgrounds. Ten PNG assets in `assets/devices/` were made with the built-in image_gen background-extraction editor from Trio's own Instagram artwork and reel covers. Poster text, prices, boxes and backgrounds were removed. These are edited source-based product depictions, not untouched photographs. The original thirteen JPEGs remain in `assets/instagram/` for provenance; the store photo is used in the home story section. No promotional poster is used as catalog or detail imagery.
 
-Ten product entries are based on named or pictured devices in those posts. Search, category filters, sort, saved favorites and product dialogs work in Arabic (RTL) and English (LTR). Language and favorites persist in localStorage, with graceful storage-error handling. Calls, Instagram, Facebook and directions use the verified public destinations.
+[sources.json](sources.json) records each original source URL/checksum and each device edit's source file, exact prompt, checksum and method. No Flick product illustration was copied. Fonts remain self-hosted with their existing licenses.
 
-This is a browse-and-contact website. Current prices, stock levels, store hours, delivery, payment terms and warranties are not invented. Original graphics can contain historical offers; the catalog and dialogs explain that customers must confirm current price, condition and availability with Trio. CSS crops emphasize devices; opening a product shows its full, unaltered source image and post link.
+## Browsing
 
-## Run
+- Home `#/` with device-type hero switches and category links.
+- Catalog `#/shop` and categories `#/shop/phones`, `#/shop/computers`, `#/shop/wearables`, `#/shop/accessories`.
+- Product pages `#/p/<product-id>` with device-only images, verified descriptions/specs, Call/Instagram inquiry and original-post link.
+- Favorites `#/saved`, repair `#/maintenance`, trade-in `#/trade-in` and contact `#/contact`.
+- Arabic/RTL and English/LTR; search, brand/category filters, name sort and persistent favorites.
+- Back/forward support and shareable filter URLs. Old `#catalog` and `#contact` links still work.
 
-Serve this directory with any static HTTP server, for example:
+Trio's public Instagram profile was checked on 17 October 2026. Public phone: 0796999292; location: Khalda, Umm Al Summaq, near Al Sukkar Circle. Map and Facebook links are the ones listed by the profile. No current prices, stock, opening hours, delivery terms or warranties are inferred. The site directs purchases and service questions to the actual store.
+
+## Run and validate
+
+No build step or package installation:
 
 ```sh
 python3 -m http.server 4173 --directory website
-```
-
-Open http://localhost:4173. There is no build step or package installation. All images, scripts, CSS and fonts are local and relative, so the same folder works under a GitHub Pages project path. The existing repository workflow deploys the complete website folder.
-
-## Checks
-
-```sh
 node website/tests/check.mjs
 node --check website/app.js
 node --check website/catalog.js
 ```
 
-See [TESTING.md](TESTING.md) for browser coverage and verification limits. Fonts and their existing licenses remain in assets/fonts/.
+All references are relative to this folder, including when hosted under `/Trio/` on GitHub Pages. The existing Pages workflow deploys the complete `website/` folder. See [TESTING.md](TESTING.md) for browser verification.

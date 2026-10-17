@@ -27,7 +27,7 @@
     }
   },
   "layoutReference": "https://github.com/yallarideapp/flickmobile",
-  "imagePolicy": "Original downloaded JPEGs are stored locally without image alteration. CSS crops emphasize devices in cards; dialogs show full originals. Published artwork may contain historical prices. No live price, stock or warranty is inferred.",
+  "imagePolicy": "Original Instagram JPEGs are retained unchanged for provenance. The storefront uses separate transparent device PNGs made with the built-in image_gen background-extraction editor from those originals. Device imagery is edited and may differ in small edge/details; original posts remain accessible as secondary source links. No live price, stock, condition, warranty or inventory is inferred.",
   "images": [
     {
       "file": "assets/instagram/logo.jpg",
@@ -119,6 +119,98 @@
       "description": "Original university essentials reel cover",
       "bytes": 231338,
       "sha256": "4e6e9d3d7940c964b0152bcaccff0b60b7ba46d42cb5b811eecc9898c6b6c4d2"
+    }
+  ],
+  "deviceImages": [
+    {
+      "file": "assets/devices/airpods-max.png",
+      "sourceImage": "assets/instagram/airpods-max.jpg",
+      "source": "https://www.instagram.com/reel/DemNhmENpEF/",
+      "method": "Built-in image_gen background-extraction edit; output copied unchanged",
+      "prompt": "Use case: background-extraction\nAsset type: transparent website catalog product cutout\nInput image: exact edit target, Trio Mobile reel photo of a woman holding a headphone retail box.\nPrimary request: isolate ONLY the headphone product picture printed on the front of the held white box. The desired subject is that exact dark blue over-ear headphone image with the arched headband and two oval earcups. Remove the entire physical white box, the woman, all hands, shelves, store background, table, text and every other object. Treat the headphone picture on the box as a flat photo cutout: retain its exact pictured perspective, color, contours, headband, metal arms, earcup shapes and interior openings. Do not redesign or generate an alternative headphone view.\nComposition/framing: full headphone image centered with about 15% transparent margin on every side, no clipping.\nScene/backdrop: actual transparent alpha background, including openings inside/around the headset; no white box shape, no opaque backdrop, no baked-in checkerboard.\nConstraints: faithful extraction of the device depiction already visible in the source only; no invented hardware details, text, packaging, person, hands or props.",
+      "bytes": 988847,
+      "sha256": "8b21fa4ac26ab9d46aa32668ffe5889a728096f000d3fcd0e89a990f97ea13ce"
+    },
+    {
+      "file": "assets/devices/airtag.png",
+      "sourceImage": "assets/instagram/airtag.jpg",
+      "source": "https://www.instagram.com/p/Dd6o2o9Krho/",
+      "method": "Built-in image_gen background-extraction edit; output copied unchanged",
+      "prompt": "Use case: background-extraction\nAsset type: transparent product catalog image for Trio Mobile's website.\nInput image: edit target, Trio's actual Apple AirTag Instagram poster.\nPrimary request: isolate ONLY the two actual foreground Apple AirTags: the silver-facing circular tag in front and white-facing tag just behind it on the right. Remove the product box INCLUDING the AirTag printed on that box, shop setting, counter, plants, all poster text, price labels, icons, logos outside the devices, and all other background material.\nConstraints: preserve the exact pictured two AirTags, their silver/white colors, proportions, angles, Apple marks on the devices, and the silver tag's circular engraving. Do not redesign, replace, add, invent or duplicate products. Keep both complete tags together in their original relative position. Do not include the box or third printed tag. Center the entire two-tag group with 15% empty margin around the devices.\nScene/backdrop: genuinely transparent alpha background, no opaque white, black or checkerboard. Only the two actual tag cutouts should remain.",
+      "bytes": 1281044,
+      "sha256": "49f410b97dd9e19e03a8eea1afa2b6bc576d95bb1293b9b07981ba30dc6d2404"
+    },
+    {
+      "file": "assets/devices/apple-watch.png",
+      "sourceImage": "assets/instagram/apple-watch.jpg",
+      "source": "https://www.instagram.com/p/DeMrVwtCino/",
+      "method": "Built-in image_gen background-extraction edit; output copied unchanged",
+      "prompt": "Use case: background-extraction\nAsset type: transparent product catalog image for Trio Mobile's website.\nInput image: edit target, Trio's actual Apple Watch Instagram poster.\nPrimary request: isolate ONLY the two actual foreground Apple Watches pictured: the black watch on the left and cream/pink watch on the right. Remove the product box and everything printed on it, shop setting, counter, plants, all poster text, price labels, icons, logos outside the devices, and all other background material.\nConstraints: preserve the exact pictured watches, their colors, proportions, angle, case/buttons, band geometry, screens and hands. Do not redesign, replace, add, invent or duplicate products. Keep both complete watches together with their original relationship. Do not include the box. Center the entire two-watch group with 15% empty margin around the full devices.\nScene/backdrop: genuinely transparent alpha background, no opaque white, black or checkerboard. Only the two device cutouts should remain.",
+      "bytes": 1668004,
+      "sha256": "6aa760de48aa299ae61795bfbd57dcaef1118673e932a00d39c87c7d2af9315c"
+    },
+    {
+      "file": "assets/devices/galaxy-s25-fe.png",
+      "sourceImage": "assets/instagram/galaxy-s25-fe.jpg",
+      "source": "https://www.instagram.com/p/DeW9T5hCrvs/",
+      "method": "Built-in image_gen background-extraction edit; output copied unchanged",
+      "prompt": "Use case: background-extraction\nAsset type: transparent product catalog image for Trio Mobile's website.\nInput image: edit target, Trio's actual Samsung Galaxy S25 FE Instagram poster.\nPrimary request: isolate ONLY the two actual foreground navy Samsung phones: the rear view with three camera lenses on the left and the front view with blue/purple wallpaper on the right. Remove the product box, all poster text, price/specification labels and icons, shop background, plants, counter and reflections.\nConstraints: preserve the exact two pictured phones, navy color, device geometry, flat sides, three camera lenses and flash positions, front screen wallpaper and camera cutout. Preserve their original relative positions and perspective. Do not redesign, replace, add, invent or duplicate products. Center both complete phones with 15% empty margin around the group.\nScene/backdrop: genuinely transparent alpha background, no opaque white, black or checkerboard. Only the two foreground phone cutouts should remain.",
+      "bytes": 1103657,
+      "sha256": "ea6b8028e5b1dceae447422a79030bc0dfae10349e750110f411e51e7c4cde4e"
+    },
+    {
+      "file": "assets/devices/huawei-watch-gt6.png",
+      "sourceImage": "assets/instagram/huawei-watch-gt6.jpg",
+      "source": "https://www.instagram.com/p/DeEkfeJqfKw/",
+      "method": "Built-in image_gen background-extraction edit; output copied unchanged",
+      "prompt": "Use case: background-extraction\nAsset type: transparent product catalog image for Trio Mobile's website.\nInput image: edit target, Trio's actual Huawei Watch GT6 Instagram poster.\nPrimary request: isolate ONLY the large actual foreground Huawei Watch GT6 with olive-green band, metal case and green circular face, as pictured. Remove the product box INCLUDING the small printed watch depicted on that box, shop setting, counter, plants, all poster text, price labels, icons, logos outside the device, and all other background material.\nConstraints: preserve the exact pictured large watch, its olive color, proportions, angle, case/buttons, band geometry, and screen. Do not redesign, replace, add, invent or duplicate products. Keep the complete watch. Center the entire watch with 15% empty margin around the full device.\nScene/backdrop: genuinely transparent alpha background, no opaque white, black or checkerboard. Only the one large watch cutout should remain.",
+      "bytes": 1817894,
+      "sha256": "f50bb3a105271a3bd8cfbbdf14a5563812f365ea1cb3b2d12b2bf4dca1d06d63"
+    },
+    {
+      "file": "assets/devices/ipad.png",
+      "sourceImage": "assets/instagram/ipad.jpg",
+      "source": "https://www.instagram.com/p/DcQLqhgFUXL/",
+      "method": "Built-in image_gen background-extraction edit; output copied unchanged",
+      "prompt": "Use case: background-extraction\nAsset type: transparent website catalog product cutout\nInput image: exact edit target, Trio Mobile's iPad promotional post.\nPrimary request: isolate ONLY the four pictured tablets in the silver, blue, pink and yellow group across the middle of the source image. Retain their exact geometry, colors, overlap arrangement, angle, cameras and colorful screen wallpaper. Remove the store, all poster copy and logos, prices, specifications, decorative light effects, background and mirrored reflection underneath. Keep the four real pictured tablets and no box.\nComposition/framing: full four-tablet group centered with about 15% transparent margin on every side, no clipping.\nScene/backdrop: genuine transparent alpha, no opaque background, no black/white fill, no checkerboard baked into pixels.\nConstraints: faithful source cutout only; do not invent a model, redesign a device, add text or alter its screen. Do not include any reflection or unrelated objects.",
+      "bytes": 1519145,
+      "sha256": "96ee119fcd005c21df52fb601ebe5220ad9607c713af0c398e322485b4cebda6"
+    },
+    {
+      "file": "assets/devices/iphone-17-pro-max.png",
+      "sourceImage": "assets/instagram/iphone-17-pro-max.jpg",
+      "source": "https://www.instagram.com/p/DePAvISCpM6/",
+      "method": "Built-in image_gen background-extraction edit; output copied unchanged",
+      "prompt": "Use case: background-extraction. Edit target: Trio's existing iPhone 17 Pro Max product poster. Produce one isolated product asset for a retail website: ONLY the two pictured orange iPhone devices (front and back) together, no packaging box. Remove the entire poster background, all Arabic and English advertising text, prices, spec panel, plants, store, table, notebook, graphics and shadows on the table. Preserve the exact orange color, existing device geometry, three camera lenses and small sensor, Apple logo, front screen artwork, relative front/back overlap and perspective from the source. Do not redesign or substitute the devices. Center both complete phones upright together on a genuinely transparent background, square canvas, with about 12% clear margin on all sides. Sharp faithful edges, natural existing product lighting. No new text, no prices, no new products, no opaque backdrop, no checkerboard drawn into pixels. Asset type: transparent standalone product cutout.",
+      "bytes": 1088647,
+      "sha256": "762157432385820079d152c92a9bd0d636b3fb4f37f6a68d1b341ea63ce2d63b"
+    },
+    {
+      "file": "assets/devices/iphone-17.png",
+      "sourceImage": "assets/instagram/iphone-17.jpg",
+      "source": "https://www.instagram.com/p/DePAvISCpM6/?img_index=2",
+      "method": "Built-in image_gen background-extraction edit; output copied unchanged",
+      "prompt": "Use case: background-extraction. Edit target: existing Trio iPhone17 product poster. Extract ONLY the two pictured lavender iPhone devices, front and back together. Remove packaging box, whole store/background/table/notebook and every advertising word, price, spec panel and graphic. Preserve exact lavender color, original two-camera arrangement, Apple logo, device silhouette and proportions, existing purple front screen wallpaper and original front/back overlap/perspective. Do not redesign, add or replace phones. Center both complete phones upright on a genuinely transparent square canvas with12%clear margin. Sharp edges, faithfully preserve product itself. No new text, price, box, drawncheckerboard or opaque backdrop. This is standalone catalog product imagery.",
+      "bytes": 1085245,
+      "sha256": "82b3baf34824e87eacc35a376508a996e2fc051b5a91fc1eb843d8d4c935334b"
+    },
+    {
+      "file": "assets/devices/macbook-air.png",
+      "sourceImage": "assets/instagram/macbook-air.jpg",
+      "source": "https://www.instagram.com/reel/DeKDsmlqxwu/",
+      "method": "Built-in image_gen background-extraction edit; output copied unchanged",
+      "prompt": "Use case: background-extraction\nAsset type: transparent website catalog product cutout\nInput image: exact edit target, Trio Mobile's MacBook Air reel frame.\nPrimary request: isolate ONLY the pictured dark blue-gray 15-inch laptop near the bottom of the photo, with lid partly open, viewed from behind so its Apple lid logo is visible. Remove the woman, hands, all store shelves and merchandise, table and promotional text. Preserve the exact pictured laptop geometry, color, angle, lid and hinge position, logo and visible lower base. Do not turn it around, open it differently, invent a screen or replace it with another model. Cleanly remove the hand overlapping the top-right edge of the lid using the laptop's existing straight edge.\nComposition/framing: full single laptop centered with about 15% transparent margin on every side, no clipping.\nScene/backdrop: genuine transparent alpha background; no opaque backdrop and no baked-in checkerboard.\nConstraints: faithful source-photo cutout only; no text, boxes, people, hands, props or added objects.",
+      "bytes": 1395929,
+      "sha256": "6790d34156c36ffdcbb9658688509d3a313109b6c91be3ff87cea29a6eb60ac1"
+    },
+    {
+      "file": "assets/devices/macbook-pro.png",
+      "sourceImage": "assets/instagram/macbook-pro.jpg",
+      "source": "https://www.instagram.com/p/Dd9NX2lCtXe/",
+      "method": "Built-in image_gen background-extraction edit; output copied unchanged",
+      "prompt": "Use case: background-extraction\nAsset type: transparent website catalog product cutout\nInput image: exact edit target, an existing Trio Mobile Instagram post.\nPrimary request: isolate ONLY the actual open dark gray laptop in the foreground of this image. Remove the white retail box behind it, all store background, table, notebook, plants, signage, logos outside the laptop, promotional copy, specifications and prices. Preserve the foreground laptop's exact device geometry, dark gray color, camera angle, keyboard, trackpad, and visible screen image. Do not replace or invent a different laptop, do not redesign any product detail. Keep only the pictured front open laptop, not the printed laptop on its box.\nComposition/framing: full device centered with about 15% transparent margin on every side, no clipping.\nScene/backdrop: actual transparent alpha background; no opaque background and no checkerboard baked into pixels.\nConstraints: faithful source-photo cutout only; no added text, objects, packaging, shadows from other objects, watermarks or decoration.",
+      "bytes": 1415003,
+      "sha256": "8c4db530179e258a65901ee156d785fe649c0173acc1661d6945cb425747dfc8"
     }
   ]
 }
