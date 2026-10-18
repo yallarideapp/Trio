@@ -14,6 +14,16 @@ const mode = process.argv[2] || 'live';
 if (!['live', 'demo', 'pages'].includes(mode)) throw new Error(`Unknown build mode: ${mode}`);
 const outputRoot = mode === 'demo' ? path.join(project, 'Demo') : mode === 'pages' ? path.join(project, 'website') : path.join(source, 'dist');
 const out = path.resolve(process.argv[3] || outputRoot);
+// The public URL belongs to the deployment, rather than a GitHub owner.
+// Omit the optional share image until that deployment has a public URL.
+let socialImage = '';
+if (process.env.SITE_URL?.trim()) {
+  const url = new URL(process.env.SITE_URL.trim());
+  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) throw new Error('SITE_URL must be an HTTPS website URL without credentials, query or fragment');
+  url.pathname = `${url.pathname.replace(/\/+$/, '')}/`;
+  const image = new URL('assets/devices/iphone-17-pro-max.webp', url).href.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
+  socialImage = `<meta property="og:image" content="${image}">`;
+}
 
 const inside = (dir, root) => { const rel = path.relative(root, dir); return rel && !rel.startsWith('..') && !path.isAbsolute(rel); };
 if (out !== outputRoot && !inside(out, outputRoot)) throw new Error(`Build output must stay within ${outputRoot}: ${out}`);
@@ -38,7 +48,7 @@ await build({ ...common, entryPoints: [path.join(source, 'site/admin/src/admin.j
 
 const htmlFiles = [['site/index.html', 'index.html'], ['site/admin/index.html', 'admin/index.html']];
 for (const [from, to] of htmlFiles) {
-  let html = (await readFile(path.join(source, from), 'utf8')).replaceAll('__BUILD__', stamp);
+  let html = (await readFile(path.join(source, from), 'utf8')).replaceAll('__BUILD__', stamp).replace('<!-- __SOCIAL_IMAGE__ -->', socialImage);
   if (mode === 'demo') html = html.replace(/\s*<link rel="preload"[^>]*>/g, '');
   await writeFile(path.join(out, to), html);
 }

@@ -31,6 +31,14 @@ The live Worker automatically records submitted checkout orders in D1, links sig
 
 The supplied Worker source is preserved for a future separately configured backend deployment. Its D1/KV bindings are placeholders; no Cloudflare deployment has been performed. `npm run build` produces the live Worker assets; `npm run demo:build` produces a clearly labeled local-only demo. See `Cloudflare-guide.md` for the supplied setup guide.
 
+## Future Trio accounts
+
+Deployment is deferred until the owner creates dedicated GitHub and Cloudflare accounts for Trio. The current accounts are not connected. Transfer or copy this complete project into the future Trio repository, then connect only that repository to Trio’s Cloudflare account. The application uses relative asset links and same-origin `/api` routes; no current Cloudflare account ID or API host is embedded in the source.
+
+Set the optional build variable `SITE_URL` to the future public website URL (including a repository subpath for GitHub Pages). This generates the social share image URL for that deployment; leaving it unset omits that optional metadata. For the current preview: `SITE_URL=https://yallarideapp.github.io/Trio/ npm run build:pages`.
+
+The [Cloudflare guide](Cloudflare-guide.md) covers the future repository, new D1/KV bindings, both migrations, runtime secrets, first admin setup, and enabling ordering with Publish. Accounts and automatic orders stay inactive on the current Pages preview until that deployment. Export any browser editor draft before changing domains; a draft is not automatically migrated into the shared live admin.
+
 Prices, condition and warranty descriptions are attributed to dated public Instagram posts, not a claim of current stock or terms. Confirm current details directly with Trio. Unconfirmed WhatsApp and inferred catalog options are excluded from this release.
 
 ## Device specifications and contact links

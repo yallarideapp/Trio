@@ -1,5 +1,12 @@
 # Replacement storefront verification — 18 October 2026
 
+## Future dedicated accounts — current deployment decision
+
+- Owner deferred Cloudflare connection until dedicated Trio GitHub and Cloudflare accounts exist. No current account connection, resource creation or deployment was performed.
+- Audited the application for owner-specific URLs and account IDs. APIs use the same origin and device assets/routes are relative. D1/KV remain placeholders. Removed the source's fixed social image URL; optional build variable SITE_URL generates it for the chosen deployment.
+- Built with a future HTTPS domain and repository subpath: share metadata uses that domain/subpath. Built without SITE_URL: no old-account share URL is included. Invalid HTTP, credential-bearing, query and fragment URLs fail before replacing build output. Rebuilt the current Pages preview with its existing public URL, preserving its share image.
+- Updated the handover guide for a new repository/account, both database migrations, browser draft handling, and enabling ordering through admin Publish after deployment. Full existing account/order/catalog checks pass.
+
 ## Customer accounts and automatic orders — current update
 
 - Added visible Arabic/English Sign in and Create account navigation, customer profile/mobile editing, password changes and private order history. Checked account forms in Chromium at 320px and 1024px; no horizontal overflow. Pages explicitly disables account submission while the shared service is disconnected.
