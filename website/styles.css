@@ -6,7 +6,7 @@
 @font-face{font-family:Plex;src:url('assets/fonts/ibm-plex-sans-arabic-latin-700-normal.woff2') format('woff2');font-weight:700;font-display:swap}
 @font-face{font-family:Lalezar;src:url('assets/fonts/lalezar-arabic-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
 
-:root{--accent:#70f336;--accent-2:#90fb5d;--accent-ink:#183d07;--ink:#121410;--deep:#0c0f0a;--surface:#1b1e18;--surface-2:#252920;--paper:#f4f5ef;--muted:#c0c8b8;--line:#ffffff24;--white:#fafbf8;--wa:#25d366;--danger:#ff8a7a;color-scheme:dark;font-family:Plex,Arial,sans-serif;background:var(--ink);color:var(--paper)}
+:root{--accent:#70f336;--accent-2:#90fb5d;--accent-ink:#183d07;--ink:#121410;--deep:#0c0f0a;--surface:#1b1e18;--surface-2:#252920;--paper:#f4f5ef;--muted:#c0c8b8;--line:#ffffff24;--white:#ffffff;--wa:#25d366;--danger:#ff8a7a;color-scheme:dark;font-family:Plex,Arial,sans-serif;background:var(--ink);color:var(--paper)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--ink);color:var(--paper);min-height:100vh;display:flex;flex-direction:column}
 main{flex:1}

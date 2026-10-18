@@ -39,6 +39,7 @@ export function verifyStorefront() {
       ui.state.route = { name: 'p', id: product.id };
       const html = ui.renderDetail(product.id);
       assert(!instagram.test(html), `${product.id}/${language}: no Instagram references`);
+      assert(!html.includes('class="name-card"'), `${product.id}/${language}: device photos replace name-only cards`);
       assert(!commentary.test(html.replace(/<[^>]*>/g, ' ')), `${product.id}/${language}: no editorial disclaimer`);
       assert(!/href="(?:tel:|https?:\/\/wa\.me)/i.test(html), `${product.id}/${language}: no contact actions`);
       assert(!/class="(?:detail-note|detail-source|posted-note|contact-actions)"/.test(html), `${product.id}/${language}: no source/contact sections`);

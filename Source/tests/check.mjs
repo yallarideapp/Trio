@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import seed from '../shared/catalog.js';
 import { verifyStorefront } from './storefront.mjs';
+import { verifyCatalogImages } from './images.mjs';
 import { priceLines, normaliseMobile, fromPrice, toFils, validPrice, MAX_QTY, MAX_LINES } from '../shared/pricing.js';
 import { conditions, notes, warranties } from '../shared/labels.js';
 
@@ -21,7 +22,7 @@ for (const p of seed.products) {
   ok(/^[a-z0-9][a-z0-9-]*$/.test(p.id), `id format ${p.id}`);
   ok(cats.has(p.category), `${p.id} category`);
   ok(p.name.ar && p.name.en, `${p.id} names`);
-  ok(!p.image || existsSync(path.join(root, 'site', p.image)), `${p.id} image file ${p.image}`);
+  ok(Boolean(p.image) && existsSync(path.join(root, 'site', p.image)), `${p.id} image file ${p.image}`);
   ok(p.variants.length > 0, `${p.id} has options`);
   const keys = new Set();
   for (const v of p.variants) {
@@ -136,6 +137,8 @@ if (process.argv.includes('--pages')) {
     ok(!/<script\b|<form\b/i.test(admin), 'Pages admin fallback cannot simulate login or changes');
   }
 }
+
+try { console.log('image checks passed:', JSON.stringify(verifyCatalogImages())); } catch (error) { ok(false, error.message); }
 
 try { verifyStorefront(); } catch (error) { ok(false, `storefront: ${error.message}`); }
 

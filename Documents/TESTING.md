@@ -29,3 +29,11 @@ This release replaces the source/date/disclaimer sections described above with r
 - iPhone 17 Pro tested at 320, 390, 768 and 1280px in Arabic, without horizontal overflow. English 320px views checked for iPhone, Samsung, MacBook, iPad, Apple Watch, AirPods Max and AirTag. All specification tables fit.
 - Choosing iPhone 17 Pro Max 512GB new updates both price to JD939 and the specification configuration row to 512GB. Favorites and Samsung search still work. No browser console warnings/errors. The revised English product page also passes the computed-color contrast checks.
 - Responsive testing uses Chromium; no physical-device testing was performed.
+
+## Device image repairs — 18 October 2026
+
+- All 24 catalog entries now have a device photo, including the previously empty iPhone 17e. Thirteen missing, damaged or mismatched images were replaced with unmodified official manufacturer photos. Nine obsolete damaged assets were removed.
+- All 23 unique shipped images fully decode with Pillow and match byte-for-byte between Source/site and website. Replacement source URLs and SHA-256 hashes are recorded in IMAGE-REPAIRS.json.
+- The Pages checks now reject empty paths, missing files, truncated PNG/JPEG/WebP containers, and images outside the expected dimensions. All 48 bilingual product renders are checked for the absence of name-only image placeholders.
+- Browser catalog inspection loaded all 24 device images successfully, with nonzero natural dimensions and no placeholders. Phones, watches, laptops and tablets were visually checked for complete edges and clean backgrounds.
+- Mobile checks covered the iPhone 17e product page and Arabic home at 390px, the Arabic catalog at 320px, and the English desktop catalog at 1280px. Checked pages have no horizontal document overflow.

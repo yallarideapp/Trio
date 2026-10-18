@@ -60,7 +60,7 @@ export const seed = {
     },
     {
       id: 'iphone-17-pro', category: 'phones', brand: 'Apple', name: { ar: 'iPhone 17 Pro', en: 'iPhone 17 Pro' },
-      image: 'assets/devices/iphone-17-pro-max.webp', imageNote: { ar: 'الصورة لـ iPhone 17 Pro Max بنفس التصميم واللون.', en: 'Pictured: iPhone 17 Pro Max, same design and colour.' }, offer: true,
+      image: 'assets/devices/iphone-17-pro.jpg', offer: true,
       tagline: { ar: 'جديد بالكرتونة بحسب المنشور', en: 'New in box according to the post' },
       about: { ar: 'عرض منشور لـ iPhone 17 Pro بسعة 256GB، جديد بالكرتونة. مدة الكفالة لهذا الخيار غير موثقة هنا؛ أكّدها مع تريو.', en: 'Published offer for iPhone 17 Pro, 256GB, new in box. A warranty term for this option is not documented here; confirm it with Trio.' },
       specs: [], source: P.oct14a,
@@ -80,7 +80,7 @@ export const seed = {
     },
     {
       id: 'iphone-17e', category: 'phones', brand: 'Apple', name: { ar: 'iPhone 17e', en: 'iPhone 17e' },
-      image: '', offer: true,
+      image: 'assets/devices/iphone-17e.png', offer: true,
       tagline: { ar: 'جديد مسكّر · كفالة الوكيل سنة', en: 'Sealed new · 1-year agent warranty' },
       about: { ar: 'iPhone 17e بسعة 256GB، جديد مسكّر بالكرتونة No Active، مع كفالة الوكيل لمدة سنة كاملة.', en: 'iPhone 17e, 256GB, sealed new and never activated, with a full 1-year agent warranty.' },
       specs: [], source: P.oct14a,
@@ -88,7 +88,7 @@ export const seed = {
     },
     {
       id: 'iphone-16-pro', category: 'phones', brand: 'Apple', name: { ar: 'iPhone 16 Pro', en: 'iPhone 16 Pro' },
-      image: 'assets/devices/iphone-16-pro-max.webp', imageNote: { ar: 'الصورة لـ iPhone 16 Pro Max بنفس التصميم واللون.', en: 'Pictured: iPhone 16 Pro Max, same design and colour.' }, offer: true,
+      image: 'assets/devices/iphone-16-pro.jpg', offer: true,
       tagline: { ar: 'جديد مسكّر · كفالة Apple سنة', en: 'Sealed new · 1-year Apple warranty' },
       about: { ar: 'iPhone 16 Pro بسعة 512GB، جديد مسكّر بالكرتونة No Active، مع كفالة Apple لمدة سنة كاملة.', en: 'iPhone 16 Pro, 512GB, sealed new and never activated, with a full 1-year Apple warranty.' },
       specs: [], source: P.oct14a,
@@ -96,7 +96,7 @@ export const seed = {
     },
     {
       id: 'iphone-16-pro-max', category: 'phones', brand: 'Apple', name: { ar: 'iPhone 16 Pro Max', en: 'iPhone 16 Pro Max' },
-      image: 'assets/devices/iphone-16-pro-max.webp',
+      image: 'assets/devices/iphone-16-pro-max.jpg',
       tagline: { ar: 'مستعمل بس مش مستخدم · بحالة الجديد', en: 'Used but unused · like-new condition' },
       about: { ar: 'iPhone 16 Pro Max بسعة 256GB، مستعمل بس مش مستخدم وبحالة الجديد تماماً.', en: 'iPhone 16 Pro Max, 256GB, used but unused, in like-new condition.' },
       specs: [{ ar: 'شاشة 6.9 إنش', en: '6.9-inch display' }, { ar: 'شريحة A18 Pro', en: 'A18 Pro chip' }],
@@ -105,7 +105,7 @@ export const seed = {
     },
     {
       id: 'iphone-16', category: 'phones', brand: 'Apple', name: { ar: 'iPhone 16', en: 'iPhone 16' },
-      image: 'assets/devices/iphone-16.webp', offer: true,
+      image: 'assets/devices/iphone-16.jpg', offer: true,
       tagline: { ar: 'جديد مسكّر أو بحالة ممتازة كالجديد', en: 'Sealed new, or excellent like-new' },
       about: { ar: 'iPhone 16 بسعة 128GB: جديد مسكّر بالكرتونة No Active مع كفالة الوكيل سنة، أو مستعمل بحالة ممتازة كالجديد.', en: 'iPhone 16, 128GB: sealed new and never activated with a 1-year agent warranty, or used in excellent like-new condition.' },
       specs: [{ ar: 'شاشة 6.1 إنش', en: '6.1-inch display' }, { ar: 'شريحة A18', en: 'A18 chip' }],
@@ -117,7 +117,7 @@ export const seed = {
     },
     {
       id: 'iphone-15-pro-max', category: 'phones', brand: 'Apple', name: { ar: 'iPhone 15 Pro Max', en: 'iPhone 15 Pro Max' },
-      image: 'assets/devices/iphone-15-pro-max.webp',
+      image: 'assets/devices/iphone-15-pro-max.jpg',
       tagline: { ar: 'جديد ومسكّر بالكرتونة', en: 'Brand new, sealed' },
       about: { ar: 'عرض منشور لـ iPhone 15 Pro Max جديد ومسكّر بالكرتونة بسعر 659 دينار. السعة مكتوبة في البوستر «255GB»؛ تُركت السعة غير محددة لحين تأكيدها من تريو.', en: 'Published offer for a brand-new, sealed iPhone 15 Pro Max at JD 659. The poster reads “255GB”; storage is left unspecified until Trio confirms it.' },
       specs: [{ ar: 'شاشة 6.7 إنش', en: '6.7-inch display' }, { ar: 'شريحة A17 Pro', en: 'A17 Pro chip' }],
@@ -126,7 +126,7 @@ export const seed = {
     },
     {
       id: 'iphone-15', category: 'phones', brand: 'Apple', name: { ar: 'iPhone 15', en: 'iPhone 15' },
-      image: 'assets/devices/iphone-15.webp', offer: true,
+      image: 'assets/devices/iphone-15.jpg', offer: true,
       tagline: { ar: 'جديد مسكّر · كفالة الوكيل سنة', en: 'Sealed new · 1-year agent warranty' },
       about: { ar: 'iPhone 15 بسعة 128GB، جديد مسكّر بالكرتونة No Active، مع كفالة الوكيل لمدة سنة كاملة.', en: 'iPhone 15, 128GB, sealed new and never activated, with a full 1-year agent warranty.' },
       specs: [{ ar: 'شاشة 6.1 إنش', en: '6.1-inch display' }, { ar: 'شريحة A16 Bionic', en: 'A16 Bionic chip' }],
@@ -135,7 +135,7 @@ export const seed = {
     },
     {
       id: 'iphone-13', category: 'phones', brand: 'Apple', name: { ar: 'iPhone 13', en: 'iPhone 13' },
-      image: 'assets/devices/iphone-13.webp',
+      image: 'assets/devices/iphone-13.jpg',
       tagline: { ar: 'مستعمل بس مش مستخدم', en: 'Used but unused' },
       about: { ar: 'iPhone 13 بسعة 128GB، مستعمل بس مش مستخدم.', en: 'iPhone 13, 128GB, used but unused.' },
       specs: [{ ar: 'شاشة 6.1 إنش', en: '6.1-inch display' }, { ar: 'شريحة A15 Bionic', en: 'A15 Bionic chip' }],
@@ -144,7 +144,7 @@ export const seed = {
     },
     {
       id: 'galaxy-s26-plus', category: 'phones', brand: 'Samsung', name: { ar: 'Galaxy S26+', en: 'Galaxy S26+' },
-      image: 'assets/devices/galaxy-s26-plus.webp', featured: true,
+      image: 'assets/devices/galaxy-s26-plus.png', featured: true,
       tagline: { ar: 'جديد مسكّر بالكرتونة', en: 'Sealed new in box' },
       about: { ar: 'Samsung Galaxy S26+ بسعة 512GB ورام 12GB، جديد مسكّر بالكرتونة.', en: 'Samsung Galaxy S26+ with 512GB storage and 12GB RAM, sealed new in box.' },
       specs: [{ ar: 'شاشة 6.7 إنش', en: '6.7-inch display' }, { ar: 'رام 12GB', en: '12GB RAM' }],
@@ -173,7 +173,7 @@ export const seed = {
     },
     {
       id: 'apple-watch-ultra-3', category: 'wearables', brand: 'Apple', name: { ar: 'Apple Watch Ultra 3', en: 'Apple Watch Ultra 3' },
-      image: 'assets/devices/apple-watch-ultra-3.webp',
+      image: 'assets/devices/apple-watch-ultra-3.png',
       tagline: { ar: 'أقوى. أذكى. أبعد.', en: 'Tougher. Smarter. Further.' },
       about: { ar: 'Apple Watch Ultra 3 جديدة مسكّرة بالكرتونة.', en: 'Apple Watch Ultra 3, sealed new in box.' },
       specs: [{ ar: 'مقاس 49mm', en: '49mm case' }], source: P.oct7,
@@ -181,7 +181,7 @@ export const seed = {
     },
     {
       id: 'apple-watch-se-3', category: 'wearables', brand: 'Apple', name: { ar: 'Apple Watch SE 3', en: 'Apple Watch SE 3' },
-      image: 'assets/devices/apple-watch-se-3.webp',
+      image: 'assets/devices/apple-watch-se-3.png',
       tagline: { ar: 'أكثر من مجرد ساعة', en: 'More than a watch' },
       about: { ar: 'Apple Watch SE 3 جديدة مسكّرة بالكرتونة، بمقاسي 40mm و44mm.', en: 'Apple Watch SE 3, sealed new in box, in 40mm and 44mm.' },
       specs: [], source: P.oct7,
@@ -229,7 +229,7 @@ export const seed = {
     },
     {
       id: 'macbook-pro-14-m5-pro', category: 'computers', brand: 'Apple', name: { ar: 'MacBook Pro 14" M5 Pro', en: 'MacBook Pro 14" M5 Pro' },
-      image: 'assets/devices/macbook-pro.webp', imageNote: { ar: 'الصورة لـ MacBook Pro بنفس التصميم.', en: 'Pictured: MacBook Pro, same design.' },
+      image: 'assets/devices/macbook-pro-14-m5-pro.png',
       tagline: { ar: 'أداء احترافي.. بحجم مثالي', en: 'Pro performance, ideal size' },
       about: { ar: 'MacBook Pro بقياس 14 إنش مع شريحة M5 Pro، ذاكرة 24GB وسعة 1TB، جديد ومسكّر بالكرتونة. وفي نسخة MDM (جهاز مُدار) بسعر أقل.', en: '14-inch MacBook Pro with M5 Pro, 24GB memory and 1TB storage, brand new and sealed, plus a lower-priced MDM (managed device) unit.' },
       specs: [{ ar: 'شاشة Liquid Retina XDR بقياس 14 إنش', en: '14-inch Liquid Retina XDR display' }], source: P.oct1,
@@ -259,7 +259,7 @@ export const seed = {
     },
     {
       id: 'ipad-pro-m5', category: 'computers', brand: 'Apple', name: { ar: 'iPad Pro M5', en: 'iPad Pro M5' },
-      image: 'assets/devices/ipad-pro-m5.webp',
+      image: 'assets/devices/ipad-pro-m5.png',
       tagline: { ar: 'قوة الـ M5 · 11 و13 إنش', en: 'M5 power · 11 and 13 inch' },
       about: { ar: 'عروض منشورة لـ iPad Pro مع شريحة M5 بقياسي 11 و13 إنش، جديد No Active مع الكرتونة. خيار 11 إنش بسعة 512GB غير معروض هنا لتعارض السعر بين صور المنشور؛ أكّده مباشرة مع تريو.', en: 'Published offers for iPad Pro with M5 in 11-inch and 13-inch, new and never activated, with box. The 11-inch/512GB option is omitted because its price conflicts across the post’s images; confirm it directly with Trio.' },
       specs: [], source: P.aug20,

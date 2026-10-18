@@ -1,0 +1,146 @@
+{
+  "checked": "2026-10-18",
+  "replacements": [
+    {
+      "id": "iphone-13",
+      "image": "assets/devices/iphone-13.jpg",
+      "sourcePage": "https://www.apple.com/iphone/compare/?modelList=iphone-17-pro,iphone-16-pro-max,iphone-13",
+      "sourceImage": "https://www.apple.com/v/iphone/compare/am/images/overview/compare_iphone13_midnight__dc2w8cyhc9iu_large_2x.jpg",
+      "format": "JPEG",
+      "width": 612,
+      "height": 760,
+      "sha256": "d5d6c7542668c5a72e0ac050d4239bc809b67cf8135852f4099bb04130090fd9"
+    },
+    {
+      "id": "iphone-15",
+      "image": "assets/devices/iphone-15.jpg",
+      "sourcePage": "https://www.apple.com/iphone/compare/?modelList=iphone-17-pro,iphone-16-pro-max,iphone-13",
+      "sourceImage": "https://www.apple.com/v/iphone/compare/am/images/overview/compare_iphone15_blue__cq4qefddyl8i_large_2x.jpg",
+      "format": "JPEG",
+      "width": 612,
+      "height": 760,
+      "sha256": "3ef23f82466e379171b4f34713609724e692439ff07c934bca638bd8f8229aa3"
+    },
+    {
+      "id": "iphone-15-pro-max",
+      "image": "assets/devices/iphone-15-pro-max.jpg",
+      "sourcePage": "https://www.apple.com/iphone/compare/?modelList=iphone-17-pro,iphone-16-pro-max,iphone-13",
+      "sourceImage": "https://www.apple.com/v/iphone/compare/am/images/overview/compare_iphone15_pro_max_natural_titanium__byvhspupwiuq_large_2x.jpg",
+      "format": "JPEG",
+      "width": 612,
+      "height": 760,
+      "sha256": "90e8153bc4ca2dc845fd9224b2b416cca68bd8bc6da305935dfc75044f0dcff3"
+    },
+    {
+      "id": "iphone-16",
+      "image": "assets/devices/iphone-16.jpg",
+      "sourcePage": "https://www.apple.com/iphone/compare/?modelList=iphone-17-pro,iphone-16-pro-max,iphone-13",
+      "sourceImage": "https://www.apple.com/v/iphone/compare/am/images/overview/compare_iphone16_ultramarine__sr260qois4am_large_2x.jpg",
+      "format": "JPEG",
+      "width": 612,
+      "height": 760,
+      "sha256": "4244f2d2def929202abad73386249e4bc0f14ffb236b386cc233ab026843fbec"
+    },
+    {
+      "id": "iphone-16-pro",
+      "image": "assets/devices/iphone-16-pro.jpg",
+      "sourcePage": "https://www.apple.com/iphone/compare/?modelList=iphone-17-pro,iphone-16-pro-max,iphone-13",
+      "sourceImage": "https://www.apple.com/v/iphone/compare/am/images/overview/compare_iphone16_pro_desert_titanium__ftixjyyve6qi_large_2x.jpg",
+      "format": "JPEG",
+      "width": 612,
+      "height": 760,
+      "sha256": "d1440d9c9cd28ac8327de82ae28244c589de0e9bace9a6213362e007394a44c7"
+    },
+    {
+      "id": "iphone-16-pro-max",
+      "image": "assets/devices/iphone-16-pro-max.jpg",
+      "sourcePage": "https://www.apple.com/iphone/compare/?modelList=iphone-17-pro,iphone-16-pro-max,iphone-13",
+      "sourceImage": "https://www.apple.com/v/iphone/compare/am/images/overview/compare_iphone16_pro_max_desert_titanium__f8058hcu01ua_large_2x.jpg",
+      "format": "JPEG",
+      "width": 612,
+      "height": 760,
+      "sha256": "51b164486225ccbd9d91b04a8d8711eb2074561c3d29c304f687ebcee8c66a4e"
+    },
+    {
+      "id": "iphone-17-pro",
+      "image": "assets/devices/iphone-17-pro.jpg",
+      "sourcePage": "https://www.apple.com/iphone/compare/?modelList=iphone-17-pro,iphone-16-pro-max,iphone-13",
+      "sourceImage": "https://www.apple.com/v/iphone/compare/am/images/overview/compare_iphone17_pro_cosmic_orange__dm1qripnvq82_large_2x.jpg",
+      "format": "JPEG",
+      "width": 612,
+      "height": 760,
+      "sha256": "9ddbe9f2a21c270fc2db153c949d0d7b0a4b04472ba86c74fe18db1ddf1ab76e"
+    },
+    {
+      "id": "iphone-17e",
+      "image": "assets/devices/iphone-17e.png",
+      "sourcePage": "https://www.apple.com/shop/buy-iphone/iphone-17e",
+      "sourceImage": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-17e-finish-select-black-202603?wid=940&hei=1112&fmt=png-alpha&.v=WEw4Mm90aWNESFd6NGRURjZZeWczZE5sc2lRMHRoVncyYVNaOGVLMmg1VlBZazlJRGVEQWQwTTIwSTJ6bFFLRi8rcENYK21tdXRtQ1lhS2pYNUNvcElYaWdsK3I0azJyRXIvQzRLSzJla2o2Q1FLdUJpbzlycW1pNkwyajhBaDA",
+      "format": "PNG",
+      "width": 940,
+      "height": 1112,
+      "sha256": "f96ae9107ec8dc9f01d5aa72ddd29ba81388eb91e5fe087ab3fee8be405d4761"
+    },
+    {
+      "id": "galaxy-s26-plus",
+      "image": "assets/devices/galaxy-s26-plus.png",
+      "sourcePage": "https://www.samsung.com/us/smartphones/galaxy-s26-plus/buy/galaxy-s26-plus-512gb-unlocked-sku-sm-s947uzkexaa/",
+      "sourceImage": "https://images.samsung.com/is/image/samsung/p6pim/us/s2602/gallery/us-galaxy-s26-s947-sm-s947uzkexaa-550994823",
+      "format": "PNG",
+      "width": 1920,
+      "height": 1280,
+      "sha256": "b10e8bfc77fd4ff8edfeba9f0b2dbcd92b77c80ad7237c16d24ad30df091103d"
+    },
+    {
+      "id": "ipad-pro-m5",
+      "image": "assets/devices/ipad-pro-m5.png",
+      "sourcePage": "https://support.apple.com/en-us/125406",
+      "sourceImage": "https://cdsassets.apple.com/live/7WUAS350/images/tech-specs/ipad-pro-11-inch-m5.png",
+      "format": "PNG",
+      "width": 1000,
+      "height": 1000,
+      "sha256": "cab0551fea614d15c09596d1c003de801f53f8b8f880c036cf4ac02a50c6ea64"
+    },
+    {
+      "id": "apple-watch-ultra-3",
+      "image": "assets/devices/apple-watch-ultra-3.png",
+      "sourcePage": "https://support.apple.com/en-us/125095",
+      "sourceImage": "https://cdsassets.apple.com/live/7WUAS350/images/tech-specs/apple-watch-ultra-3-hero.png",
+      "format": "PNG",
+      "width": 1000,
+      "height": 1000,
+      "sha256": "9adb524f9a99e722a8502b732a1a41632449c88b4bbc05da6ca7d97ac486a661"
+    },
+    {
+      "id": "apple-watch-se-3",
+      "image": "assets/devices/apple-watch-se-3.png",
+      "sourcePage": "https://www.apple.com/shop/buy-watch/apple-watch-se",
+      "sourceImage": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/watch-compare-se-3-202609?wid=520&hei=520&fmt=png-alpha&.v=eEpjZGlsbzI4YmtuR2pKQXNDTzZ5ekhaamlqcFJZSks4dDNjRlpIWmZyMkNwenZmdENrN1NaTUE5TldXRk5lalB3a3pOZFM1cm5iZlQxd0NvYVFSTTE4UVZLWHpaNTZzV1BXaXNXYnlOUG8",
+      "format": "PNG",
+      "width": 520,
+      "height": 520,
+      "sha256": "80cfa85c55dac8ecbef105dd74ec56d5564068ca1424fbc1c44e697ef447aea2"
+    },
+    {
+      "id": "macbook-pro-14-m5-pro",
+      "image": "assets/devices/macbook-pro-14-m5-pro.png",
+      "sourcePage": "https://support.apple.com/en-us/126318",
+      "sourceImage": "https://cdsassets.apple.com/live/7WUAS350/images/tech-specs/macbook-pro-14-inch-m5-pro-m5-max.png",
+      "format": "PNG",
+      "width": 1000,
+      "height": 1000,
+      "sha256": "a44a59bfaba7794e3dfe502f53c1ffb5c38c521b57330a986835b91bf111d90c"
+    }
+  ],
+  "removedUnreferencedImages": [
+    "assets/devices/iphone-15-pro-max.webp",
+    "assets/devices/iphone-16.webp",
+    "assets/devices/apple-watch-ultra-3.webp",
+    "assets/devices/galaxy-s26-plus.webp",
+    "assets/devices/ipad-pro-m5.webp",
+    "assets/devices/iphone-13.webp",
+    "assets/devices/iphone-16-pro-max.webp",
+    "assets/devices/iphone-15.webp",
+    "assets/devices/apple-watch-se-3.webp"
+  ]
+}
