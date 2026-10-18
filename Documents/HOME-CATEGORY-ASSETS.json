@@ -1,0 +1,19 @@
+{
+  "checked": "2026-10-18",
+  "purpose": "Home page accessories category illustration only. Does not assert product availability or price.",
+  "assets": [
+    {
+      "id": "airpods-pro",
+      "image": "assets/categories/airpods-pro.png",
+      "sourcePage": "https://support.apple.com/en-us/125135",
+      "sourceImage": "https://cdsassets.apple.com/live/7WUAS350/images/tech-specs/airpods-pro-3-hero.png",
+      "model": "AirPods Pro 3",
+      "format": "PNG",
+      "width": 1000,
+      "height": 1000,
+      "bytes": 181660,
+      "sha256": "c30e6be1672f0febe47c3de101444fefcff84e1825026e2c4ecb686fa4c75a8e",
+      "transformation": "None. Original official Apple PNG."
+    }
+  ]
+}

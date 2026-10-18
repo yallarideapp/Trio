@@ -37,3 +37,12 @@ This release replaces the source/date/disclaimer sections described above with r
 - The Pages checks now reject empty paths, missing files, truncated PNG/JPEG/WebP containers, and images outside the expected dimensions. All 48 bilingual product renders are checked for the absence of name-only image placeholders.
 - Browser catalog inspection loaded all 24 device images successfully, with nonzero natural dimensions and no placeholders. Phones, watches, laptops and tablets were visually checked for complete edges and clean backgrounds.
 - Mobile checks covered the iPhone 17e product page and Arabic home at 390px, the Arabic catalog at 320px, and the English desktop catalog at 1280px. Checked pages have no horizontal document overflow.
+
+## Mobile storefront refresh — 18 October 2026
+
+- Mobile home now puts search and device categories first, uses a clean white photo stage, and shows offers earlier. Laptop/tablet and watch/AirPods compositions appear in both the home showcase and category cards; they link to their categories. The AirPods illustration does not add a product, price or availability claim.
+- Catalog filters collapse into a labeled native disclosure on phones and stay visible on tablets/desktops. Active filter counts remain visible when collapsed. On the 320px Arabic catalog, the first device photo starts around 301px from the top, with no horizontal document overflow.
+- English home search for Samsung returns both Samsung phones. Ascending price sorting puts S25 FE first. Arabic Huawei filtering returns one watch; the filter indicator updates. Favorites persist through page navigation and reload.
+- Mobile device pages show a fixed selected-price/Add-to-bag bar. Selecting the retained MacBook 48GB/1TB option updates the bar to JD2549 and adds that exact option to the bag. Removal works. The bar replaces the bottom navigation on device pages; the bag remains accessible in the header.
+- Checked Arabic/English phone layouts at 320px and 390px, the tablet catalog at 768px, and desktop catalog/home at 1280px. Catalog columns remain 2/3/4, all 24 catalog images load, and checked pages have no horizontal overflow. Samsung's photo fits the shorter mobile detail stage without clipping. Both new home photo combinations were visually checked.
+- Safe-area padding is included in the fixed bar and toast offset. Browser testing uses Chromium; physical iPhone/Android and iPhone safe-area rendering were not available.

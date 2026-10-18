@@ -28,7 +28,7 @@ const words = {
     collection: 'تشكيلة تريو', shopIntro: 'تصفّح الأجهزة وقارن المواصفات والسعات والحالات.', offersTitle: 'عروض تريو', offersIntro: 'اكتشف العروض واختر الجهاز اللي بناسبك.',
     search: 'ابحث عن جهاز', searchPlaceholder: 'اسم الجهاز أو الماركة…', brand: 'الماركة', allBrands: 'كل الماركات', sort: 'الترتيب', featured: 'الترتيب المقترح',
     priceLow: 'السعر: من الأقل', priceHigh: 'السعر: من الأعلى', nameSort: 'حسب الاسم', condAll: 'كل الحالات', condNew: 'جديد', condUsed: 'مستعمل',
-    clear: 'امسح البحث والفلاتر', noResults: 'ما لقينا أجهزة بهالبحث.', noResultsText: 'جرّب كلمة ثانية أو امسح الفلاتر.',
+    filters: 'فلترة وترتيب', clear: 'امسح البحث والفلاتر', noResults: 'ما لقينا أجهزة بهالبحث.', noResultsText: 'جرّب كلمة ثانية أو امسح الفلاتر.',
     savedIntro: 'الأجهزة اللي عجبتك، كلها بمكان واحد.', noSaved: 'لسه ما حفظت أجهزة.', noSavedText: 'اضغط القلب على أي جهاز ليرجع يظهر هون.',
     details: 'المواصفات التقنية', configuration: 'التهيئة', condition: 'الحالة', warranty: 'الكفالة', options: 'الخيارات', related: 'من نفس القسم', backCategory: 'كل أجهزة القسم',
     askWhatsapp: 'اسأل على واتساب', call: 'اتصل بتريو', ask: 'اسألنا على إنستغرام', source: 'شوف المنشور على إنستغرام', imageCard: 'صورة الجهاز قريباً',
@@ -64,7 +64,7 @@ const words = {
     collection: 'THE TRIO COLLECTION', shopIntro: 'Explore devices and compare specifications, storage and condition.', offersTitle: 'Trio offers', offersIntro: 'Explore offers and find your next device.',
     search: 'Search devices', searchPlaceholder: 'Device name or brand…', brand: 'Brand', allBrands: 'All brands', sort: 'Sort', featured: 'Featured',
     priceLow: 'Price: low to high', priceHigh: 'Price: high to low', nameSort: 'Name A–Z', condAll: 'Any condition', condNew: 'New', condUsed: 'Used',
-    clear: 'Clear search and filters', noResults: 'No devices match this search.', noResultsText: 'Try another word or clear the filters.',
+    filters: 'Filters', clear: 'Clear search and filters', noResults: 'No devices match this search.', noResultsText: 'Try another word or clear the filters.',
     savedIntro: 'The devices you like, all in one place.', noSaved: 'Nothing saved yet.', noSavedText: 'Tap the heart on a device to save it here.',
     details: 'Technical specifications', configuration: 'Configuration', condition: 'Condition', warranty: 'Warranty', options: 'Options', related: 'More in this category', backCategory: 'Back to category',
     askWhatsapp: 'Ask on WhatsApp', call: 'Call Trio', ask: 'Ask us on Instagram', source: 'See the post on Instagram', imageCard: 'Photo coming soon',
@@ -169,11 +169,23 @@ function heroProduct() {
   const list = products();
   return list.find((p) => p.category === state.heroCategory && p.featured && imageSrc(p)) || list.find((p) => p.category === state.heroCategory && imageSrc(p)) || list[0];
 }
+function categoryComposition(id, { eager = false } = {}) {
+  const pictures = id === 'computers'
+    ? [['assets/devices/macbook-pro.webp', 'MacBook Pro'], ['assets/devices/ipad-pro-m5.png', 'iPad Pro']]
+    : id === 'wearables'
+      ? [['assets/devices/apple-watch-se-3.png', 'Apple Watch'], ['assets/categories/airpods-pro.png', 'AirPods']]
+      : null;
+  if (!pictures) return '';
+  return `<span class="category-composition ${id}">${pictures.map(([src, alt], index) => `<img class="composition-${index ? 'secondary' : 'primary'}" src="${src}" alt="${alt}" loading="${eager ? 'eager' : 'lazy'}" decoding="async" draggable="false">`).join('')}</span>`;
+}
 function heroShowcase() {
   const product = heroProduct();
   if (!product) return '';
   const low = fromPrice(product);
-  return `<a class="hero-product" href="${productUrl(product)}" aria-label="${esc(`${t('view')}: ${L(product.name)}`)}"><div class="device-media hero-device">${media(product, { eager: true })}</div><div class="hero-product-caption"><div><p class="product-brand" dir="ltr">${esc(product.brand)}</p><p class="hero-product-name" dir="auto">${esc(L(product.name))}</p></div>${low !== null ? `<span class="hero-price"><small>${esc(t('from'))}</small> <bdi>${esc(money(low))}</bdi></span>` : ''}</div></a><div class="hero-tabs" role="group" aria-label="${esc(t('heroChoose'))}">${categoryIds().map((id) => `<button type="button" data-hero-category="${esc(id)}" aria-pressed="${id === state.heroCategory}">${esc(categoryName(id))}</button>`).join('')}</div>`;
+  const composition = categoryComposition(state.heroCategory, { eager: true });
+  const title = composition ? categoryName(state.heroCategory) : L(product.name);
+  const caption = composition ? `<span class="hero-price">${arrow}</span>` : low !== null ? `<span class="hero-price"><small>${esc(t('from'))}</small> <bdi>${esc(money(low))}</bdi></span>` : '';
+  return `<a class="hero-product" href="${composition ? categoryUrl(state.heroCategory) : productUrl(product)}" aria-label="${esc(`${composition ? t('browse') : t('view')}: ${title}`)}"><div class="device-media hero-device">${composition || media(product, { eager: true })}</div><div class="hero-product-caption"><div><p class="product-brand" dir="ltr">${esc(composition ? 'TRIO COLLECTION' : product.brand)}</p><p class="hero-product-name" dir="auto">${esc(title)}</p></div>${caption}</div></a><div class="hero-tabs" role="group" aria-label="${esc(t('heroChoose'))}">${categoryIds().map((id) => `<button type="button" data-hero-category="${esc(id)}" aria-pressed="${id === state.heroCategory}">${esc(categoryName(id))}</button>`).join('')}</div>`;
 }
 function offersRow(list) {
   return `<div class="offer-row" data-scroller><div class="offer-track">${list.map((product) => `<div class="offer-slide">${productCard(product)}</div>`).join('')}</div><div class="row-controls" aria-hidden="true"><button type="button" class="row-button" data-scroll="-1" tabindex="-1">${icon('chevron')}</button><button type="button" class="row-button is-next" data-scroll="1" tabindex="-1">${icon('chevron')}</button></div></div>`;
@@ -187,10 +199,10 @@ function renderHome() {
     const inCat = list.filter((p) => p.category === id);
     const rep = inCat.find((p) => p.featured && imageSrc(p)) || inCat.find((p) => imageSrc(p)) || inCat[0];
     const lows = inCat.map(fromPrice).filter((n) => n !== null);
-    return `<a class="category-card" href="${categoryUrl(id)}"><div class="category-picture device-media">${media(rep)}</div><h3>${esc(categoryName(id))}</h3><span class="category-count">${esc(t('count')(inCat.length))}${lows.length ? ` · ${esc(t('from'))} <bdi>${esc(money(Math.min(...lows)))}</bdi>` : ''}</span></a>`;
+    return `<a class="category-card" href="${categoryUrl(id)}"><div class="category-picture device-media">${categoryComposition(id) || media(rep)}</div><h3>${esc(categoryName(id))}</h3><span class="category-count">${esc(t('count')(inCat.length))}${lows.length ? ` · ${esc(t('from'))} <bdi>${esc(money(Math.min(...lows)))}</bdi>` : ''}</span></a>`;
   }).join('');
   const trust = t('trust').map(([title, text], i) => `<li class="trust-item"><span class="trust-icon" aria-hidden="true">${icon(['search', 'box', 'heart', 'swap'][i])}</span><span><strong>${esc(title)}</strong><small>${esc(text)}</small></span></li>`).join('');
-  return `<section class="hero"><div class="container hero-grid"><div class="hero-copy"><h1><span>${esc(t('heroLine1'))}</span> <span>${esc(t('heroLine2'))}</span></h1><div class="hero-buttons"><a class="button button-dark" href="#/offers">${esc(t('heroOffers'))}${arrow}</a><a class="button button-outline" href="#/shop">${esc(t('browse'))}</a></div></div><div id="hero-showcase" class="hero-showcase">${heroShowcase()}</div></div></section>
+  return `<section class="hero"><div class="container hero-grid"><div class="hero-copy"><h1><span>${esc(t('heroLine1'))}</span> <span>${esc(t('heroLine2'))}</span></h1><form id="home-search-form" class="home-search" role="search">${icon('search')}<label class="sr-only" for="home-search">${esc(t('search'))}</label><input id="home-search" name="q" type="search" placeholder="${esc(t('searchPlaceholder'))}" autocomplete="off" enterkeyhint="search"></form><div class="hero-buttons"><a class="button button-dark" href="#/offers">${esc(t('heroOffers'))}${arrow}</a><a class="button button-outline" href="#/shop">${esc(t('browse'))}</a></div></div><div id="hero-showcase" class="hero-showcase">${heroShowcase()}</div></div></section>
   <div class="home-content">
     ${offers.length ? `<section class="container offers-section">${sectionHeading(t('offersTitle'), '#/offers', t('offersAll'))}${offersRow(offers)}</section>` : ''}
     <section class="container"><ul class="trust-strip">${trust}</ul></section>
@@ -249,14 +261,20 @@ function renderCatalog() {
   const opt = (value, label, current) => `<option value="${value}"${current === value ? ' selected' : ''}>${esc(label)}</option>`;
   return `<div class="container page-shell catalog-page"><div class="page-heading"><p class="eyebrow">${esc(t('collection'))}</p><h1>${esc(heading)}</h1><p class="page-intro">${esc(intro)}</p></div>${categoryTabs()}
   <div class="catalog-controls"><label class="search-field">${icon('search')}<span class="sr-only">${esc(t('search'))}</span><input id="product-search" type="search" value="${esc(state.query)}" placeholder="${esc(t('searchPlaceholder'))}" autocomplete="off"></label>
-  <label class="control-field"><span class="sr-only">${esc(t('brand'))}</span><select id="brand-filter">${opt('all', t('allBrands'), state.brand)}${brands.map((b) => opt(b, b, state.brand)).join('')}</select></label>
-  <label class="control-field"><span class="sr-only">${esc(t('condition'))}</span><select id="cond-filter">${opt('all', t('condAll'), state.cond)}${opt('new', t('condNew'), state.cond)}${opt('used', t('condUsed'), state.cond)}</select></label>
-  <label class="control-field"><span class="sr-only">${esc(t('sort'))}</span><select id="sort-order">${opt('featured', t('featured'), state.sort)}${opt('price-asc', t('priceLow'), state.sort)}${opt('price-desc', t('priceHigh'), state.sort)}${opt('name', t('nameSort'), state.sort)}</select></label></div>
+  <details class="catalog-filter-panel"${window.matchMedia?.('(min-width: 641px)').matches ? ' open' : ''}><summary class="catalog-filter-summary">${icon('swap')}<span>${esc(t('filters'))}</span></summary><div class="catalog-filter-fields">
+  <label class="control-field"><span>${esc(t('brand'))}</span><select id="brand-filter">${opt('all', t('allBrands'), state.brand)}${brands.map((b) => opt(b, b, state.brand)).join('')}</select></label>
+  <label class="control-field"><span>${esc(t('condition'))}</span><select id="cond-filter">${opt('all', t('condAll'), state.cond)}${opt('new', t('condNew'), state.cond)}${opt('used', t('condUsed'), state.cond)}</select></label>
+  <label class="control-field"><span>${esc(t('sort'))}</span><select id="sort-order">${opt('featured', t('featured'), state.sort)}${opt('price-asc', t('priceLow'), state.sort)}${opt('price-desc', t('priceHigh'), state.sort)}${opt('name', t('nameSort'), state.sort)}</select></label></div></details></div>
   <div id="catalog-results"></div></div>`;
 }
 function updateResults() {
   const box = $('#catalog-results');
   if (!box) return;
+  const activeFilters = [state.brand !== 'all', state.cond !== 'all', state.sort !== 'featured'].filter(Boolean).length;
+  const panel = $('.catalog-filter-panel');
+  panel?.classList.toggle('has-filters', activeFilters > 0);
+  const filterLabel = $('.catalog-filter-summary span');
+  if (filterLabel) filterLabel.textContent = `${t('filters')}${activeFilters ? ` · ${num(activeFilters)}` : ''}`;
   const rows = filteredProducts();
   const filtered = Boolean(state.query || state.brand !== 'all' || state.cond !== 'all' || state.sort !== 'featured');
   const emptySaved = state.route.name === 'saved' && !state.saved.size;
@@ -289,7 +307,7 @@ function renderDetail(id) {
   <div class="detail-copy"><div class="detail-top"><div><p class="product-brand" dir="ltr">${esc(product.brand)}</p><h1 dir="auto">${esc(L(product.name))}</h1></div>${saveButton(product, 'detail-save-button')}</div><p class="detail-tagline">${esc(L(specification(product)?.summary))}</p>
   ${chips}
   <div class="detail-buy" id="detail-buy"><p class="detail-price"><bdi>${esc(canBuy ? money(toFils(variant.price)) : t('soldOut'))}</bdi></p>${variant.storage ? `<p class="detail-variant" dir="auto">${esc(variant.storage)}</p>` : ''}${rows ? `<ul class="spec-list">${rows}</ul>` : ''}
-  <div class="detail-actions">${canBuy ? `<button type="button" class="button button-primary button-wide" data-add="${esc(variantId(product.id, variant.key))}">${icon('bag')}${esc(t('add'))}</button>` : `<span class="button button-wide is-disabled">${esc(t('unavailable'))}</span>`}</div></div>
+  <div class="detail-actions">${canBuy ? `<span class="mobile-buy-price"><bdi>${esc(money(toFils(variant.price)))}</bdi></span><button type="button" class="button button-primary button-wide" data-add="${esc(variantId(product.id, variant.key))}">${icon('bag')}${esc(t('add'))}</button>` : `<span class="button button-wide is-disabled">${esc(t('unavailable'))}</span>`}</div></div>
   ${renderSpecifications(product, variant)}</div></div>
   ${related.length ? `<section class="related-section">${sectionHeading(t('related'), categoryUrl(product.category), t('backCategory'))}<div class="product-grid">${related.map(productCard).join('')}</div></section>` : ''}</div>`;
 }
@@ -491,6 +509,7 @@ function translateShell() {
 }
 function renderRoute({ focus = false } = {}) {
   state.route = readRoute();
+  document.body.dataset.route = state.route.name;
   state.category = state.route.category;
   const p = state.route.params;
   state.query = p.get('q') || ''; state.brand = p.get('brand') || 'all';
@@ -573,7 +592,7 @@ document.addEventListener('change', (event) => {
 });
 document.addEventListener('submit', (event) => {
   if (event.target.id === 'checkout-form') { event.preventDefault(); submitCheckout(event.target); }
-  if (event.target.id === 'header-search-form' || event.target.id === 'mobile-search-form') { event.preventDefault(); const q = (event.target.querySelector('input[type=search]')?.value || '').trim(); location.hash = `#/shop${q ? `?q=${encodeURIComponent(q)}` : ''}`; }
+  if (['header-search-form', 'mobile-search-form', 'home-search-form'].includes(event.target.id)) { event.preventDefault(); const q = (event.target.querySelector('input[type=search]')?.value || '').trim(); location.hash = `#/shop${q ? `?q=${encodeURIComponent(q)}` : ''}`; }
 });
 $('#language-toggle')?.addEventListener('click', () => { state.language = state.language === 'ar' ? 'en' : 'ar'; local.write('trio-language', state.language); translateShell(); renderRoute(); });
 $('#menu-toggle')?.addEventListener('click', () => setMenu($('#menu-toggle').getAttribute('aria-expanded') !== 'true'));
@@ -586,6 +605,7 @@ document.addEventListener('error', (event) => {
   img.replaceWith(card);
 }, true);
 window.addEventListener('hashchange', () => renderRoute({ focus: true }));
+window.matchMedia?.('(min-width: 641px)').addEventListener('change', (event) => { $('.catalog-filter-panel')?.toggleAttribute('open', event.matches); });
 window.addEventListener('storage', (event) => {
   if (event.key === 'trio-bag') { state.bag = loadBag(); updateCounts(); if (['bag', 'checkout'].includes(state.route.name)) renderRoute(); }
   if (event.key === 'trio-saved') { state.saved = new Set(local.read('trio-saved', [])); updateCounts(); updateSavedButtons(); }
