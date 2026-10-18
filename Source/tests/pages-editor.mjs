@@ -1,5 +1,6 @@
 // The Pages editor creates an explicit, portable browser preview. It must not
-// change an ordinary visitor's catalog or simulate authentication and checkout.
+// change an ordinary visitor's catalog. The owner demo has a separate local
+// checkout/order store; it never contacts the future shared backend.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -15,7 +16,7 @@ const copy = (value) => structuredClone(value);
 const errorIs = (code, status) => (error) => error.code === code && error.status === status;
 
 export async function verifyPagesEditor() {
-  const original = Object.fromEntries(['fetch', 'localStorage', 'location', 'FileReader'].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  const original = Object.fromEntries(['fetch', 'localStorage', 'location', 'FileReader', 'navigator'].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   const values = new Map();
   let reads = 0;
   let network = 0;
@@ -24,6 +25,7 @@ export async function verifyPagesEditor() {
   try {
     globalThis.fetch = () => { network++; throw new Error('The browser editor must not contact a backend'); };
     globalThis.location = { search: '' };
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { locks: { request: async (_name, _options, change) => change() } } });
     globalThis.localStorage = {
       getItem(key) { reads++; return values.get(key) ?? null; },
       setItem(key, value) { if (storageFull) throw new Error('QuotaExceededError'); values.set(key, String(value)); },
@@ -87,7 +89,7 @@ export async function verifyPagesEditor() {
       assert.equal(publicCatalog.source, 'seed');
       assert.deepEqual(publicCatalog.content.products, seed.products, 'ordinary visits retain the published device list');
       assert.equal(publicCatalog.content.settings.phone, seed.settings.phone, 'ordinary visits ignore edited contact details');
-      assert.equal(publicCatalog.content.settings.ordersOn, false);
+      assert.equal(publicCatalog.content.settings.ordersOn, true, 'owner demo checkout is available without publishing a draft');
       assert.equal(api.photoUrl(photo.id), '');
       assert.equal(reads, readsBefore, 'ordinary visits never read a stored browser preview');
     }
@@ -99,12 +101,12 @@ export async function verifyPagesEditor() {
     assert.equal(preview.content.products[0].variants[0].price, 123);
     assert.deepEqual(preview.content.products[0].technical, product.technical, 'explicit previews retain edited technical specifications');
     assert.equal(preview.content.settings.phone, draft.settings.phone);
-    assert.equal(preview.content.settings.ordersOn, false);
+    assert.equal(preview.content.settings.ordersOn, true, 'explicit previews also support the owner checkout demonstration');
     assert.equal(api.photoUrl(photo.id), photoData);
     assert.equal(api.photoUrl('missing-photo'), '');
     preview.content.products[0].name.en = 'Mutated load';
     assert.equal((await api.loadContent()).content.products[0].name.en, product.name.en, 'preview loads are independent copies');
-    await assert.rejects(api.placeOrder({}), errorIs('orders-off', 403), 'preview mode cannot place simulated orders');
+    await assert.rejects(api.placeOrder({}), 'invalid demo checkout is rejected');
 
     const exported = await pagesAdmin.exportDraft(draft);
     assert.equal(exported.format, 'trio-catalog-draft');
@@ -206,7 +208,8 @@ export async function verifyPagesEditor() {
     assert(!values.get(PREVIEW_KEY).includes(collisionData), 'subsequent saves still keep image bytes only in the photo bank');
 
     const localOrders = await verifyLocalOrders(api, values, (full) => { storageFull = full; });
-    verifyEditorViews((await pagesAdmin.content()).content, localOrders);
+    const demoOrders = await verifyDemoCheckoutOrders(api, values);
+    await verifyEditorViews((await pagesAdmin.content()).content, demoOrders, localOrders, api);
     assert.equal(network, 0, 'editing, previews, imports, exports, photos and local order records require no API calls');
     assert(![...values.keys()].some((key) => /session|password/.test(key)), 'the editor creates no simulated authentication records');
     console.log('Pages editor checks passed: isolated explicit previews, editable specs, version conflicts, portable photos, photo cleanup and collision isolation, validated imports, quota errors, reset, local orders, and bilingual editor views');
@@ -318,13 +321,42 @@ async function verifyLocalOrders(api, values, setStorageFull) {
   globalThis.location.search = '';
   const beforePublic = [...values];
   assert.equal((await api.loadContent()).source, 'seed');
-  await assert.rejects(api.placeOrder(payload), errorIs('orders-off', 403), 'public checkout remains disabled even when the admin has manual orders');
-  assert.deepEqual([...values], beforePublic, 'public browsing and rejected checkout cannot alter private local order records');
+  assert.equal((await api.loadContent()).content.settings.ordersOn, true, 'public owner demo checkout is enabled');
+  assert.equal((await api.demoOrders.orders()).orders.length, 0, 'earlier manual records do not appear as demo checkout orders');
+  assert.deepEqual([...values], beforePublic, 'public browsing cannot alter earlier manual order records');
   globalThis.location.search = '?preview=draft';
   return (await pagesAdmin.orders()).orders;
 }
 
-function verifyEditorViews(content, orders) {
+async function verifyDemoCheckoutOrders(api, values) {
+  globalThis.location.search = '';
+  const { content } = await api.loadContent();
+  const product = content.products.find((item) => !item.hidden && item.variants.some((variant) => !variant.soldOut && pricing.validPrice(variant.price)));
+  const variant = product.variants.find((item) => !item.soldOut && pricing.validPrice(item.price));
+  const lines = [{ id: pricing.variantId(product.id, variant.key), qty: 2 }];
+  const priced = pricing.priceLines(content, lines);
+  assert(priced.ok);
+  const legacy = values.get('trio-pages-orders-v1');
+  const result = await api.placeOrder({ token: '1234567890abcdef1234567890abcdef', lines, totalFils: priced.totalFils, customer: { name: 'Owner demo checkout', mobile: '0791234567', notes: 'From the storefront' }, fulfilment: 'pickup', lang: 'en', website: '', elapsedMs: 3500 });
+  assert.match(result.number, /^DEMO-\d+$/, 'demo checkout uses a clearly distinguishable order number');
+  assert.equal(result.totalFils, priced.totalFils);
+  let rows = (await api.demoOrders.orders()).orders;
+  const order = rows.find((row) => row.number === result.number);
+  assert(order, 'storefront checkout automatically appears in demo admin orders');
+  assert.equal(order.customer.name, 'Owner demo checkout');
+  assert.equal(order.lines[0].qty, 2);
+  assert.equal(order.lines[0].unitFils * 2, priced.totalFils);
+  assert.equal(values.get('trio-pages-orders-v1'), legacy, 'demo checkout never alters legacy manual records');
+  await api.demoOrders.updateOrder(order.number, { status: 'confirmed', note: 'Owner reviewed demo' });
+  rows = (await api.demoOrders.orders('confirmed')).orders;
+  assert.equal(rows.find((row) => row.number === order.number).note, 'Owner reviewed demo', 'demo admin updates status and notes');
+  const exported = await api.demoOrders.exportOrders();
+  assert(exported.orders.some((row) => row.number === order.number && row.status === 'confirmed'), 'demo export includes current checkout records');
+  globalThis.location.search = '?preview=draft';
+  return (await api.demoOrders.orders()).orders;
+}
+
+async function verifyEditorViews(content, orders, legacyOrders, api) {
   const root = { innerHTML: '' };
   const document = {
     querySelector: (selector) => selector === '#admin' ? root : null,
@@ -335,14 +367,15 @@ function verifyEditorViews(content, orders) {
     .replace(/^import[^\n]*\n/gm, '').replace(/\(async function start\(\) \{[\s\S]*$/, '');
   const context = vm.createContext({
     ...pricing, conditions, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications,
-    api: {}, pagesAdmin, MODE: 'pages', ApiError, local, withDefaults, document,
-    console, setTimeout, clearTimeout,
+    api, pagesAdmin, MODE: 'pages', ApiError, local, withDefaults, document,
+    window: { addEventListener() {} }, console, setTimeout, clearTimeout, setInterval() {},
   });
   vm.runInContext(source + '\n globalThis.ui = { state, render, setLanguage: (value) => { lang = value; } };', context);
   const { ui } = context;
   ui.state.draft = copy(content);
   ui.state.published = copy(content);
   ui.state.orders = copy(orders);
+  ui.state.legacyOrders = copy(legacyOrders);
   for (const language of ['ar', 'en']) {
     ui.setLanguage(language);
     for (const view of ['orders', 'devices', 'settings']) {
@@ -352,7 +385,7 @@ function verifyEditorViews(content, orders) {
       const html = root.innerHTML;
       assert.equal(document.documentElement.lang, language);
       assert.equal(document.documentElement.dir, language === 'ar' ? 'rtl' : 'ltr');
-      const localNotice = view === 'orders' ? (language === 'ar' ? 'خدمة الطلبات المشتركة غير متصلة' : 'Shared order service not connected') : (language === 'ar' ? 'معاينة في هذا المتصفح فقط' : 'Browser-only preview');
+      const localNotice = view === 'orders' ? (language === 'ar' ? 'عرض لصاحب المحل · في هذا المتصفح فقط' : 'Owner demo · this browser only') : (language === 'ar' ? 'معاينة في هذا المتصفح فقط' : 'Browser-only preview');
       assert(html.includes(localNotice), `${language}: editor explicitly labels browser-only changes`);
       assert(html.includes(language === 'ar' ? 'احفظ المعاينة' : 'Save preview'), `${language}: editor calls the action saving a preview`);
       assert(html.includes('href="../index.html?preview=draft#/"'), 'preview link opts into local changes');
@@ -361,11 +394,13 @@ function verifyEditorViews(content, orders) {
       assert(html.includes('data-view="orders"'), `${language}: local orders are reachable from the editor tabs`);
       assert(!/id="(?:sign-form|password-form|logout)"|name="ordersOn"/.test(html), `${language}: no authentication or public checkout controls are shown`);
       if (view === 'orders') {
-        assert(html.includes(language === 'ar' ? 'ستظهر طلبات العملاء هنا بعد ربط خدمة الطلبات المشتركة.' : 'Customer orders will appear here after the shared order service is connected.'), `${language}: the page explains what enables automatic customer orders`);
-        assert(html.includes(language === 'ar' ? 'هذا الموقع لا يستقبل طلبات إلكترونية حالياً.' : 'This website currently accepts no online orders.'), `${language}: Pages explains disabled online checkout`);
+        assert(html.includes(language === 'ar' ? 'تظهر طلبات تجربة الشراء هنا تلقائياً.' : 'Demo checkout orders appear here automatically.'), `${language}: the page explains automatic demo checkout orders`);
+        assert(html.includes(language === 'ar' ? 'لا تُرسل إلى المحل ولا تظهر في متصفحات أخرى.' : 'They are not sent to the store or shared with other browsers.'), `${language}: demo order boundaries remain clear`);
         assert(!html.includes('data-new-order') && !html.includes('id="new-order-form"'), `${language}: Pages cannot create records that look like customer checkout`);
         assert(html.includes('data-export-orders'), `${language}: existing browser records remain exportable`);
-        for (const order of orders) assert(html.includes(`data-open-order="${order.number}"`), `${language}: saved manual order is reachable`);
+        assert(html.includes('data-export-legacy-orders'), `${language}: old manual records have a separate export`);
+        for (const order of orders) assert(html.includes(`data-open-order="${order.number}"`), `${language}: storefront demo order is reachable`);
+        for (const order of legacyOrders) assert(!html.includes(`data-open-order="${order.number}"`), `${language}: old manual records are excluded from demo checkout orders`);
       }
     }
     ui.state.view = 'orders';
@@ -376,7 +411,7 @@ function verifyEditorViews(content, orders) {
     ui.state.orderOpen = null;
     ui.state.orders = [];
     ui.render();
-    assert(root.innerHTML.includes(language === 'ar' ? 'خدمة الطلبات المشتركة غير متصلة' : 'Shared order service not connected'), `${language}: an empty order page explains the disconnected shared service`);
+    assert(root.innerHTML.includes(language === 'ar' ? 'لا توجد طلبات تجريبية بعد.' : 'No demo orders yet.'), `${language}: an empty page invites a storefront checkout demonstration`);
     assert(!root.innerHTML.includes('data-new-order') && !root.innerHTML.includes('id="new-order-form"'), `${language}: an empty Pages order book offers no manual creation`);
     ui.state.orders = copy(orders);
     ui.state.view = 'devices';

@@ -10,6 +10,7 @@ import { verifyCatalogImages } from './images.mjs';
 import { verifyPagesEditor } from './pages-editor.mjs';
 import { verifyWorkerOrders } from './worker-orders.mjs';
 import { verifyCustomerAccountUI } from './customer-account-ui.mjs';
+import { verifyBrowserShop } from './browser-shop.mjs';
 import { priceLines, normaliseMobile, fromPrice, toFils, validPrice, MAX_QTY, MAX_LINES } from '../shared/pricing.js';
 import { conditions, notes, warranties } from '../shared/labels.js';
 
@@ -63,8 +64,8 @@ for (const [input, want] of [['0791234567', '0791234567'], ['٠٧٩١٢٣٤٥٦�
   ok(normaliseMobile(input) === want, `mobile ${input} -> ${want}`);
 }
 
-// Ordinary Pages visits must remain usable without a backend, and must never
-// save simulated orders or load a draft without an explicit preview selection.
+// Pages shopping works as an explicit browser demo, without contacting a backend
+// or loading a catalog draft unless a visitor selects its preview URL.
 const adapterPath = path.join(root, 'site/src/store.js');
 const adapterSource = readFileSync(adapterPath, 'utf8')
   .replace(/\b__MODE__\b/g, JSON.stringify('pages'))
@@ -73,32 +74,24 @@ const originalFetch = globalThis.fetch;
 const originalStorage = globalThis.localStorage;
 const originalLocation = Object.getOwnPropertyDescriptor(globalThis, 'location');
 let pagesNetwork = 0;
-let pagesStorage = 0;
+const pagesValues = new Map();
 try {
   globalThis.fetch = () => { pagesNetwork++; throw new Error('Pages must not call a backend'); };
   globalThis.location = { search: '' };
-  globalThis.localStorage = new Proxy({}, { get() { pagesStorage++; throw new Error('Pages must not read local content or orders'); } });
+  globalThis.localStorage = { getItem: (key) => pagesValues.get(key) ?? null, setItem: (key, value) => pagesValues.set(key, String(value)), removeItem: (key) => pagesValues.delete(key) };
   const { api, local, MODE, ApiError } = await import(`data:text/javascript;base64,${Buffer.from(adapterSource).toString('base64')}`);
   const loaded = await api.loadContent();
   ok(MODE === 'pages', 'Pages selects the catalog adapter');
-  ok(loaded.content.settings.ordersOn === false, 'Pages disables online ordering');
+  ok(loaded.content.settings.ordersOn === true, 'Pages enables browser demo checkout');
   ok(loaded.source === 'seed' && loaded.content.products.length === seed.products.length, 'Pages loads shipped content');
   ok(!Object.hasOwn(api, 'admin'), 'Pages does not expose demo or live admin');
-  ok(JSON.stringify(await api.account.session()) === JSON.stringify({ configured: false, signedIn: false, customer: null }), 'Pages explicitly reports customer accounts as unavailable');
-  for (const action of ['register', 'login', 'logout', 'profile', 'password', 'orders']) {
-    let unavailable = false;
-    try { await api.account[action]({}); }
-    catch (error) { unavailable = error instanceof ApiError && error.code === 'accounts-unavailable' && error.status === 503; }
-    ok(unavailable, `Pages customer ${action} cannot simulate a shared account`);
-  }
+  const session = await api.account.session();
+  ok(session.configured === true && session.demo === true && session.signedIn === false && session.customer === null, 'Pages exposes functional accounts clearly marked as a browser demo');
   ok(api.photoUrl('draft-photo') === '', 'Pages does not request backend photos');
   loaded.content.settings.phone = 'changed';
   ok((await api.loadContent()).content.settings.phone === seed.settings.phone, 'Pages returns a fresh content copy');
-  let rejected = false;
-  try { await api.placeOrder({ token: 'not-a-real-order' }); }
-  catch (error) { rejected = error instanceof ApiError && error.code === 'orders-off' && error.status === 403; }
-  ok(rejected, 'Pages rejects orders explicitly');
-  ok(pagesNetwork === 0 && pagesStorage === 0, 'Pages neither contacts an API nor reads/writes demo orders');
+  ok(pagesNetwork === 0, 'Pages shopping and accounts contact no live APIs');
+  ok(![...pagesValues.keys()].some((key) => /^trio-demo-|^trio-pages-orders/.test(key)), 'Pages does not load the legacy demo or manual order books');
   let savedPreference = 'en';
   globalThis.localStorage = { getItem: () => savedPreference };
   ok(local.read('trio-language') === 'en', 'keeps legacy raw English preference');
@@ -153,7 +146,7 @@ if (process.argv.includes('--pages')) {
     ok(!adminBundle.includes('/api/'), 'Pages editor has no live backend endpoints');
     ok(!/trio-demo-(?:content|orders|photos|counter)/.test(adminBundle), 'Pages editor keeps the legacy demo order adapter out of the build');
     ok(adminBundle.includes('Browser-only preview') && adminBundle.includes('Save preview'), 'Pages editor clearly labels browser-only previews');
-    ok(adminBundle.includes('Shared order service not connected') && adminBundle.includes('Customer orders will appear here after the shared order service is connected.'), 'Pages explains how customer orders are enabled');
+    ok(adminBundle.includes('Owner demo') && adminBundle.includes('this browser only') && adminBundle.includes('Demo checkout orders appear here automatically. They are not sent to the store or shared with other browsers.'), 'Pages labels owner demo orders and explains automatic local checkout');
     ok(!adminBundle.includes('data-new-order') && !adminBundle.includes('new-order-form'), 'Pages provides no manual order creation form');
   }
   const adminPath = path.join(website, 'admin/index.html');
@@ -172,6 +165,7 @@ try { verifyStorefront(); } catch (error) { ok(false, `storefront: ${error.messa
 try { await verifyPagesEditor(); } catch (error) { ok(false, `Pages editor: ${error.stack || error.message}`); }
 try { await verifyWorkerOrders(); } catch (error) { ok(false, `Worker integration: ${error.stack || error.message}`); }
 try { await verifyCustomerAccountUI(); } catch (error) { ok(false, `Customer account UI: ${error.stack || error.message}`); }
+try { await verifyBrowserShop(); } catch (error) { ok(false, `Browser demo shop: ${error.stack || error.message}`); }
 
 console.log(failed ? `\n${failed} check(s) failed` : 'all checks passed');
 process.exit(failed ? 1 : 0);

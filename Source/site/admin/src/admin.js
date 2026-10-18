@@ -7,6 +7,7 @@ import deviceSpecifications from '../../../shared/device-specs.js';
 const IS_PAGES = MODE === 'pages';
 const USE_TECHNICAL = MODE !== 'demo';
 const adminApi = IS_PAGES ? pagesAdmin : api.admin;
+const orderApi = IS_PAGES ? api.demoOrders : adminApi;
 const draftKey = IS_PAGES ? 'trio-pages-editor-draft-v1' : 'trio-admin-draft';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -69,14 +70,19 @@ const AR = {
   'Previous browser records': 'سجلات المتصفح السابقة', 'These earlier records exist only in this browser. They are separate from customer checkout orders.': 'هذه السجلات السابقة موجودة في هذا المتصفح فقط، وهي منفصلة عن طلبات العملاء الإلكترونية.',
   'Export previous records': 'تصدير السجلات السابقة', 'Customer orders': 'طلبات العملاء', 'Customer checkout orders arrive here automatically. This list refreshes every 15 seconds while the panel is visible.': 'تصل طلبات العملاء من الموقع إلى هنا تلقائياً. تتحدث القائمة كل 15 ثانية أثناء عرض اللوحة.',
   'Load older orders': 'تحميل الطلبات الأقدم',
+  'Owner demo · this browser only': 'عرض لصاحب المحل · في هذا المتصفح فقط',
+  'Demo checkout orders appear here automatically. They are not sent to the store or shared with other browsers.': 'تظهر طلبات تجربة الشراء هنا تلقائياً. لا تُرسل إلى المحل ولا تظهر في متصفحات أخرى.',
+  'Demo orders': 'طلبات العرض التجريبي', 'Save demo order': 'احفظ الطلب التجريبي', 'Demo order saved.': 'تم حفظ الطلب التجريبي.', 'Demo note': 'ملاحظة تجريبية',
+  'No demo orders yet.': 'لا توجد طلبات تجريبية بعد.', 'Place an order through the storefront to demonstrate checkout.': 'أكمل طلباً من واجهة الموقع لتجربة الشراء.', 'Open demo store': 'افتح متجر العرض',
+  'Export demo orders': 'تصدير الطلبات التجريبية', 'Demo orders exported from this browser.': 'تم تصدير طلبات العرض من هذا المتصفح.',
 };
 let lang = local.read('trio-admin-lang') === 'en' ? 'en' : 'ar';
-const t = (s, vars = {}) => (lang === 'ar' ? AR[s] || s : s).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+const t = (s, vars = {}) => (lang === 'ar' ? AR[s] || s : ({ new: 'New', confirmed: 'Confirmed', out: 'Out for delivery', delivered: 'Delivered', cancelled: 'Cancelled' }[s] || s)).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
 const L = (o) => (o && typeof o === 'object' ? o[lang] || o.ar || o.en || '' : String(o || ''));
 const money = (jd) => formatJD(toFils(jd), lang);
 
 const initialView = IS_PAGES ? ({ '#orders': 'orders', '#settings': 'settings' }[globalThis.location?.hash] || 'devices') : 'orders';
-const state = { view: initialView, signedIn: IS_PAGES, setup: true, published: null, version: 0, draft: null, dirty: false, orders: [], orderFilter: '', orderOpen: null, orderQuery: '', orderBefore: null, editing: null, category: 'all', query: '', message: '' };
+const state = { view: initialView, signedIn: IS_PAGES, setup: true, published: null, version: 0, draft: null, dirty: false, orders: [], legacyOrders: [], orderFilter: '', orderOpen: null, orderQuery: '', orderBefore: null, editing: null, category: 'all', query: '', message: '' };
 
 function saveDraft() {
   state.dirty = JSON.stringify(state.draft) !== JSON.stringify(state.published);
@@ -138,11 +144,13 @@ function signInView() {
 const fmtDate = (iso) => { try { return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-JO' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Amman' }).format(new Date(iso)); } catch { return iso; } };
 const fils = (n) => formatJD(n, lang);
 function localOrdersNotice() {
-  return `<aside class="preview-notice order-notice"><div><strong>${esc(t('Shared order service not connected'))}</strong><p>${esc(t('Customer orders will appear here after the shared order service is connected.'))}</p><p>${esc(t('This website currently accepts no online orders. Customer checkout and automatic order delivery to this panel require the shared service.'))}</p></div></aside>`;
+  return `<aside class="preview-notice order-notice"><div><strong>${esc(t('Owner demo · this browser only'))}</strong><p>${esc(t('Demo checkout orders appear here automatically. They are not sent to the store or shared with other browsers.'))}</p></div></aside>`;
+}
+function legacyOrdersExport() {
+  return IS_PAGES && state.legacyOrders.length ? `<details class="card"><summary>${esc(t('Previous browser records'))} (${state.legacyOrders.length})</summary><p class="muted">${esc(t('These earlier records exist only in this browser. They are separate from customer checkout orders.'))}</p><div class="btns"><button type="button" class="btn ghost" data-export-legacy-orders>${esc(t('Export previous records'))}</button></div></details>` : '';
 }
 function ordersView() {
   const notice = IS_PAGES ? localOrdersNotice() : MODE === 'live' ? `<aside class="preview-notice order-notice"><div><strong>${esc(t('Customer orders'))}</strong><p>${esc(t('Customer checkout orders arrive here automatically. This list refreshes every 15 seconds while the panel is visible.'))}</p></div></aside>` : '';
-  if (IS_PAGES && !state.orders.length) return `${notice}<div class="head"><h1>${esc(t('Orders'))}</h1></div>`;
   if (state.orderOpen) {
     const order = state.orders.find((o) => o.number === state.orderOpen);
     if (order) return `${notice}${orderDetail(order)}`;
@@ -151,9 +159,9 @@ function ordersView() {
   const counts = Object.fromEntries(orderStatuses.map((s) => [s, state.orders.filter((o) => o.status === s).length]));
   const query = state.orderQuery.trim().toLowerCase();
   const list = state.orders.filter((o) => (!state.orderFilter || o.status === state.orderFilter) && (!query || `${o.number} ${o.customer.name} ${o.customer.mobile || ''} ${o.lines.map((line) => `${line.name} ${line.nameAr || ''}`).join(' ')}`.toLowerCase().includes(query)));
-  return `${notice}<div class="head"><h1>${esc(t(IS_PAGES ? 'Previous browser records' : 'Orders'))}</h1><div class="btns order-actions">${IS_PAGES ? `<button type="button" class="btn ghost" data-export-orders>${esc(t('Export previous records'))}</button>` : ''}<button type="button" class="btn ghost" data-refresh-orders aria-label="${esc(t('Refresh orders'))}">↻</button></div></div>${IS_PAGES ? `<p class="muted">${esc(t('These earlier records exist only in this browser. They are separate from customer checkout orders.'))}</p>` : ''}
+  return `${notice}<div class="head"><h1>${esc(t(IS_PAGES ? 'Demo orders' : 'Orders'))}</h1><div class="btns order-actions">${IS_PAGES ? `<button type="button" class="btn ghost" data-export-orders${state.orders.length ? '' : ' disabled'}>${esc(t('Export demo orders'))}</button>` : ''}<button type="button" class="btn ghost" data-refresh-orders aria-label="${esc(t('Refresh orders'))}">↻</button></div></div>
   <label class="f search"><span class="sr">${esc(t('Search orders'))}</span><input id="order-search" type="search" placeholder="${esc(t('Search orders'))}" value="${esc(state.orderQuery)}"></label><div class="chips">${[['', t('All'), state.orders.length], ...orderStatuses.map((s) => [s, t(s), counts[s]])].map(([id, label, n]) => `<button type="button" class="chip" data-order-filter="${id}" aria-pressed="${state.orderFilter === id}">${esc(label)}${MODE === 'live' ? '' : ` <span>${n}</span>`}</button>`).join('')}</div>
-  ${list.length ? `<ul class="rows order-rows">${list.map((o) => `<li><button type="button" class="row order-row" data-open-order="${esc(o.number)}"><span class="o-num" dir="ltr">${esc(o.number)}</span><span class="o-main"><strong>${esc(o.customer.name)}</strong>${o.customer.mobile ? `<small dir="ltr">${esc(o.customer.mobile)}</small>` : ''}</span><span class="o-meta"><small>${esc(fmtDate(o.createdAt))}</small><strong>${esc(fils(o.totalFils))}</strong></span><span class="status s-${esc(o.status)}">${esc(t(o.status))}</span></button></li>`).join('')}</ul>` : `<div class="empty"><p>${esc(t(state.orders.length ? 'No matching orders.' : 'No orders here yet.'))}</p></div>`}${MODE === 'live' && state.orderBefore ? `<div class="btns"><button type="button" class="btn" data-load-older-orders>${esc(t('Load older orders'))}</button></div>` : ''}`;
+  ${list.length ? `<ul class="rows order-rows">${list.map((o) => `<li><button type="button" class="row order-row" data-open-order="${esc(o.number)}"><span class="o-num" dir="ltr">${esc(o.number)}</span><span class="o-main"><strong>${esc(o.customer.name)}</strong>${o.customer.mobile ? `<small dir="ltr">${esc(o.customer.mobile)}</small>` : ''}</span><span class="o-meta"><small>${esc(fmtDate(o.createdAt))}</small><strong>${esc(fils(o.totalFils))}</strong></span><span class="status s-${esc(o.status)}">${esc(t(o.status))}</span></button></li>`).join('')}</ul>` : `<div class="empty"><p>${esc(t(state.orders.length ? 'No matching orders.' : IS_PAGES ? 'No demo orders yet.' : 'No orders here yet.'))}</p>${IS_PAGES && !state.orders.length ? `<p class="muted">${esc(t('Place an order through the storefront to demonstrate checkout.'))}</p><div class="btns"><a class="btn primary" href="../index.html#/shop" target="_blank" rel="noopener">${esc(t('Open demo store'))} ↗</a></div>` : ''}</div>`}${state.orderBefore ? `<div class="btns"><button type="button" class="btn" data-load-older-orders>${esc(t('Load older orders'))}</button></div>` : ''}${legacyOrdersExport()}`;
 }
 function orderDetail(o) {
   if (!o) { state.orderOpen = null; return ordersView(); }
@@ -165,27 +173,28 @@ function orderDetail(o) {
   <div class="grid2"><section class="card"><h2>${esc(o.customer.name)}</h2>${mobile ? `<p dir="ltr" class="big">${esc(mobile)}</p><div class="btns"><a class="btn primary" href="tel:${esc(mobile)}">${esc(t('Call'))}</a>${wa ? `<a class="btn wa" href="${esc(wa)}" target="_blank" rel="noopener">${esc(t('WhatsApp'))}</a>` : ''}</div>` : ''}
   <p><strong>${esc(o.fulfilment === 'pickup' ? t('Pickup in store') : t('Delivery'))}</strong>${o.fulfilment === 'pickup' || !o.customer.governorate ? '' : ` — ${esc(gov ? (lang === 'ar' ? gov[1] : gov[2]) : o.customer.governorate)}`}</p>${o.customer.address ? `<p>${esc(o.customer.address)}</p>` : ''}${o.customer.notes ? `<p class="muted"><strong>${esc(t('Customer notes'))}:</strong> ${esc(o.customer.notes)}</p>` : ''}<p class="muted">${esc(fmtDate(o.createdAt))}</p></section>
   <section class="card"><ul class="lines">${o.lines.map((l) => `<li><span dir="auto">${esc(lang === 'ar' ? l.nameAr || l.name : l.name)}${l.storage ? ` · ${esc(l.storage)}` : ''}${l.condition ? ` · ${esc(L(conditions[l.condition]))}` : ''}</span><span>× ${l.qty}</span><strong>${esc(fils(l.unitFils * l.qty))}</strong></li>`).join('')}</ul><p class="total"><span>${esc(t('Total'))}</span><strong>${esc(fils(o.totalFils))}</strong></p>
-  <form id="order-form" data-number="${esc(o.number)}"><label class="f"><span>${esc(t('Status'))}</span><select name="status">${orderStatuses.map((s) => `<option value="${s}"${o.status === s ? ' selected' : ''}>${esc(t(s))}</option>`).join('')}</select></label><label class="f"><span>${esc(t(IS_PAGES ? 'Local note' : 'Private note'))}</span><textarea name="note" rows="3" maxlength="500">${esc(o.note || '')}</textarea></label><button class="btn primary" type="submit">${esc(t(IS_PAGES ? 'Save local order' : 'Save'))}</button></form></section></div>`;
+  <form id="order-form" data-number="${esc(o.number)}"><label class="f"><span>${esc(t('Status'))}</span><select name="status">${orderStatuses.map((s) => `<option value="${s}"${o.status === s ? ' selected' : ''}>${esc(t(s))}</option>`).join('')}</select></label><label class="f"><span>${esc(t(IS_PAGES ? 'Demo note' : 'Private note'))}</span><textarea name="note" rows="3" maxlength="500">${esc(o.note || '')}</textarea></label><button class="btn primary" type="submit">${esc(t(IS_PAGES ? 'Save demo order' : 'Save'))}</button></form></section></div>`;
 }
 async function loadOrders({ append = false } = {}) {
-  const filter = MODE === 'live' ? state.orderFilter : '';
+  const filter = MODE !== 'demo' ? state.orderFilter : '';
   const before = append ? state.orderBefore : '';
-  const data = await guard(() => adminApi.orders(filter, before));
-  if (!data || (MODE === 'live' && filter !== state.orderFilter)) return false;
+  const data = await guard(() => orderApi.orders(filter, before));
+  if (!data || (MODE !== 'demo' && filter !== state.orderFilter)) return false;
   const incoming = data.orders || [];
   state.orders = append ? [...new Map([...state.orders, ...incoming].map((order) => [order.number, order])).values()] : incoming;
-  state.orderBefore = MODE === 'live' && Number.isSafeInteger(data.nextBefore) && data.nextBefore > 0 ? data.nextBefore : null;
+  state.orderBefore = Number.isSafeInteger(data.nextBefore) && data.nextBefore > 0 ? data.nextBefore : null;
+  if (IS_PAGES) state.legacyOrders = (await pagesAdmin.orders()).orders || [];
   return true;
 }
-async function exportOrders() {
+async function exportOrders({ legacy = false } = {}) {
   try {
-    const data = await adminApi.exportOrders();
+    const data = await (legacy ? pagesAdmin : orderApi).exportOrders();
     const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
     const link = document.createElement('a');
-    link.href = url; link.download = `trio-local-orders-${new Date().toISOString().slice(0, 10)}.json`;
+    link.href = url; link.download = `trio-${legacy ? 'previous-records' : 'demo-orders'}-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.append(link); link.click(); link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    flash(t('Orders exported from this browser.'));
+    flash(t(legacy ? 'Orders exported from this browser.' : 'Demo orders exported from this browser.'));
   } catch (error) { flash(errorText(error), 'error'); }
 }
 
@@ -364,12 +373,13 @@ document.addEventListener('click', async (e) => {
   if (hit('#discard')) { if (confirmed(t(IS_PAGES ? 'Discard changes since the last saved preview?' : 'Discard all unpublished changes?'))) { state.draft = clone(state.published); state.editing = null; saveDraft(); render(); } return; }
   if (hit('[data-reload-published]')) { await loadContent({ keepDraft: false }); state.editing = null; render(); return; }
   if (hit('#logout') && !IS_PAGES) { await guard(() => adminApi.logout()); state.signedIn = false; render(); return; }
-  if (hit('[data-order-filter]')) { state.orderFilter = hit('[data-order-filter]').dataset.orderFilter; if (MODE === 'live') await loadOrders(); render(); return; }
-  if (MODE === 'live' && hit('[data-load-older-orders]')) { const button = hit('[data-load-older-orders]'); button.disabled = true; await loadOrders({ append: true }); render(); return; }
+  if (hit('[data-order-filter]')) { state.orderFilter = hit('[data-order-filter]').dataset.orderFilter; if (MODE !== 'demo') await loadOrders(); render(); return; }
+  if (hit('[data-load-older-orders]')) { const button = hit('[data-load-older-orders]'); button.disabled = true; await loadOrders({ append: true }); render(); return; }
   if (IS_PAGES && hit('[data-export-orders]')) { await exportOrders(); return; }
+  if (IS_PAGES && hit('[data-export-legacy-orders]')) { await exportOrders({ legacy: true }); return; }
   if (hit('[data-refresh-orders]')) { await loadOrders(); render(); return; }
   if (hit('[data-open-order]')) { state.orderOpen = hit('[data-open-order]').dataset.openOrder; render(); window.scrollTo(0, 0); return; }
-  if (hit('[data-close-order]')) { state.orderOpen = null; render(); return; }
+  if (hit('[data-close-order]')) { state.orderOpen = null; await loadOrders(); render(); return; }
   if (hit('[data-cat]')) { state.category = hit('[data-cat]').dataset.cat; render(); return; }
   if (hit('[data-edit]')) { state.editing = { index: Number(hit('[data-edit]').dataset.edit) }; render(); window.scrollTo(0, 0); return; }
   if (hit('[data-close-edit]')) { state.editing = null; render(); return; }
@@ -442,8 +452,8 @@ document.addEventListener('submit', async (e) => {
   }
   if (f.id === 'order-form') {
     const number = f.dataset.number;
-    const ok = await guard(() => adminApi.updateOrder(number, { status: f.status.value, note: f.note.value }));
-    if (ok) { const o = state.orders.find((x) => x.number === number); if (o) { o.status = f.status.value; o.note = f.note.value; } render(); flash(t(IS_PAGES ? 'Local order saved.' : 'Saved.')); }
+    const ok = await guard(() => orderApi.updateOrder(number, { status: f.status.value, note: f.note.value }));
+    if (ok) { const o = state.orders.find((x) => x.number === number); if (o) { o.status = f.status.value; o.note = f.note.value; } render(); flash(t(IS_PAGES ? 'Demo order saved.' : 'Saved.')); }
     return;
   }
   if (f.id === 'password-form') {
@@ -454,7 +464,7 @@ document.addEventListener('submit', async (e) => {
 });
 let pollingOrders = false;
 async function pollOrders() {
-  if (IS_PAGES || pollingOrders || !state.signedIn || document.visibilityState !== 'visible' || state.orderOpen) return;
+  if (pollingOrders || !state.signedIn || document.visibilityState !== 'visible' || state.orderOpen) return;
   pollingOrders = true;
   const previous = JSON.stringify(state.orders);
   const search = $('#order-search');
@@ -472,9 +482,11 @@ async function pollOrders() {
     }
   } finally { pollingOrders = false; }
 }
-if (!IS_PAGES) {
-  setInterval(pollOrders, MODE === 'live' ? 15000 : 60000);
-  document.addEventListener('visibilitychange', pollOrders);
+setInterval(pollOrders, MODE === 'demo' ? 60000 : 15000);
+document.addEventListener('visibilitychange', pollOrders);
+if (IS_PAGES) {
+  window.addEventListener('storage', (event) => { if (event.key === 'trio-browser-shop-v1' || event.key === null) pollOrders(); });
+  window.addEventListener('trio-browser-shop-change', pollOrders);
 }
 
 (async function start() {

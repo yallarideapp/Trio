@@ -35,12 +35,13 @@ const words = {
     askWhatsapp: 'اسأل على واتساب', call: 'اتصل بتريو', ask: 'اسألنا على إنستغرام', source: 'شوف المنشور على إنستغرام', imageCard: 'صورة الجهاز قريباً',
     notFound: 'الجهاز مش موجود بهالقائمة.', notFoundText: 'ارجع للأجهزة لتشوف تشكيلة تريو.',
     bagTitle: 'السلة', bagEmpty: 'السلة فاضية.', bagEmptyText: 'اختار جهاز وأضفه للسلة.', remove: 'شيل', qty: 'العدد', subtotal: 'المجموع', delivery: 'التوصيل', deliveryValue: 'نأكده معك بالاتصال',
-    total: 'المجموع', bagFull: 'السلة فيها أكبر عدد أجهزة لطلب واحد.', checkout: 'تواصل لتأكيد الأجهزة', checkoutLive: 'أكمل الطلب', keepShopping: 'كمّل تسوّق', bagFixed: 'في جهاز بالسلة صار غير متوفر وانشال.',
+    total: 'المجموع', bagFull: 'السلة فيها أكبر عدد أجهزة لطلب واحد.', checkout: 'أكمل الطلب', checkoutLive: 'أكمل الطلب', keepShopping: 'كمّل تسوّق', bagFixed: 'في جهاز بالسلة صار غير متوفر وانشال.',
     checkoutTitle: 'تفاصيل الطلب', checkoutIntro: 'أكمل بيانات التواصل والاستلام.', name: 'الاسم', mobile: 'رقم الموبايل', mobileHint: 'مثال: 0791234567', fulfilment: 'الاستلام', deliveryOpt: 'توصيل', pickupOpt: 'استلام من المحل',
-    governorate: 'المحافظة', address: 'العنوان', addressHint: 'المنطقة، الشارع، أقرب معلم', notes: 'ملاحظات (اختياري)', placeOrder: 'أرسل الطلب', sending: 'عم نرسل…',
+    governorate: 'المحافظة', address: 'العنوان', addressHint: 'المنطقة، الشارع، أقرب معلم', notes: 'ملاحظات (اختياري)', placeOrder: 'تأكيد الطلب', sending: 'عم نرسل…',
     payCash: 'راجع الأجهزة والخيارات اللي اخترتها قبل إكمال الطلب.', privacy: 'نستخدم اسمك ورقمك وعنوانك بس لتأكيد الطلب وتوصيله.', ordersOff: 'لإكمال تفاصيل طلبك، انتقل لصفحة زورونا.',
     sendWhatsapp: 'ابعت الطلب على واتساب', doneTitle: 'تم استلام طلبك', doneText: 'رقم طلبك', doneNext: 'تم تسجيل طلبك لدى تريو. سيتواصل معك المحل لتأكيد الأجهزة وتفاصيل الاستلام.', receiptMissing: 'لا يوجد تأكيد طلب محفوظ هنا.', receiptMissingText: 'يظهر التأكيد بعد إرسال الطلب بنجاح. ارجع للسلة لإكمال طلبك.',
     demoNote: 'نسخة عرض: الطلب انحفظ على هالمتصفح بس، وما انبعت للمحل.',
+    demoDone: 'تم تأكيد الطلب التجريبي', demoNext: 'طلبك التجريبي محفوظ ويظهر في لوحة الطلبات على هذا المتصفح. لم يُرسل للمحل ولم يتم تحصيل أي دفعة.', myOrders: 'شوف طلباتي', signInCheckout: 'سجّل الدخول لحفظ الطلب في حسابك، أو كمّل كضيف.', demoDelivery: 'لا تُحصّل في العرض التجريبي', demoPrivacy: 'استخدم بيانات تجريبية؛ تُحفظ على هذا المتصفح فقط.',
     errors: { 'bad-name': 'اكتب اسمك (حرفين على الأقل).', 'bad-mobile': 'اكتب رقم موبايل أردني صحيح، مثل 0791234567.', 'bad-governorate': 'اختار المحافظة.', 'bad-address': 'اكتب العنوان للتوصيل.',
       'price-changed': 'تغيّر سعر جهاز بالسلة. راجع السلة وجرّب مرة ثانية.', 'sold-out': 'جهاز بالسلة نفد. راجع السلة.', unknown: 'جهاز بالسلة ما عاد موجود. راجع السلة.', 'orders-off': 'الطلب من الموقع متوقف حالياً.',
       'rate-limited': 'طلبات كثيرة من نفس الجهاز. جرّب بعد شوي أو ابعت على واتساب.', network: 'ما قدرنا نوصل للموقع. تأكد من الإنترنت وجرّب مرة ثانية.', 'too-fast': 'خذ ثانية وراجع البيانات، وبعدين أرسل.', generic: 'صار خطأ. جرّب مرة ثانية أو ابعت على واتساب.' },
@@ -71,12 +72,13 @@ const words = {
     askWhatsapp: 'Ask on WhatsApp', call: 'Call Trio', ask: 'Ask us on Instagram', source: 'See the post on Instagram', imageCard: 'Photo coming soon',
     notFound: 'This device is not in the collection.', notFoundText: 'Browse devices to explore Trio’s collection.',
     bagTitle: 'Your bag', bagEmpty: 'Your bag is empty.', bagEmptyText: 'Pick a device and add it to your bag.', remove: 'Remove', qty: 'Qty', subtotal: 'Subtotal', delivery: 'Delivery', deliveryValue: 'Confirmed by phone',
-    total: 'Total', bagFull: 'Your bag holds the most devices one order can take.', checkout: 'Ask Trio about your bag', checkoutLive: 'Checkout', keepShopping: 'Keep shopping', bagFixed: 'A device in your bag is no longer available and was removed.',
+    total: 'Total', bagFull: 'Your bag holds the most devices one order can take.', checkout: 'Checkout', checkoutLive: 'Checkout', keepShopping: 'Keep shopping', bagFixed: 'A device in your bag is no longer available and was removed.',
     checkoutTitle: 'Order details', checkoutIntro: 'Complete your contact and collection details.', name: 'Name', mobile: 'Mobile number', mobileHint: 'e.g. 0791234567', fulfilment: 'Delivery or pickup', deliveryOpt: 'Delivery', pickupOpt: 'Pick up in store',
-    governorate: 'Governorate', address: 'Address', addressHint: 'Area, street, nearest landmark', notes: 'Notes (optional)', placeOrder: 'Send order', sending: 'Sending…',
+    governorate: 'Governorate', address: 'Address', addressHint: 'Area, street, nearest landmark', notes: 'Notes (optional)', placeOrder: 'Place order', sending: 'Sending…',
     payCash: 'Review your selected devices and configurations before continuing.', privacy: 'We use your name, number and address only to confirm and deliver your order.', ordersOff: 'Continue to Visit us to complete your request.',
     sendWhatsapp: 'Send order on WhatsApp', doneTitle: 'Order received', doneText: 'Your order number', doneNext: 'Your order has been recorded with Trio. The store will contact you to confirm the devices and collection details.', receiptMissing: 'No saved order confirmation here.', receiptMissingText: 'A confirmation appears after your order is sent successfully. Return to your bag to complete your order.',
     demoNote: 'Demo copy: the order was saved in this browser only and not sent to the store.',
+    demoDone: 'Demo order confirmed', demoNext: 'Your demo order is saved in the Orders panel on this browser. It was not sent to the store and no payment was collected.', myOrders: 'View my orders', signInCheckout: 'Sign in to save this order to your account, or continue as a guest.', demoDelivery: 'Not charged in this demo', demoPrivacy: 'Use sample details; they are saved on this browser only.',
     errors: { 'bad-name': 'Enter your name (at least 2 letters).', 'bad-mobile': 'Enter a valid Jordanian mobile number, like 0791234567.', 'bad-governorate': 'Choose a governorate.', 'bad-address': 'Enter the delivery address.',
       'price-changed': 'A price in your bag changed. Check your bag and try again.', 'sold-out': 'A device in your bag sold out. Check your bag.', unknown: 'A device in your bag is no longer listed. Check your bag.', 'orders-off': 'Ordering on the site is paused.',
       'rate-limited': 'Too many orders from this device. Try again later or use WhatsApp.', network: 'We could not reach the site. Check your connection and try again.', 'too-fast': 'Take a second to check your details, then send.', generic: 'Something went wrong. Try again or use WhatsApp.' },
@@ -89,6 +91,8 @@ const words = {
   },
 };
 
+Object.assign(words.ar.errors, { 'storage-full': 'مساحة المتصفح غير كافية لحفظ الطلب.', 'storage-unavailable': 'تخزين المتصفح غير متاح. فعّله وحاول مجدداً.', 'storage-invalid': 'تعذّر قراءة بيانات العرض المحفوظة في هذا المتصفح.', 'orders-full': 'وصل سجل العرض إلى الحد الأقصى من الطلبات.', 'token-conflict': 'تغيّر الحساب أو تفاصيل الطلب. راجع البيانات وحاول مجدداً.', 'signed-out': 'تغيّرت جلسة الحساب. راجع بياناتك وحاول مجدداً.', generic: 'تعذّر حفظ الطلب. حاول مجدداً.' });
+Object.assign(words.en.errors, { 'storage-full': 'Your browser does not have enough space to save the order.', 'storage-unavailable': 'Browser storage is unavailable. Enable it and try again.', 'storage-invalid': 'Could not read the saved demo data in this browser.', 'orders-full': 'The demo order history is full.', 'token-conflict': 'Your account or order details changed. Review checkout and try again.', 'signed-out': 'Your account session changed. Review checkout and try again.', generic: 'Could not save your order. Please try again.' });
 const t = (key) => words[state.language][key];
 const L = (value) => (value && typeof value === 'object' ? value[state.language] || value.ar || value.en || '' : String(value || ''));
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -98,7 +102,7 @@ const icon = (name) => `<svg class="icon" aria-hidden="true"><use href="#icon-${
 const money = (fils) => formatJD(fils, state.language);
 const num = (n) => new Intl.NumberFormat(state.language === 'ar' ? 'ar-JO' : 'en').format(n);
 const S = () => state.content.settings;
-const ordersEnabled = () => MODE !== 'pages' && S().ordersOn === true;
+const ordersEnabled = () => S().ordersOn === true;
 const visitorKey = (name) => `trio-${state.source === 'preview' ? 'preview-' : ''}${name}`;
 const offersHeading = () => L(S().offersTitle) || t('offersTitle');
 const products = () => visibleProducts(state.content);
@@ -363,7 +367,7 @@ function bagLine(line) {
   return `<li class="bag-line"><a class="bag-thumb device-media" href="${productUrl(p)}">${media(p)}</a><div class="bag-info"><a class="bag-name" href="${productUrl(p)}" dir="auto">${esc(L(p.name))}</a><p class="bag-variant" dir="auto">${esc(variantLabel(v))}</p><div class="bag-row"><div class="qty" role="group" aria-label="${esc(t('qty'))}"><button type="button" data-qty="${esc(line.id)}" data-delta="-1" aria-label="−"${line.qty <= 1 ? ' disabled' : ''}>−</button><output>${line.qty}</output><button type="button" data-qty="${esc(line.id)}" data-delta="1" aria-label="+"${line.qty >= MAX_QTY ? ' disabled' : ''}>+</button></div><strong class="bag-price"><bdi>${esc(money(line.totalFils))}</bdi></strong></div><button type="button" class="bag-remove" data-remove="${esc(line.id)}">${esc(t('remove'))}</button></div></li>`;
 }
 function summary(priced, withButton) {
-  return `<aside class="bag-summary"><dl><div><dt>${esc(t('subtotal'))}</dt><dd><bdi>${esc(money(priced.totalFils))}</bdi></dd></div><div><dt>${esc(t('delivery'))}</dt><dd>${esc(t('deliveryValue'))}</dd></div><div class="is-total"><dt>${esc(t('total'))}</dt><dd><bdi>${esc(money(priced.totalFils))}</bdi></dd></div></dl><p class="summary-note">${esc(t('payCash'))}</p>${withButton ? `<a class="button button-primary button-wide" href="#/checkout">${esc(t(ordersEnabled() ? 'checkoutLive' : 'checkout'))}${arrow}</a><a class="text-link" href="#/shop">${esc(t('keepShopping'))}</a>` : ''}</aside>`;
+  return `<aside class="bag-summary"><dl><div><dt>${esc(t('subtotal'))}</dt><dd><bdi>${esc(money(priced.totalFils))}</bdi></dd></div><div><dt>${esc(t('delivery'))}</dt><dd>${esc(t(MODE === 'pages' ? 'demoDelivery' : 'deliveryValue'))}</dd></div><div class="is-total"><dt>${esc(t('total'))}</dt><dd><bdi>${esc(money(priced.totalFils))}</bdi></dd></div></dl><p class="summary-note">${esc(t('payCash'))}</p>${withButton ? `<a class="button button-primary button-wide" href="#/checkout">${esc(t('checkoutLive'))}${arrow}</a><a class="text-link" href="#/shop">${esc(t('keepShopping'))}</a>` : ''}</aside>`;
 }
 function renderBag() {
   const fixed = cleanBag();
@@ -387,7 +391,7 @@ function renderCheckout() {
   const draft = { name: customerProfile()?.name || '', mobile: customerProfile()?.mobile || '', ...(local.read(checkoutKey(), {}) || {}) };
   const gov = governorates.map(([id, ar, en]) => `<option value="${id}"${(draft.governorate || 'amman') === id ? ' selected' : ''}>${esc(state.language === 'ar' ? ar : en)}</option>`).join('');
   const pickup = draft.fulfilment === 'pickup';
-  return `<div class="container page-shell checkout-page"><div class="page-heading"><h1>${esc(t('checkoutTitle'))}</h1><p class="page-intro">${esc(t('checkoutIntro'))}</p></div><div class="bag-layout">
+  return `<div class="container page-shell checkout-page"><div class="page-heading"><h1>${esc(t('checkoutTitle'))}</h1><p class="page-intro">${esc(t('checkoutIntro'))}</p>${!customerProfile() ? `<a class="checkout-signin" href="#/account">${esc(t('signInCheckout'))}</a>` : ''}</div><div class="bag-layout">
   <form id="checkout-form" class="checkout-form" novalidate><p class="form-alert" id="form-alert" role="alert" hidden></p>
   <label class="field"><span>${esc(t('name'))}</span><input name="name" autocomplete="name" minlength="2" maxlength="60" required value="${esc(draft.name || '')}"></label>
   <label class="field"><span>${esc(t('mobile'))}</span><input name="mobile" type="tel" inputmode="tel" dir="ltr" autocomplete="tel" maxlength="20" placeholder="${esc(t('mobileHint'))}" required value="${esc(draft.mobile || '')}"></label>
@@ -396,16 +400,15 @@ function renderCheckout() {
   <label class="field"><span>${esc(t('address'))}</span><input name="address" autocomplete="street-address" minlength="4" maxlength="200"${pickup ? ' disabled' : ' required'} placeholder="${esc(t('addressHint'))}" value="${esc(draft.address || '')}"></label></div>
   <label class="field"><span>${esc(t('notes'))}</span><textarea name="notes" rows="3" maxlength="300">${esc(draft.notes || '')}</textarea></label>
   <label class="hp" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
-  <p class="summary-note">${esc(t('privacy'))}</p>
+  <p class="summary-note">${esc(t(MODE === 'pages' ? 'demoPrivacy' : 'privacy'))}</p>
   <button class="button button-primary button-wide" type="submit">${esc(t('placeOrder'))}</button></form>
   <div><ul class="bag-lines is-compact">${priced.lines.map((l) => `<li class="bag-line"><span class="bag-thumb device-media">${media(l.product)}</span><div class="bag-info"><span class="bag-name" dir="auto">${esc(L(l.product.name))} × ${l.qty}</span><p class="bag-variant" dir="auto">${esc(variantLabel(l.variant))}</p><strong class="bag-price"><bdi>${esc(money(l.totalFils))}</bdi></strong></div></li>`).join('')}</ul>${summary(priced, false)}</div></div></div>`;
 }
 function renderDone(number) {
-  if (MODE === 'pages') return renderInquiry();
   const order = state.lastOrder && state.lastOrder.number === number && state.lastOrder.channel === MODE ? state.lastOrder : null;
   if (!order) return `<div class="container page-shell done-page"><div class="done-card"><h1>${esc(t('receiptMissing'))}</h1><p>${esc(t('receiptMissingText'))}</p><a class="button button-primary" href="#/bag">${esc(t('bag'))}</a></div></div>`;
   const details = Array.isArray(order.lines) ? `<ul class="bag-lines is-compact">${order.lines.map((line) => `<li class="bag-line"><div class="bag-info"><span class="bag-name" dir="auto">${esc(L(line.name))} × ${line.qty}</span>${line.storage ? `<p class="bag-variant" dir="auto">${esc(line.storage)}</p>` : ''}<strong class="bag-price"><bdi>${esc(money(line.unitFils * line.qty))}</bdi></strong></div></li>`).join('')}</ul>` : '';
-  return `<div class="container page-shell done-page"><div class="done-card"><span class="done-icon" aria-hidden="true">✓</span><h1>${esc(t('doneTitle'))}</h1><p>${esc(t('doneText'))}</p><p class="order-number" dir="ltr">${esc(number)}</p><p>${esc(t('doneNext'))}</p>${details}${Number.isInteger(order.totalFils) ? `<p class="total"><span>${esc(t('total'))}</span> <strong><bdi>${esc(money(order.totalFils))}</bdi></strong></p>` : ''}${MODE === 'demo' ? `<p class="form-alert">${esc(t('demoNote'))}</p>` : ''}<div class="contact-actions">${S().whatsapp ? `<a class="button button-whatsapp" href="${esc(waHref(order.text || ''))}" ${external}>${icon('whatsapp')}${esc(t('sendWhatsapp'))}</a>` : ''}<a class="button button-outline" href="${esc(phoneHref())}">${icon('phone')}${esc(t('call'))}</a></div><a class="text-link" href="#/shop">${esc(t('keepShopping'))}</a></div></div>`;
+  return `<div class="container page-shell done-page"><div class="done-card"><span class="done-icon" aria-hidden="true">✓</span><h1>${esc(t(MODE === 'pages' ? 'demoDone' : 'doneTitle'))}</h1><p>${esc(t('doneText'))}</p><p class="order-number" dir="ltr">${esc(number)}</p><p>${esc(t(MODE === 'pages' ? 'demoNext' : 'doneNext'))}</p>${details}${Number.isInteger(order.totalFils) ? `<p class="total"><span>${esc(t('total'))}</span> <strong><bdi>${esc(money(order.totalFils))}</bdi></strong></p>` : ''}${MODE === 'demo' ? `<p class="form-alert">${esc(t('demoNote'))}</p>` : ''}<div class="contact-actions">${MODE === 'pages' ? `<a class="button button-primary" href="${customerProfile() ? '#/account' : '#/shop'}">${esc(t(customerProfile() ? 'myOrders' : 'keepShopping'))}</a>` : ''}${MODE !== 'pages' && S().whatsapp ? `<a class="button button-whatsapp" href="${esc(waHref(order.text || ''))}" ${external}>${icon('whatsapp')}${esc(t('sendWhatsapp'))}</a>` : ''}${MODE !== 'pages' ? `<a class="button button-outline" href="${esc(phoneHref())}">${icon('phone')}${esc(t('call'))}</a>` : ''}</div><a class="text-link" href="#/shop">${esc(t('keepShopping'))}</a></div></div>`;
 }
 function randomToken() {
   const bytes = new Uint8Array(16);
@@ -450,6 +453,7 @@ async function submitCheckout(form) {
   } catch (error) {
     const code = error instanceof ApiError ? error.code : 'generic';
     if (code === 'price-changed' || code === 'sold-out' || code === 'unknown') { await refreshContent(); }
+    if (code === 'token-conflict' || code === 'signed-out') await loadAccount();
     showFormError(code);
   } finally {
     state.busy = false;
@@ -640,6 +644,7 @@ document.addEventListener('error', (event) => {
 window.addEventListener('hashchange', () => { renderRoute({ focus: true }); if (state.route.name === 'account') loadAccount(); });
 window.matchMedia?.('(min-width: 641px)').addEventListener('change', (event) => { $('.catalog-filter-panel')?.toggleAttribute('open', event.matches); });
 window.addEventListener('storage', (event) => {
+  if (MODE === 'pages' && event.key === 'trio-browser-shop-v1') loadAccount();
   if (event.key === visitorKey('bag')) { state.bag = loadBag(); updateCounts(); if (['bag', 'checkout'].includes(state.route.name)) renderRoute(); }
   if (event.key === visitorKey('saved')) { state.saved = new Set(local.read(visitorKey('saved'), [])); updateCounts(); updateSavedButtons(); }
 });
@@ -651,6 +656,7 @@ async function start() {
     document.body.insertAdjacentHTML('beforeend', `<a class="demo-corner" href="admin/index.html" lang="${state.language}">${state.language === 'ar' ? 'نسخة عرض · لوحة التحكم' : 'Demo · Admin panel'}</a>`);
   }
   await refreshContent();
+  const demoNotice = $('#owner-demo-notice'); if (demoNotice) demoNotice.hidden = MODE !== 'pages';
   if (state.source === 'preview') document.querySelector('#preview-notice').hidden = false;
   const ids = new Set(products().map((p) => p.id));
   const saved = local.read(visitorKey('saved'), []);
@@ -666,7 +672,9 @@ const checkoutKey = () => `trio-checkout-${customerProfile()?.id || 'guest'}`;
 let accountIdentity;
 bindAccount(() => {
   const identity = customerProfile()?.id || 'guest';
-  if (accountIdentity !== undefined && accountIdentity !== identity) {
+  const firstLoad = accountIdentity === undefined;
+  const identityChanged = !firstLoad && accountIdentity !== identity;
+  if (identityChanged) {
     // Contact drafts and receipts belong to one identity on shared devices.
     local.remove(`trio-checkout-${accountIdentity}`);
     local.remove(`trio-last-order-${accountIdentity}`);
@@ -677,6 +685,13 @@ bindAccount(() => {
   if (accountIdentity === undefined) state.lastOrder = local.read(`trio-last-order-${identity}`);
   accountIdentity = identity;
   $$('[data-account-link]').forEach((link) => { link.textContent = accountLabel(state.language); });
-  if (state.content && ['account', 'checkout', 'done'].includes(state.route.name)) renderRoute();
+  if (state.content && (state.route.name === 'account' || state.route.name === 'done' && (firstLoad || identityChanged) || state.route.name === 'checkout' && identityChanged)) renderRoute();
+  // Background order updates must not replace an unfinished checkout form.
+  if (state.route.name === 'checkout') {
+    for (const key of ['name', 'mobile']) {
+      const input = $(`#checkout-form [name="${key}"]`);
+      if (input && !input.value) input.value = customerProfile()?.[key] || '';
+    }
+  }
 });
 start();

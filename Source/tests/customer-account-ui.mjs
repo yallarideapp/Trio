@@ -41,30 +41,70 @@ function mount(overrides = {}) {
   };
 }
 
-async function verifyOfflineAdapter() {
-  const oldFetch = Object.getOwnPropertyDescriptor(globalThis, 'fetch');
+async function verifyBrowserDemoAdapter() {
+  const originals = Object.fromEntries(['fetch', 'localStorage', 'location'].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  const values = new Map();
   let network = 0;
   try {
     globalThis.fetch = () => { network++; throw new Error('Pages must not request customer APIs'); };
+    globalThis.location = { search: '' };
+    globalThis.localStorage = { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)), removeItem: (key) => values.delete(key) };
     const url = new URL('../site/src/store.js', import.meta.url);
     const source = readFileSync(url, 'utf8').replace(/\b__MODE__\b/g, JSON.stringify('pages')).replace(/from '([^']+)'/g, (_, ref) => `from ${JSON.stringify(new URL(ref, url).href)}`);
     const { api } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
     const ui = mount(api.account);
     await ui.loadAccount();
-    assert.equal(ui.state.configured, false);
+    assert.equal(ui.state.configured, true);
     assert.equal(ui.customerProfile(), null);
-    assert(ui.renderAccount('en').includes('<fieldset disabled>'), 'Pages authentication fields are disabled');
-    await ui.submit('register', { name: 'Example', email: 'test@example.test', password: 'a-valid-test-password', repeat: 'a-valid-test-password' });
-    assert.equal(ui.customerProfile(), null, 'Pages cannot create a simulated customer');
-    await assert.rejects(api.account.login({}), (error) => error.code === 'accounts-unavailable');
-    assert.equal(network, 0, 'Pages account UI and unavailable adapter never contact an API');
+    assert.equal((await api.account.session()).demo, true, 'Pages accounts identify browser demo behavior');
+    await ui.click('[data-account-tab]', { accountTab: 'create' });
+    for (const language of ['ar', 'en']) {
+      const html = ui.renderAccount(language);
+      assert(!html.includes('<fieldset disabled>'), `${language}: browser demo registration is enabled`);
+      assert(html.includes('data-account-form="register"'), `${language}: account creation is available`);
+      assert(/demo|عرض|تجريبي/i.test(html), `${language}: account forms explain demo behavior`);
+    }
+    const email = 'preview@example.test';
+    const password = 'a-valid-test-password';
+    await ui.submit('register', { name: 'Example', email, password, repeat: password });
+    assert.equal(ui.customerProfile().email, email, 'the real Pages adapter creates an account through actual form handlers');
+    const customerId = ui.customerProfile().id;
+    await ui.submit('profile', { name: 'Edited Example', mobile: '+962 79 123 4567' });
+    assert.equal(ui.customerProfile().name, 'Edited Example');
+    assert.equal(ui.customerProfile().mobile, '0791234567');
+    const receipt = await api.placeOrder({
+      token: 'a'.repeat(32), elapsedMs: 5000, website: '', lang: 'en', fulfilment: 'pickup',
+      customer: { name: 'Edited Example', mobile: '0791234567', governorate: '', address: '', notes: '' },
+      lines: [{ id: 'airtag:one', qty: 2 }], totalFils: 56000,
+    });
+    assert.match(receipt.number, /^DEMO-/);
+    assert.equal(receipt.totalFils, 56000);
+    await ui.loadAccount();
+    assert.deepEqual(Array.from(ui.state.orders, (item) => item.number), [receipt.number], 'checkout appears automatically in the signed-in browser account history');
+    assert((await api.demoOrders.orders()).orders.some((item) => item.number === receipt.number), 'the owner demo receives the same checkout order');
+    for (const language of ['ar', 'en']) assert(ui.renderAccount(language).includes(receipt.number), `${language}: account history renders the checkout receipt`);
+    const reopened = mount(api.account);
+    await reopened.loadAccount();
+    assert.equal(reopened.customerProfile().id, customerId, 'the demo session survives a page reload');
+    await ui.submit('password', { current: password, newPassword: 'another-valid-test-password' });
+    await ui.click('[data-account-logout]');
+    assert.equal(ui.customerProfile(), null);
+    await ui.submit('login', { email, password });
+    assert.equal(ui.customerProfile(), null, 'the replaced demo password no longer signs in');
+    await ui.submit('login', { email, password: 'another-valid-test-password' });
+    assert.equal(ui.customerProfile().id, customerId, 'the changed password signs in to the same account');
+    assert.deepEqual(Array.from(ui.state.orders, (item) => item.number), [receipt.number], 'signing back in restores private demo history');
+    assert.equal(network, 0, 'browser demo signup, profile, password, checkout, history and owner orders never contact an API');
   } finally {
-    if (oldFetch) Object.defineProperty(globalThis, 'fetch', oldFetch); else delete globalThis.fetch;
+    for (const [key, descriptor] of Object.entries(originals)) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else delete globalThis[key];
+    }
   }
 }
 
 export async function verifyCustomerAccountUI() {
-  await verifyOfflineAdapter();
+  await verifyBrowserDemoAdapter();
 
   const pendingProfile = deferred();
   const profileRace = mount({ profile: () => pendingProfile.promise });
@@ -167,7 +207,7 @@ export async function verifyCustomerAccountUI() {
   assert.equal(passwordBody.current, 'old-test-password');
   assert.equal(passwordBody.password, 'a-new-valid-password');
   assert.equal(forms.state.busy, false);
-  console.log('Customer account UI passed: unavailable Pages adapter, account forms, password mapping, private history, request races,401 clearing, and connection retries');
+  console.log('Customer account UI passed: real Pages demo signup/signin/profile/password/checkout/history, account forms, request races,401 clearing, and connection retries');
 }
 
 if (process.argv[1] && new URL(import.meta.url).pathname === process.argv[1]) await verifyCustomerAccountUI();

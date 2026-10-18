@@ -1,11 +1,12 @@
 // Data adapter. The live build talks to the Worker API on the same site; the demo
 // build (opened from a folder, no server) keeps everything in this browser.
-// Pages has an explicitly selected browser preview; ordinary visits use the seed.
+// Pages runs an owner demo; catalog drafts still require explicit preview selection.
 // __MODE__ is replaced at build time with "live", "demo" or "pages".
 import seedContent from '../../shared/catalog.js';
 import { priceLines, normaliseMobile } from '../../shared/pricing.js';
 import { governorates } from '../../shared/labels.js';
 import { PHOTO_KEY, previewRequested, readLocal, readPreview, validPhoto } from './pages-preview.js';
+import { createBrowserShop } from './browser-shop.js';
 
 export const MODE = typeof __MODE__ === 'string' ? __MODE__ : 'live';
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -58,27 +59,32 @@ async function request(path, { method = 'GET', body, raw } = {}) {
   return data;
 }
 
-// ---------- GitHub Pages (no backend) ----------
+// ---------- GitHub Pages owner demonstration (this browser only) ----------
 const accountUnavailable = async () => { throw new ApiError('accounts-unavailable', 503); };
 const offlineAccounts = {
   async session() { return { configured: false, signedIn: false, customer: null }; },
   register: accountUnavailable, login: accountUnavailable, logout: accountUnavailable,
   profile: accountUnavailable, password: accountUnavailable, orders: accountUnavailable,
 };
-const pages = {
-  account: offlineAccounts,
-  async loadContent() {
-    const saved = previewRequested() ? readPreview() : null;
-    const content = withDefaults(clone(saved?.content || seedContent));
-    content.settings.ordersOn = false;
-    return { content, source: previewRequested() ? 'preview' : 'seed', version: saved?.version || 0 };
-  },
-  async placeOrder() { throw new ApiError('orders-off', 403); },
-  photoUrl(id) {
-    const value = previewRequested() ? readLocal(PHOTO_KEY, {})[id] : '';
-    return validPhoto(value) ? value : '';
-  },
-};
+function createPages() {
+  const browserShop = createBrowserShop({ ApiError, getContent: () => pages.loadContent() });
+  const pages = {
+    account: browserShop.account,
+    demoOrders: browserShop.admin,
+    async loadContent() {
+      const saved = previewRequested() ? readPreview() : null;
+      const content = withDefaults(clone(saved?.content || seedContent));
+      content.settings.ordersOn = true;
+      return { content, source: previewRequested() ? 'preview' : 'seed', version: saved?.version || 0 };
+    },
+    placeOrder: browserShop.placeOrder,
+    photoUrl(id) {
+      const value = previewRequested() ? readLocal(PHOTO_KEY, {})[id] : '';
+      return validPhoto(value) ? value : '';
+    },
+  };
+  return pages;
+}
 
 // ---------- live ----------
 const live = {
@@ -196,6 +202,5 @@ const demo = {
   },
 };
 
-// Direct compile-time conditions let the bundler remove both the simulated
-// order store and the live API client from the GitHub Pages output.
-export const api = typeof __MODE__ === 'string' && __MODE__ === 'pages' ? pages : typeof __MODE__ === 'string' && __MODE__ === 'demo' ? demo : live;
+// Compile-time conditions keep the real API client out of the Pages owner demo.
+export const api = typeof __MODE__ === 'string' && __MODE__ === 'pages' ? createPages() : typeof __MODE__ === 'string' && __MODE__ === 'demo' ? demo : live;

@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { webcrypto } from 'node:crypto';
 import seed from '../shared/catalog.js';
 import deviceSpecifications from '../shared/device-specs.js';
 import * as pricing from '../shared/pricing.js';
@@ -11,12 +12,12 @@ export function verifyStorefront() {
   const stored = new Map();
   const windowEvents = new Map();
   const document = { querySelector: () => null, querySelectorAll: () => [], addEventListener() {} };
-  const location = { hash: '#/' };
+  const location = { hash: '#/', replace(value) { this.hash = value; } };
   const context = vm.createContext({
     ...pricing, deviceSpecifications, conditions, conditionShort, noteLabels: notes, warranties, governorates,
     renderAccount: () => '<h1>My account</h1>', loadAccount: async () => {}, bindAccount: () => {}, accountLabel: () => 'Sign in', customerProfile: () => null,
     MODE: 'pages', api: { photoUrl: () => '' }, local: { read: (key, fallback = null) => stored.has(key) ? structuredClone(stored.get(key)) : fallback, write: (key, value) => { stored.set(key, structuredClone(value)); return true; } },
-    document, location, window: { addEventListener: (name, listener) => windowEvents.set(name, listener) }, console, URLSearchParams, Intl, setTimeout, clearTimeout,
+    document, location, crypto: webcrypto, window: { crypto: webcrypto, addEventListener: (name, listener) => windowEvents.set(name, listener) }, console, URLSearchParams, Intl, setTimeout, clearTimeout,
   });
   const source = readFileSync(new URL('../site/src/app.js', import.meta.url), 'utf8')
     .replace(/^import[^\n]*\n/gm, '').replace(/^start\(\);\s*$/m, '');
@@ -196,15 +197,35 @@ export function verifyStorefront() {
     }
     ui.state.route = { name: 'trade-in' };
     assert(!instagram.test(ui.renderService(true)), `${language}: trade-in has no Instagram links`);
+    ui.state.content.settings.ordersOn = true;
+    ui.state.bag = [{ id: 'airtag:one', qty: 2 }];
+    ui.state.route = { name: 'bag' };
+    const bag = ui.renderBag();
+    assert(bag.includes('href="#/checkout"'), `${language}: shopping bag offers normal checkout`);
+    assert(!/Ask Trio about your bag|تواصل لتأكيد الأجهزة/.test(bag), `${language}: bag checkout does not ask the shopper to contact Trio`);
+    assert(bag.includes(language === 'ar' ? 'أكمل الطلب' : 'Checkout'), `${language}: bag uses the normal checkout action`);
+    ui.state.route = { name: 'checkout' };
+    const checkout = ui.renderCheckout();
+    assert(checkout.includes('id="checkout-form"'), `${language}: Pages renders the checkout form`);
+    for (const field of ['name', 'mobile', 'fulfilment', 'governorate', 'address', 'notes']) assert(checkout.includes(`name="${field}"`), `${language}: checkout includes ${field}`);
+    assert(checkout.includes(pricing.formatJD(56000, language)), `${language}: checkout displays the exact selected-device total`);
+    ui.state.lastOrder = { number: 'DEMO-1001', channel: 'pages', demo: true, totalFils: 56000, lines: [{ name: { ar: 'إيرتاغ', en: 'AirTag' }, storage: '', qty: 2, unitFils: 28000 }] };
+    const receipt = ui.renderDone('DEMO-1001');
+    assert(receipt.includes('DEMO-1001'), `${language}: demo checkout has a receipt number`);
+    assert(receipt.includes(pricing.formatJD(56000, language)), `${language}: receipt shows the saved total`);
+    assert(/demo|عرض|تجريبي/i.test(receipt), `${language}: receipt explains browser demo behavior`);
+    assert(!ui.renderDone('DEMO-9999').includes('class="order-number"'), `${language}: arbitrary receipt URLs cannot manufacture a successful order`);
+    ui.state.lastOrder = null;
     for (const name of ['bag', 'checkout', 'done']) {
       ui.state.route = { name };
       const html = name === 'bag' ? ui.renderBag() : name === 'checkout' ? ui.renderCheckout() : ui.renderDone('old-order');
       assert(!instagram.test(html), `${language}: ${name} has no Instagram reference`);
     }
+    ui.state.bag = [];
     assert(instagram.test(ui.renderService()), `${language}: repair retains Instagram`);
     assert(instagram.test(ui.renderContact()), `${language}: visit-us retains Instagram`);
   }
   for (const name of ['home', 'shop', 'offers', 'saved', 'p', 'bag', 'checkout', 'done', 'trade-in']) assert(!ui.instagramAllowed(name), `${name}: footer social link hidden`);
   for (const name of ['maintenance', 'contact']) assert(ui.instagramAllowed(name), `${name}: footer social link allowed`);
-  console.log(`storefront checks passed: four home categories, six separate catalog categories, grouped catalog, global search/sort, ${productViews} bilingual device views, selected options, and route-specific contact rules`);
+  console.log(`storefront checks passed: four home categories, six separate catalog categories, grouped catalog, global search/sort, ${productViews} bilingual device views, selected options, browser checkout/receipts, and route-specific contact rules`);
 }

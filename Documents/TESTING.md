@@ -1,5 +1,14 @@
 # Replacement storefront verification — 18 October 2026
 
+## Working owner demonstration — 19 October 2026
+
+- Pages now has functional browser-only registration, sign-in/out, sample-account entry, profile editing, password changes and private order history. Passwords are stored only as salted PBKDF2 hashes. A bilingual banner identifies the owner demonstration and explains that no payments are collected or orders sent to the store.
+- Replaced the contact/inquiry bag action with Checkout, a complete contact/delivery/pickup form, exact totals and a saved DEMO-number receipt. Checkout orders automatically appear in the same browser's admin Orders panel, with search, status updates, notes and export. Earlier manually entered records remain a separate archive.
+- Automated tests pass using real WebCrypto and local storage: unique accounts, credential validation/rotation, persisted sessions, sample access, account-scoped history, guest orders, catalog-derived prices, snapshots, retry deduplication, pagination and atomic quota failures. Web Locks serialize writes. Queued operations reject an intervening account/session switch, and corrupt data is preserved rather than silently reset. No backend requests occur in Pages.
+- Browser testing completed sample sign-in → edit profile → add AirTag → Checkout → DEMO-1001 confirmation → My orders → automatic admin entry. The JD28 total matches the shipped catalog. Changing the admin status to Confirmed reached the account history, and an unfinished checkout kept its unsent notes during the cross-tab update.
+- Arabic 320px and English 390px account/checkout layouts fit without horizontal document overflow. Browser tests use Chromium, not physical iOS/Android. Registration, returning password sign-in and password rotation are covered by the actual adapter/UI test harness; browser QA uses the built-in sample button without entering new credentials.
+- Live and Pages builds and the complete account/order/catalog/image/preview suites pass. Shared production accounts/orders remain deferred for Trio's future GitHub and Cloudflare accounts. Demonstration data is not migrated into production.
+
 ## Future dedicated accounts — current deployment decision
 
 - Owner deferred Cloudflare connection until dedicated Trio GitHub and Cloudflare accounts exist. No current account connection, resource creation or deployment was performed.
