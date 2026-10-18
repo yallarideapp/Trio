@@ -427,3 +427,16 @@ html[lang=en] .service-card h2{font-size:22px}
 .inquiry-back{margin-top:24px;min-height:44px}
 @media(max-width:640px){.hero h1{font-size:38px}html[lang=en] .hero h1{font-size:36px}.hero-device{height:300px;min-height:0}.home-content .product-image>img{padding:4%}.hero-product-caption{gap:9px}.hero-product-name{font-size:14px}.hero-price{font-size:16px}.section-note{font-size:12px}.hero .button{white-space:normal}.hero-tabs button{overflow-wrap:anywhere}}
 @media(max-width:370px){.hero h1{font-size:32px}html[lang=en] .hero h1{font-size:30px}.hero-device{height:280px}.hero-tabs button{font-size:10px}}
+
+/* Device details focus on the selected configuration and technical specifications. */
+.detail-tagline{font-size:14px;line-height:1.85;color:var(--muted);margin-top:12px}
+.device-specs{margin-top:28px;border:1px solid var(--line);border-radius:16px;background:var(--surface);overflow:hidden}
+.device-specs h2{font-family:Plex,Arial,sans-serif;font-size:18px;font-weight:600;letter-spacing:0;padding:20px 22px;border-bottom:1px solid var(--line);color:var(--paper)}
+.device-specs dl{margin:0;padding:0 22px}
+.device-spec-row{display:grid;grid-template-columns:minmax(100px,.7fr) minmax(0,1.5fr);gap:20px;padding:15px 0;border-bottom:1px solid var(--line);font-size:13px;line-height:1.8}
+.device-spec-row:last-child{border-bottom:0}
+.device-spec-row dt{color:var(--muted)}.device-spec-row dd{margin:0;color:var(--paper);overflow-wrap:anywhere}
+html[lang=en] .device-specs h2{font-size:18px;font-weight:600;letter-spacing:0}
+@media(max-width:640px){.device-specs{margin-top:22px;border-radius:13px}.device-specs h2{font-size:17px;padding:17px 16px}.device-specs dl{padding-inline:16px}.device-spec-row{grid-template-columns:minmax(82px,.6fr) minmax(0,1.4fr);gap:14px;font-size:13px;padding-block:13px}.detail-tagline{font-size:13px}.detail-actions .button{min-height:48px}}
+
+.site-footer.is-device-page .footer-grid{grid-template-columns:1fr 1fr}

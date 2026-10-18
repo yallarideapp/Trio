@@ -1,3 +1,4 @@
+import deviceSpecifications from '../../shared/device-specs.js';
 import { api, local, MODE, ApiError } from './store.js';
 import { priceLines, fromPrice, formatJD, toFils, variantId, splitVariantId, visibleProducts, normaliseMobile, MAX_QTY, MAX_LINES, validPrice } from '../../shared/pricing.js';
 import { conditions, conditionShort, notes as noteLabels, warranties, governorates } from '../../shared/labels.js';
@@ -21,22 +22,22 @@ const words = {
     save: 'حفظ الجهاز', unsave: 'إلغاء الحفظ', savedNow: 'انحفظ بالمفضلة.', unsavedNow: 'انشال من المفضلة.',
     categories: 'شو عم تدوّر عليه؟', allDevices: 'شوف كل الأجهزة', featuredTitle: 'مختارات من تريو', offersAll: 'كل العروض',
     count: (n) => `${n} ${n === 1 ? 'جهاز' : n === 2 ? 'جهازين' : n <= 10 ? 'أجهزة' : 'جهاز'}`,
-    trust: [['من منشورات تريو', 'رابط المصدر داخل صفحة كل جهاز'], ['الحالة حسب المنشور', 'أكد الحالة والكفالة مع المحل'], ['تواصل مباشرة', 'اتصل أو ابعت على إنستغرام'], ['بيع · شراء · تبديل', 'وصيانة احترافية بالمحل']],
+    trust: [['اعثر على جهازك', 'ابحث حسب الماركة ونوع الجهاز'], ['قارن الخيارات', 'السعة والحالة في مكان واحد'], ['احفظ مفضلتك', 'ارجع للأجهزة اللي عجبتك'], ['بيع · شراء · تبديل', 'وصيانة احترافية بالمحل']],
     servicesTitle: 'بيع، شراء، تبديل وصيانة', servicesText: 'جهازك القديم ممكن يكون بداية جهازك الجديد. احكيلنا عنه، أو جيبه للصيانة.', repairCta: 'احكي معنا عن الصيانة', tradeCta: 'اسأل عن التبديل',
-    aboutTitle: 'مش بس محل موبايلات.', aboutText: 'بيع | شراء | تبديل | صيانة احترافية. تابع الجديد والعروض أول بأول على صفحتنا.', followTitle: 'تابع الجديد من تريو', follow: 'افتح إنستغرام',
-    collection: 'تشكيلة تريو', shopIntro: 'أجهزة وأسعار من منشورات تريو. اسأل المحل عن السعر والحالة والتوفر الحالي.', offersIntro: 'عروض سابقة من منشورات تريو، مع تاريخ المصدر. تأكد من السعر والتوفر مع المحل.',
+    aboutTitle: 'مش بس محل موبايلات.', aboutText: 'بيع وشراء وتبديل الأجهزة، وصيانة احترافية في خلدا، عمّان.', followTitle: 'تابع الجديد من تريو', follow: 'افتح إنستغرام',
+    collection: 'تشكيلة تريو', shopIntro: 'تصفّح الأجهزة وقارن المواصفات والسعات والحالات.', offersTitle: 'عروض تريو', offersIntro: 'اكتشف العروض واختر الجهاز اللي بناسبك.',
     search: 'ابحث عن جهاز', searchPlaceholder: 'اسم الجهاز أو الماركة…', brand: 'الماركة', allBrands: 'كل الماركات', sort: 'الترتيب', featured: 'الترتيب المقترح',
     priceLow: 'السعر: من الأقل', priceHigh: 'السعر: من الأعلى', nameSort: 'حسب الاسم', condAll: 'كل الحالات', condNew: 'جديد', condUsed: 'مستعمل',
     clear: 'امسح البحث والفلاتر', noResults: 'ما لقينا أجهزة بهالبحث.', noResultsText: 'جرّب كلمة ثانية أو امسح الفلاتر.',
     savedIntro: 'الأجهزة اللي عجبتك، كلها بمكان واحد.', noSaved: 'لسه ما حفظت أجهزة.', noSavedText: 'اضغط القلب على أي جهاز ليرجع يظهر هون.',
-    details: 'عن الجهاز', condition: 'الحالة', warranty: 'الكفالة', options: 'الخيارات المنشورة', related: 'من نفس القسم', backCategory: 'كل أجهزة القسم',
+    details: 'المواصفات التقنية', configuration: 'التهيئة', condition: 'الحالة', warranty: 'الكفالة', options: 'الخيارات', related: 'من نفس القسم', backCategory: 'كل أجهزة القسم',
     askWhatsapp: 'اسأل على واتساب', call: 'اتصل بتريو', ask: 'اسألنا على إنستغرام', source: 'شوف المنشور على إنستغرام', imageCard: 'صورة الجهاز قريباً',
     notFound: 'الجهاز مش موجود بهالقائمة.', notFoundText: 'ارجع للأجهزة لتشوف تشكيلة تريو.',
     bagTitle: 'السلة', bagEmpty: 'السلة فاضية.', bagEmptyText: 'اختار جهاز وأضفه للسلة.', remove: 'شيل', qty: 'العدد', subtotal: 'المجموع', delivery: 'التوصيل', deliveryValue: 'نأكده معك بالاتصال',
     total: 'المجموع', bagFull: 'السلة فيها أكبر عدد أجهزة لطلب واحد.', checkout: 'تواصل لتأكيد الأجهزة', keepShopping: 'كمّل تسوّق', bagFixed: 'في جهاز بالسلة صار غير متوفر وانشال.',
-    checkoutTitle: 'تفاصيل الطلب', name: 'الاسم', mobile: 'رقم الموبايل', mobileHint: 'مثال: 0791234567', fulfilment: 'الاستلام', deliveryOpt: 'توصيل', pickupOpt: 'استلام من المحل',
+    checkoutTitle: 'تفاصيل الطلب', checkoutIntro: 'أكمل بيانات التواصل والاستلام.', name: 'الاسم', mobile: 'رقم الموبايل', mobileHint: 'مثال: 0791234567', fulfilment: 'الاستلام', deliveryOpt: 'توصيل', pickupOpt: 'استلام من المحل',
     governorate: 'المحافظة', address: 'العنوان', addressHint: 'المنطقة، الشارع، أقرب معلم', notes: 'ملاحظات (اختياري)', placeOrder: 'أرسل الطلب', sending: 'عم نرسل…',
-    payCash: 'الأسعار من المنشورات؛ تأكد من السعر والتوفر وخيارات الاستلام مع تريو.', privacy: 'نستخدم اسمك ورقمك وعنوانك بس لتأكيد الطلب وتوصيله.', ordersOff: 'لتأكيد الأجهزة والأسعار، تواصل مباشرة مع تريو.',
+    payCash: 'راجع الأجهزة والخيارات اللي اخترتها قبل إكمال الطلب.', privacy: 'نستخدم اسمك ورقمك وعنوانك بس لتأكيد الطلب وتوصيله.', ordersOff: 'لإكمال تفاصيل طلبك، انتقل لصفحة زورونا.',
     sendWhatsapp: 'ابعت الطلب على واتساب', doneTitle: 'وصلنا طلبك!', doneText: 'رقم طلبك', doneNext: 'رح نتصل فيك قريباً لنأكد الجهاز والتوصيل. إذا حاب، ابعت رقم الطلب على واتساب.',
     demoNote: 'نسخة عرض: الطلب انحفظ على هالمتصفح بس، وما انبعت للمحل.',
     errors: { 'bad-name': 'اكتب اسمك (حرفين على الأقل).', 'bad-mobile': 'اكتب رقم موبايل أردني صحيح، مثل 0791234567.', 'bad-governorate': 'اختار المحافظة.', 'bad-address': 'اكتب العنوان للتوصيل.',
@@ -57,22 +58,22 @@ const words = {
     save: 'Save device', unsave: 'Remove from saved', savedNow: 'Saved.', unsavedNow: 'Removed from saved.',
     categories: 'What are you looking for?', allDevices: 'View all devices', featuredTitle: 'Picks from Trio', offersAll: 'All offers',
     count: (n) => `${n} ${n === 1 ? 'device' : 'devices'}`,
-    trust: [['From Trio’s posts', 'Source link on each device page'], ['Posted condition', 'Confirm condition and warranty with Trio'], ['Contact Trio directly', 'Call or message us on Instagram'], ['Buy · Sell · Trade in', 'And professional repair in store']],
+    trust: [['Find your device', 'Search by brand and category'], ['Compare options', 'Storage and condition together'], ['Save your favorites', 'Keep the devices you like'], ['Buy · Sell · Trade in', 'And professional repair in store']],
     servicesTitle: 'Buy, sell, trade in and repair', servicesText: 'Your old device can be the start of your new one. Tell us about it, or bring it in for repair.', repairCta: 'Ask about a repair', tradeCta: 'Ask about trade-in',
-    aboutTitle: 'More than a mobile store.', aboutText: 'Buy | Sell | Trade in | Professional repair. Follow our page for new arrivals and offers.', followTitle: 'Catch the latest from Trio', follow: 'Open Instagram',
-    collection: 'THE TRIO COLLECTION', shopIntro: 'Devices and prices from Trio’s posts. Contact the store for current prices, condition and availability.', offersIntro: 'Previous offers from Trio’s posts, with source dates. Confirm current prices and availability with the store.',
+    aboutTitle: 'More than a mobile store.', aboutText: 'Buy, sell and trade in devices, with professional repair in Khalda, Amman.', followTitle: 'Catch the latest from Trio', follow: 'Open Instagram',
+    collection: 'THE TRIO COLLECTION', shopIntro: 'Explore devices and compare specifications, storage and condition.', offersTitle: 'Trio offers', offersIntro: 'Explore offers and find your next device.',
     search: 'Search devices', searchPlaceholder: 'Device name or brand…', brand: 'Brand', allBrands: 'All brands', sort: 'Sort', featured: 'Featured',
     priceLow: 'Price: low to high', priceHigh: 'Price: high to low', nameSort: 'Name A–Z', condAll: 'Any condition', condNew: 'New', condUsed: 'Used',
     clear: 'Clear search and filters', noResults: 'No devices match this search.', noResultsText: 'Try another word or clear the filters.',
     savedIntro: 'The devices you like, all in one place.', noSaved: 'Nothing saved yet.', noSavedText: 'Tap the heart on a device to save it here.',
-    details: 'About this device', condition: 'Condition', warranty: 'Warranty', options: 'Posted options', related: 'More in this category', backCategory: 'Back to category',
+    details: 'Technical specifications', configuration: 'Configuration', condition: 'Condition', warranty: 'Warranty', options: 'Options', related: 'More in this category', backCategory: 'Back to category',
     askWhatsapp: 'Ask on WhatsApp', call: 'Call Trio', ask: 'Ask us on Instagram', source: 'See the post on Instagram', imageCard: 'Photo coming soon',
     notFound: 'This device is not in the collection.', notFoundText: 'Browse devices to explore Trio’s collection.',
     bagTitle: 'Your bag', bagEmpty: 'Your bag is empty.', bagEmptyText: 'Pick a device and add it to your bag.', remove: 'Remove', qty: 'Qty', subtotal: 'Subtotal', delivery: 'Delivery', deliveryValue: 'Confirmed by phone',
     total: 'Total', bagFull: 'Your bag holds the most devices one order can take.', checkout: 'Ask Trio about your bag', keepShopping: 'Keep shopping', bagFixed: 'A device in your bag is no longer available and was removed.',
-    checkoutTitle: 'Order details', name: 'Name', mobile: 'Mobile number', mobileHint: 'e.g. 0791234567', fulfilment: 'Delivery or pickup', deliveryOpt: 'Delivery', pickupOpt: 'Pick up in store',
+    checkoutTitle: 'Order details', checkoutIntro: 'Complete your contact and collection details.', name: 'Name', mobile: 'Mobile number', mobileHint: 'e.g. 0791234567', fulfilment: 'Delivery or pickup', deliveryOpt: 'Delivery', pickupOpt: 'Pick up in store',
     governorate: 'Governorate', address: 'Address', addressHint: 'Area, street, nearest landmark', notes: 'Notes (optional)', placeOrder: 'Send order', sending: 'Sending…',
-    payCash: 'Posted prices; confirm current prices, availability and collection options with Trio.', privacy: 'We use your name, number and address only to confirm and deliver your order.', ordersOff: 'Contact Trio directly to confirm devices and prices.',
+    payCash: 'Review your selected devices and configurations before continuing.', privacy: 'We use your name, number and address only to confirm and deliver your order.', ordersOff: 'Continue to Visit us to complete your request.',
     sendWhatsapp: 'Send order on WhatsApp', doneTitle: 'We got your order!', doneText: 'Your order number', doneNext: 'We will call you soon to confirm the device and delivery. You can also send the order number on WhatsApp.',
     demoNote: 'Demo copy: the order was saved in this browser only and not sent to the store.',
     errors: { 'bad-name': 'Enter your name (at least 2 letters).', 'bad-mobile': 'Enter a valid Jordanian mobile number, like 0791234567.', 'bad-governorate': 'Choose a governorate.', 'bad-address': 'Enter the delivery address.',
@@ -98,13 +99,15 @@ const num = (n) => new Intl.NumberFormat(state.language === 'ar' ? 'ar-JO' : 'en
 const S = () => state.content.settings;
 const products = () => visibleProducts(state.content);
 const categoryIds = () => state.content.categories.map((c) => c.id).filter((id) => products().some((p) => p.category === id));
+const instagramAllowed = (routeName) => ['maintenance', 'contact'].includes(routeName);
+const specification = (product) => deviceSpecifications[product.id];
 const categoryName = (id) => L((state.content.categories.find((c) => c.id === id) || {}).name) || id;
 const legacyIds = { 'apple-watch-s11': 'apple-watch-s11', 'airpods-max': 'airpods-max-2', 'macbook-pro': 'macbook-pro-16-m5-pro', 'macbook-air': 'macbook-air-15-m5', 'ipad-a16': 'ipad-a16' };
 const productUrl = (product) => `#/p/${encodeURIComponent(product.id)}`;
 const categoryUrl = (id) => (id === 'all' ? '#/shop' : `#/shop/${encodeURIComponent(id)}`);
 const phoneHref = () => `tel:+962${String(S().phone || '').replace(/\D/g, '').replace(/^0/, '')}`;
 const phoneText = () => String(S().phone || '').replace(/\D/g, '').replace(/^(\d{4})(\d{3})(\d+)$/, '$1 $2 $3');
-const waHref = (text) => S().whatsapp ? `https://wa.me/${String(S().whatsapp).replace(/\D/g, '')}${text ? `?text=${encodeURIComponent(text)}` : ''}` : S().instagram;
+const waHref = (text) => S().whatsapp ? `https://wa.me/${String(S().whatsapp).replace(/\D/g, '')}${text ? `?text=${encodeURIComponent(text)}` : ''}` : '#/contact';
 
 function availableVariants(product) { return (product.variants || []).filter((v) => !v.soldOut && validPrice(v.price)); }
 function defaultVariant(product) {
@@ -150,14 +153,15 @@ function cardAction(product) {
 }
 function productCard(product) {
   const name = esc(L(product.name));
-  return `<article class="product-card" data-product="${esc(product.id)}"><div class="product-visual"><a class="product-image device-media" href="${productUrl(product)}" aria-label="${esc(`${t('view')}: ${L(product.name)}`)}">${media(product)}</a>${saveButton(product)}${product.offer ? `<span class="offer-badge">${esc(t('offers'))}</span>` : ''}</div><div class="product-body"><p class="product-brand" dir="ltr">${esc(product.brand)}</p><h3 class="product-name" dir="auto"><a href="${productUrl(product)}">${name}</a></h3><p class="product-caption">${esc(L(product.tagline))}</p>${conditionChips(product)}<div class="product-buy">${priceTag(product)}${cardAction(product)}</div></div></article>`;
+  return `<article class="product-card" data-product="${esc(product.id)}"><div class="product-visual"><a class="product-image device-media" href="${productUrl(product)}" aria-label="${esc(`${t('view')}: ${L(product.name)}`)}">${media(product)}</a>${saveButton(product)}${product.offer ? `<span class="offer-badge">${esc(t('offers'))}</span>` : ''}</div><div class="product-body"><p class="product-brand" dir="ltr">${esc(product.brand)}</p><h3 class="product-name" dir="auto"><a href="${productUrl(product)}">${name}</a></h3><p class="product-caption">${esc(L(specification(product)?.specs[0]?.value))}</p>${conditionChips(product)}<div class="product-buy">${priceTag(product)}${cardAction(product)}</div></div></article>`;
 }
 function sectionHeading(title, href, label = t('allDevices'), eyebrow = '') {
   return `<div class="section-heading"><div>${eyebrow ? `<p class="eyebrow">${esc(eyebrow)}</p>` : ''}<h2>${esc(title)}</h2></div>${href ? `<a class="text-link" href="${esc(href)}">${esc(label)}${arrow}</a>` : ''}</div>`;
 }
-function contactActions(product, variant) {
-  const text = product ? `${t('waHello')} ${t('waAsk')} ${L(product.name)}${variant ? ` (${variantLabel(variant)})` : ''}` : t('waHello');
-  return `<div class="contact-actions"><a class="button ${S().whatsapp ? 'button-whatsapp' : 'button-primary'}" href="${esc(waHref(text))}" ${external}>${S().whatsapp ? icon('whatsapp') : ''}${esc(t(S().whatsapp ? 'askWhatsapp' : 'ask'))}</a><a class="button button-outline" href="${esc(phoneHref())}">${icon('phone')}${esc(t('call'))}</a></div>`;
+function contactActions({ instagram = false } = {}) {
+  const destination = instagram ? S().instagram : '#/contact';
+  const label = instagram ? t('ask') : t('contact');
+  return `<div class="contact-actions"><a class="button button-primary" href="${esc(destination)}"${instagram ? ` ${external}` : ''}>${esc(label)}</a><a class="button button-outline" href="${esc(phoneHref())}">${icon('phone')}${esc(t('call'))}</a></div>`;
 }
 
 // ---------- home ----------
@@ -185,16 +189,16 @@ function renderHome() {
     const lows = inCat.map(fromPrice).filter((n) => n !== null);
     return `<a class="category-card" href="${categoryUrl(id)}"><div class="category-picture device-media">${media(rep)}</div><h3>${esc(categoryName(id))}</h3><span class="category-count">${esc(t('count')(inCat.length))}${lows.length ? ` · ${esc(t('from'))} <bdi>${esc(money(Math.min(...lows)))}</bdi>` : ''}</span></a>`;
   }).join('');
-  const trust = t('trust').map(([title, text], i) => `<li class="trust-item"><span class="trust-icon" aria-hidden="true">${icon(['shield', 'box', 'cash', 'swap'][i])}</span><span><strong>${esc(title)}</strong><small>${esc(text)}</small></span></li>`).join('');
+  const trust = t('trust').map(([title, text], i) => `<li class="trust-item"><span class="trust-icon" aria-hidden="true">${icon(['search', 'box', 'heart', 'swap'][i])}</span><span><strong>${esc(title)}</strong><small>${esc(text)}</small></span></li>`).join('');
   return `<section class="hero"><div class="container hero-grid"><div class="hero-copy"><h1><span>${esc(t('heroLine1'))}</span> <span>${esc(t('heroLine2'))}</span></h1><div class="hero-buttons"><a class="button button-dark" href="#/offers">${esc(t('heroOffers'))}${arrow}</a><a class="button button-outline" href="#/shop">${esc(t('browse'))}</a></div></div><div id="hero-showcase" class="hero-showcase">${heroShowcase()}</div></div></section>
   <div class="home-content">
-    ${offers.length ? `<section class="container offers-section">${sectionHeading(L(S().offersTitle), '#/offers', t('offersAll'))}<p class="section-note">${esc(L(S().pricesNote))}</p>${offersRow(offers)}</section>` : ''}
+    ${offers.length ? `<section class="container offers-section">${sectionHeading(t('offersTitle'), '#/offers', t('offersAll'))}${offersRow(offers)}</section>` : ''}
     <section class="container"><ul class="trust-strip">${trust}</ul></section>
     <section class="container categories-section">${sectionHeading(t('categories'), '#/shop')}<div class="category-grid">${cats}</div></section>
     ${featured.length ? `<section class="container featured-section">${sectionHeading(t('featuredTitle'), '#/shop')}<div class="product-grid">${featured.map(productCard).join('')}</div></section>` : ''}
     <section class="container services-section"><div class="service-panel"><div><p class="eyebrow" dir="ltr">TRIO MOBILE</p><h2>${esc(t('servicesTitle'))}</h2><p>${esc(t('servicesText'))}</p></div><div class="service-actions"><a class="button button-primary" href="#/maintenance">${esc(t('repairCta'))}${arrow}</a><a class="button button-outline" href="#/trade-in">${esc(t('tradeCta'))}${arrow}</a></div></div></section>
-    <section class="container story-section"><div class="story-panel"><a class="story-image" href="https://www.instagram.com/reel/DekDjiFKN3j/" ${external}><img src="assets/instagram/store.jpg" alt="${esc(state.language === 'ar' ? 'داخل محل تريو موبايل' : 'Inside Trio Mobile')}" width="1179" height="1572" loading="lazy"></a><div class="story-copy"><p class="eyebrow" dir="ltr">THIS IS TRIO.</p><h2>${esc(t('aboutTitle'))}</h2><p>${esc(t('aboutText'))}</p><a class="text-link" href="#/contact">${esc(t('contact'))}${arrow}</a></div></div></section>
-    <section class="container instagram-banner"><div><p class="eyebrow" dir="ltr">@TRIO_MOBILE.JO</p><h2>${esc(t('followTitle'))}</h2></div><a class="button button-dark" href="${esc(S().instagram)}" ${external}>${esc(t('follow'))}${arrow}</a></section>
+    <section class="container story-section"><div class="story-panel"><a class="story-image" href="#/contact"><img src="assets/instagram/store.jpg" alt="${esc(state.language === 'ar' ? 'داخل محل تريو موبايل' : 'Inside Trio Mobile')}" width="1179" height="1572" loading="lazy"></a><div class="story-copy"><p class="eyebrow" dir="ltr">THIS IS TRIO.</p><h2>${esc(t('aboutTitle'))}</h2><p>${esc(t('aboutText'))}</p><a class="text-link" href="#/contact">${esc(t('contact'))}${arrow}</a></div></div></section>
+
   </div>`;
 }
 
@@ -240,7 +244,7 @@ function renderCatalog() {
   const r = state.route.name;
   const brands = [...new Set(baseProducts().map((p) => p.brand))].sort();
   if (!brands.includes(state.brand)) state.brand = 'all';
-  const heading = r === 'saved' ? t('saved') : r === 'offers' ? L(S().offersTitle) : state.category === 'all' ? t('shop') : categoryName(state.category);
+  const heading = r === 'saved' ? t('saved') : r === 'offers' ? t('offersTitle') : state.category === 'all' ? t('shop') : categoryName(state.category);
   const intro = r === 'saved' ? t('savedIntro') : r === 'offers' ? t('offersIntro') : t('shopIntro');
   const opt = (value, label, current) => `<option value="${value}"${current === value ? ' selected' : ''}>${esc(label)}</option>`;
   return `<div class="container page-shell catalog-page"><div class="page-heading"><p class="eyebrow">${esc(t('collection'))}</p><h1>${esc(heading)}</h1><p class="page-intro">${esc(intro)}</p></div>${categoryTabs()}
@@ -248,7 +252,7 @@ function renderCatalog() {
   <label class="control-field"><span class="sr-only">${esc(t('brand'))}</span><select id="brand-filter">${opt('all', t('allBrands'), state.brand)}${brands.map((b) => opt(b, b, state.brand)).join('')}</select></label>
   <label class="control-field"><span class="sr-only">${esc(t('condition'))}</span><select id="cond-filter">${opt('all', t('condAll'), state.cond)}${opt('new', t('condNew'), state.cond)}${opt('used', t('condUsed'), state.cond)}</select></label>
   <label class="control-field"><span class="sr-only">${esc(t('sort'))}</span><select id="sort-order">${opt('featured', t('featured'), state.sort)}${opt('price-asc', t('priceLow'), state.sort)}${opt('price-desc', t('priceHigh'), state.sort)}${opt('name', t('nameSort'), state.sort)}</select></label></div>
-  <div id="catalog-results"></div><p class="image-disclosure">${esc(L(S().pricesNote))} ${esc(t('photoNote'))}</p></div>`;
+  <div id="catalog-results"></div></div>`;
 }
 function updateResults() {
   const box = $('#catalog-results');
@@ -267,6 +271,11 @@ function variantNotes(variant) {
   if (variant.warranty && warranties[variant.warranty]) rows.push([t('warranty'), L(warranties[variant.warranty])]);
   return rows;
 }
+function renderSpecifications(product, variant) {
+  const data = specification(product);
+  const rows = [...(variant.storage ? [{ label: { ar: t('configuration'), en: t('configuration') }, value: { ar: variant.storage, en: variant.storage } }] : []), ...(data?.specs || [])];
+  return `<section class="device-specs" id="device-specs"><h2>${esc(t('details'))}</h2><dl>${rows.map((row) => `<div class="device-spec-row"><dt>${esc(L(row.label))}</dt><dd dir="auto">${esc(L(row.value))}</dd></div>`).join('')}</dl></section>`;
+}
 function renderDetail(id) {
   const product = products().find((p) => p.id === id);
   if (!product) return `<div class="container page-shell"><div class="empty-state"><h1>${esc(t('notFound'))}</h1><p>${esc(t('notFoundText'))}</p><a class="button button-primary" href="#/shop">${esc(t('browse'))}</a></div></div>`;
@@ -277,12 +286,11 @@ function renderDetail(id) {
   const canBuy = !variant.soldOut && validPrice(variant.price);
   return `<div class="container page-shell product-page"><nav class="breadcrumbs" aria-label="${esc(state.language === 'ar' ? 'مسار التصفح' : 'Breadcrumb')}"><a href="#/">${esc(t('home'))}</a><span aria-hidden="true">/</span><a href="${categoryUrl(product.category)}">${esc(categoryName(product.category))}</a><span aria-hidden="true">/</span><span dir="auto">${esc(L(product.name))}</span></nav>
   <div class="product-detail"><div class="detail-visual"><div class="detail-image device-media">${media(product, { eager: true })}</div>${product.imageNote && !product.photo ? `<p class="detail-photo-note">${esc(L(product.imageNote))}</p>` : ''}</div>
-  <div class="detail-copy"><div class="detail-top"><div><p class="product-brand" dir="ltr">${esc(product.brand)}</p><h1 dir="auto">${esc(L(product.name))}</h1></div>${saveButton(product, 'detail-save-button')}</div><p class="detail-tagline">${esc(L(product.tagline))}</p>
+  <div class="detail-copy"><div class="detail-top"><div><p class="product-brand" dir="ltr">${esc(product.brand)}</p><h1 dir="auto">${esc(L(product.name))}</h1></div>${saveButton(product, 'detail-save-button')}</div><p class="detail-tagline">${esc(L(specification(product)?.summary))}</p>
   ${chips}
-  <div class="detail-buy" id="detail-buy"><p class="detail-price"><bdi>${esc(canBuy ? money(toFils(variant.price)) : t('soldOut'))}</bdi></p>${variant.storage ? `<p class="detail-variant" dir="auto">${esc(variant.storage)}</p>` : ''}${variant.posted ? `<p class="posted-note">${esc(t('postedOn'))} <time datetime="${esc(variant.posted)}" dir="ltr">${esc(variant.posted)}</time></p>` : ''}${rows ? `<ul class="spec-list">${rows}</ul>` : ''}
-  <div class="detail-actions">${canBuy ? `<button type="button" class="button button-primary button-wide" data-add="${esc(variantId(product.id, variant.key))}">${icon('bag')}${esc(t('add'))}</button>` : `<span class="button button-wide is-disabled">${esc(t('unavailable'))}</span>`}${contactActions(product, variant)}</div></div>
-  <section class="detail-about"><h2>${esc(t('details'))}</h2><p>${esc(L(product.about))}</p>${(product.specs || []).length ? `<ul class="about-specs">${product.specs.map((s) => `<li dir="auto">${esc(L(s))}</li>`).join('')}</ul>` : ''}</section>
-  <p class="detail-note">${esc(L(S().pricesNote))}</p>${(variant.source || product.source) ? `<a class="detail-source" href="${esc(variant.source || product.source)}" ${external}>${esc(t('source'))}${arrow}</a>` : ''}</div></div>
+  <div class="detail-buy" id="detail-buy"><p class="detail-price"><bdi>${esc(canBuy ? money(toFils(variant.price)) : t('soldOut'))}</bdi></p>${variant.storage ? `<p class="detail-variant" dir="auto">${esc(variant.storage)}</p>` : ''}${rows ? `<ul class="spec-list">${rows}</ul>` : ''}
+  <div class="detail-actions">${canBuy ? `<button type="button" class="button button-primary button-wide" data-add="${esc(variantId(product.id, variant.key))}">${icon('bag')}${esc(t('add'))}</button>` : `<span class="button button-wide is-disabled">${esc(t('unavailable'))}</span>`}</div></div>
+  ${renderSpecifications(product, variant)}</div></div>
   ${related.length ? `<section class="related-section">${sectionHeading(t('related'), categoryUrl(product.category), t('backCategory'))}<div class="product-grid">${related.map(productCard).join('')}</div></section>` : ''}</div>`;
 }
 
@@ -329,7 +337,7 @@ function orderText(priced, number = '') {
   return [t('waHello'), t('waOrder'), ...lines, `${t('waTotal')}: ${money(priced.totalFils)}`, number ? `${t('waNumber')}: ${number}` : ''].filter(Boolean).join('\n');
 }
 function renderInquiry() {
-  return `<div class="container page-shell inquiry-page"><div class="page-heading"><h1>${esc(t('contactTitle'))}</h1><p class="page-intro">${esc(t('ordersOff'))}</p></div><div class="service-panel"><div><h2>${esc(t('call'))}</h2><p>${esc(L(S().pricesNote))}</p><p dir="ltr">${esc(phoneText())}</p></div>${contactActions(null)}</div><a class="text-link inquiry-back" href="#/bag">${esc(t('bag'))}${arrow}</a></div>`;
+  return `<div class="container page-shell inquiry-page"><div class="page-heading"><h1>${esc(t('checkoutTitle'))}</h1><p class="page-intro">${esc(t('ordersOff'))}</p></div><div class="contact-actions"><a class="button button-primary" href="#/contact">${esc(t('contact'))}${arrow}</a><a class="button button-outline" href="#/bag">${esc(t('bag'))}</a></div></div>`;
 }
 function renderCheckout() {
   if (MODE === 'pages') return renderInquiry();
@@ -341,7 +349,7 @@ function renderCheckout() {
   const ordersOn = S().ordersOn !== false;
   const gov = governorates.map(([id, ar, en]) => `<option value="${id}"${(draft.governorate || 'amman') === id ? ' selected' : ''}>${esc(state.language === 'ar' ? ar : en)}</option>`).join('');
   const pickup = draft.fulfilment === 'pickup';
-  return `<div class="container page-shell checkout-page"><div class="page-heading"><h1>${esc(t('checkoutTitle'))}</h1><p class="page-intro">${esc(L(S().deliveryNote))}</p></div><div class="bag-layout">
+  return `<div class="container page-shell checkout-page"><div class="page-heading"><h1>${esc(t('checkoutTitle'))}</h1><p class="page-intro">${esc(t('checkoutIntro'))}</p></div><div class="bag-layout">
   ${ordersOn ? `<form id="checkout-form" class="checkout-form" novalidate><p class="form-alert" id="form-alert" role="alert" hidden></p>
   <label class="field"><span>${esc(t('name'))}</span><input name="name" autocomplete="name" maxlength="60" required value="${esc(draft.name || '')}"></label>
   <label class="field"><span>${esc(t('mobile'))}</span><input name="mobile" type="tel" inputmode="tel" dir="ltr" autocomplete="tel" maxlength="20" placeholder="${esc(t('mobileHint'))}" required value="${esc(draft.mobile || '')}"></label>
@@ -405,7 +413,7 @@ async function submitCheckout(form) {
 // ---------- service pages ----------
 function renderService(trade = false) {
   const steps = trade ? '' : `<div class="service-grid">${t('serviceSteps').map(([title, text], i) => `<section class="service-card"><span class="service-number" aria-hidden="true">0${i + 1}</span><h2>${esc(title)}</h2><p>${esc(text)}</p></section>`).join('')}</div>`;
-  return `<div class="container page-shell service-page"><div class="page-heading"><p class="eyebrow" dir="ltr">TRIO MOBILE</p><h1>${esc(t(trade ? 'tradeTitle' : 'serviceTitle'))}</h1><p class="page-intro">${esc(t(trade ? 'tradeText' : 'serviceText'))}</p></div><div class="service-panel"><div><h2>${esc(t('contact'))}</h2><p>${esc(trade ? t('tradeNote') : L(S().address))}</p></div>${contactActions(null)}</div>${steps}<a class="text-link" href="${esc(S().maps)}" ${external}>${esc(t('map'))}${arrow}</a></div>`;
+  return `<div class="container page-shell service-page"><div class="page-heading"><p class="eyebrow" dir="ltr">TRIO MOBILE</p><h1>${esc(t(trade ? 'tradeTitle' : 'serviceTitle'))}</h1><p class="page-intro">${esc(t(trade ? 'tradeText' : 'serviceText'))}</p></div><div class="service-panel"><div><h2>${esc(t('contact'))}</h2><p>${esc(trade ? t('tradeNote') : L(S().address))}</p></div>${contactActions({ instagram: !trade })}</div>${steps}<a class="text-link" href="${esc(S().maps)}" ${external}>${esc(t('map'))}${arrow}</a></div>`;
 }
 function renderContact() {
   return `<div class="container page-shell contact-page"><div class="page-heading"><p class="eyebrow" dir="ltr">KHALDA · AMMAN</p><h1>${esc(t('contactTitle'))}</h1><p class="page-intro">${esc(t('contactIntro'))}</p></div><div class="contact-grid">
@@ -478,7 +486,7 @@ function translateShell() {
   $$('[data-phone-link]').forEach((a) => { a.href = phoneHref(); }); $$('[data-phone-text]').forEach((a) => { a.textContent = phoneText(); });
   $$('[data-address]').forEach((n) => { n.textContent = L(S().address); });
   $$('[data-wa-link]').forEach((a) => { a.hidden = !S().whatsapp; if (S().whatsapp) a.href = waHref(t('waHello')); else a.removeAttribute('href'); });
-  $$('[data-ig-link]').forEach((a) => { a.href = S().instagram; }); $$('[data-maps-link]').forEach((a) => { a.href = S().maps; });
+  $$('[data-maps-link]').forEach((a) => { a.href = S().maps; });
   updateCounts();
 }
 function renderRoute({ focus = false } = {}) {
@@ -502,6 +510,13 @@ function renderRoute({ focus = false } = {}) {
     default: html = renderHome();
   }
   main.innerHTML = html;
+  $$('[data-instagram-slot]').forEach((element) => {
+    const allowed = instagramAllowed(state.route.name);
+    element.hidden = !allowed;
+    element.innerHTML = allowed ? `<a href="${esc(S().instagram)}" ${external}>Instagram ↗</a>` : '';
+  });
+  $$('[data-contact-block]').forEach((element) => { element.hidden = state.route.name === 'p'; });
+  $('.site-footer')?.classList.toggle('is-device-page', state.route.name === 'p');
   updateResults();
   const nav = state.route.name === 'p' ? 'shop' : state.route.name === 'checkout' || state.route.name === 'done' ? 'bag' : state.route.name;
   $$('[data-nav]').forEach((a) => { if (a.dataset.nav === nav) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
@@ -516,8 +531,8 @@ function updateDetailBuy(product) {
   const tmp = document.createElement('div'); tmp.innerHTML = html;
   const fresh = $('#detail-buy', tmp); const now = $('#detail-buy');
   if (fresh && now) now.replaceWith(fresh);
-  const sourceLink = $('.detail-source'); const freshSource = $('.detail-source', tmp);
-  if (sourceLink && freshSource) sourceLink.replaceWith(freshSource);
+  const specs = $('#device-specs'); const freshSpecs = $('#device-specs', tmp);
+  if (specs && freshSpecs) specs.replaceWith(freshSpecs);
   $$('[data-variant]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.variant === state.selected[product.id])));
 }
 async function refreshContent() {

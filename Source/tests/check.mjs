@@ -5,6 +5,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import seed from '../shared/catalog.js';
+import { verifyStorefront } from './storefront.mjs';
 import { priceLines, normaliseMobile, fromPrice, toFils, validPrice, MAX_QTY, MAX_LINES } from '../shared/pricing.js';
 import { conditions, notes, warranties } from '../shared/labels.js';
 
@@ -135,6 +136,8 @@ if (process.argv.includes('--pages')) {
     ok(!/<script\b|<form\b/i.test(admin), 'Pages admin fallback cannot simulate login or changes');
   }
 }
+
+try { verifyStorefront(); } catch (error) { ok(false, `storefront: ${error.message}`); }
 
 console.log(failed ? `\n${failed} check(s) failed` : 'all checks passed');
 process.exit(failed ? 1 : 0);

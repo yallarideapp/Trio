@@ -22,3 +22,9 @@ GitHub Pages supports the catalog, offers, options, search, filters, favorites, 
 The supplied Worker source is preserved for a future separately configured backend deployment. Its D1/KV bindings are placeholders; no Cloudflare deployment has been performed. `npm run build` produces the live Worker assets; `npm run demo:build` produces a clearly labeled local-only demo. See `Cloudflare-guide.md` for the supplied setup guide.
 
 Prices, condition and warranty descriptions are attributed to dated public Instagram posts, not a claim of current stock or terms. Confirm current details directly with Trio. Unconfirmed WhatsApp and inferred catalog options are excluded from this release.
+
+## Device specifications and contact links
+
+Bilingual hardware descriptions and specification tables live in `Source/shared/specs/`, combined by `Source/shared/device-specs.js`. Each profile records official manufacturer URLs for maintenance; these are not rendered as product-page source links. Selected configuration, condition, warranty and price remain catalog variant fields.
+
+Public product pages contain specifications and bag actions. Instagram links are limited to Repair and Visit us. Source/post commentary, dated price notices and product inquiry buttons are omitted from the storefront. `Source/tests/storefront.mjs` verifies this for all 24 devices in both languages and checks every selected configuration.
