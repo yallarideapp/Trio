@@ -8,6 +8,8 @@ import seed from '../shared/catalog.js';
 import { verifyStorefront } from './storefront.mjs';
 import { verifyCatalogImages } from './images.mjs';
 import { verifyPagesEditor } from './pages-editor.mjs';
+import { verifyWorkerOrders } from './worker-orders.mjs';
+import { verifyCustomerAccountUI } from './customer-account-ui.mjs';
 import { priceLines, normaliseMobile, fromPrice, toFils, validPrice, MAX_QTY, MAX_LINES } from '../shared/pricing.js';
 import { conditions, notes, warranties } from '../shared/labels.js';
 
@@ -82,6 +84,13 @@ try {
   ok(loaded.content.settings.ordersOn === false, 'Pages disables online ordering');
   ok(loaded.source === 'seed' && loaded.content.products.length === seed.products.length, 'Pages loads shipped content');
   ok(!Object.hasOwn(api, 'admin'), 'Pages does not expose demo or live admin');
+  ok(JSON.stringify(await api.account.session()) === JSON.stringify({ configured: false, signedIn: false, customer: null }), 'Pages explicitly reports customer accounts as unavailable');
+  for (const action of ['register', 'login', 'logout', 'profile', 'password', 'orders']) {
+    let unavailable = false;
+    try { await api.account[action]({}); }
+    catch (error) { unavailable = error instanceof ApiError && error.code === 'accounts-unavailable' && error.status === 503; }
+    ok(unavailable, `Pages customer ${action} cannot simulate a shared account`);
+  }
   ok(api.photoUrl('draft-photo') === '', 'Pages does not request backend photos');
   loaded.content.settings.phone = 'changed';
   ok((await api.loadContent()).content.settings.phone === seed.settings.phone, 'Pages returns a fresh content copy');
@@ -144,7 +153,8 @@ if (process.argv.includes('--pages')) {
     ok(!adminBundle.includes('/api/'), 'Pages editor has no live backend endpoints');
     ok(!/trio-demo-(?:content|orders|photos|counter)/.test(adminBundle), 'Pages editor keeps the legacy demo order adapter out of the build');
     ok(adminBundle.includes('Browser-only preview') && adminBundle.includes('Save preview'), 'Pages editor clearly labels browser-only previews');
-    ok(adminBundle.includes('trio-pages-orders-v1') && adminBundle.includes('Local order book'), 'Pages editor ships the explicitly local manual order book');
+    ok(adminBundle.includes('Shared order service not connected') && adminBundle.includes('Customer orders will appear here after the shared order service is connected.'), 'Pages explains how customer orders are enabled');
+    ok(!adminBundle.includes('data-new-order') && !adminBundle.includes('new-order-form'), 'Pages provides no manual order creation form');
   }
   const adminPath = path.join(website, 'admin/index.html');
   ok(existsSync(adminPath), 'Pages has a runnable editor entry point');
@@ -160,6 +170,8 @@ try { console.log('image checks passed:', JSON.stringify(verifyCatalogImages()))
 
 try { verifyStorefront(); } catch (error) { ok(false, `storefront: ${error.message}`); }
 try { await verifyPagesEditor(); } catch (error) { ok(false, `Pages editor: ${error.stack || error.message}`); }
+try { await verifyWorkerOrders(); } catch (error) { ok(false, `Worker integration: ${error.stack || error.message}`); }
+try { await verifyCustomerAccountUI(); } catch (error) { ok(false, `Customer account UI: ${error.stack || error.message}`); }
 
 console.log(failed ? `\n${failed} check(s) failed` : 'all checks passed');
 process.exit(failed ? 1 : 0);

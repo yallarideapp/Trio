@@ -14,6 +14,7 @@ export function verifyStorefront() {
   const location = { hash: '#/' };
   const context = vm.createContext({
     ...pricing, deviceSpecifications, conditions, conditionShort, noteLabels: notes, warranties, governorates,
+    renderAccount: () => '<h1>My account</h1>', loadAccount: async () => {}, bindAccount: () => {}, accountLabel: () => 'Sign in', customerProfile: () => null,
     MODE: 'pages', api: { photoUrl: () => '' }, local: { read: (key, fallback = null) => stored.has(key) ? structuredClone(stored.get(key)) : fallback, write: (key, value) => { stored.set(key, structuredClone(value)); return true; } },
     document, location, window: { addEventListener: (name, listener) => windowEvents.set(name, listener) }, console, URLSearchParams, Intl, setTimeout, clearTimeout,
   });

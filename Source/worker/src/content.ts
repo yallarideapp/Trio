@@ -5,6 +5,8 @@ import seed from '../../shared/catalog.js';
 import { conditions, notes as noteLabels, warranties } from '../../shared/labels.js';
 // @ts-ignore
 import { validPrice } from '../../shared/pricing.js';
+// @ts-ignore verified bilingual device profiles
+import deviceSpecifications from '../../shared/device-specs.js';
 
 export interface Published { version: number; content: any; fromSeed: boolean }
 
@@ -40,7 +42,7 @@ export function sanitizeContent(input: any): any {
     phone: str(s.phone, 20).replace(/[^\d+]/g, ''),
     whatsapp: str(s.whatsapp, 20).replace(/\D/g, ''),
     instagram: httpsUrl(s.instagram), facebook: httpsUrl(s.facebook), maps: httpsUrl(s.maps),
-    address: pair(s.address, 200), ordersOn: s.ordersOn !== false,
+    address: pair(s.address, 200), ordersOn: s.ordersOn === true,
     deliveryNote: pair(s.deliveryNote, 400), pricesNote: pair(s.pricesNote, 400), offersTitle: pair(s.offersTitle, 80),
   };
   if (Array.isArray(input)) throw new HttpError(400, 'bad-content');
@@ -79,7 +81,10 @@ export function sanitizeContent(input: any): any {
     const photo = isStr(p.photo) && PHOTO.test(p.photo) ? p.photo : '';
     const specs = (Array.isArray(p.specs) ? p.specs.slice(0, 12) : []).map((x: any) => pair(x, 120)).filter((x: any) => x.ar || x.en);
     const imageNote = p.imageNote ? pair(p.imageNote, 160) : undefined;
-    return { id, category, brand: str(p.brand, 30), name, image, photo, imageNote: imageNote && (imageNote.ar || imageNote.en) ? imageNote : undefined, hidden: p.hidden === true, offer: p.offer === true, featured: p.featured === true, tagline: pair(p.tagline, 140), about: pair(p.about, 1200), specs, source: httpsUrl(p.source, 300), variants };
+    const profile = p.technical || deviceSpecifications[id] || { summary: { ar: '', en: '' }, specs: [] };
+    if (typeof profile !== 'object' || !Array.isArray(profile.specs) || profile.specs.length > 60) throw new HttpError(400, 'bad-content', { field: 'technical', id });
+    const technical = { summary: pair(profile.summary, 2000), specs: profile.specs.map((row: any) => ({ label: pair(row?.label, 200), value: pair(row?.value, 2000) })), sources: Array.isArray(profile.sources) ? profile.sources.slice(0, 12).map((url: unknown) => httpsUrl(url)).filter(Boolean) : [] };
+    return { id, category, brand: str(p.brand, 30), name, image, photo, imageNote: imageNote && (imageNote.ar || imageNote.en) ? imageNote : undefined, hidden: p.hidden === true, offer: p.offer === true, featured: p.featured === true, tagline: pair(p.tagline, 140), about: pair(p.about, 1200), specs, technical, source: httpsUrl(p.source, 300), variants };
   });
   return { settings, categories, products };
 }

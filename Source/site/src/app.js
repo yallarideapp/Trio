@@ -1,5 +1,6 @@
 import deviceSpecifications from '../../shared/device-specs.js';
 import { api, local, MODE, ApiError } from './store.js';
+import { renderAccount, loadAccount, bindAccount, accountLabel, customerProfile } from './account.js';
 import { priceLines, fromPrice, formatJD, toFils, variantId, splitVariantId, visibleProducts, normaliseMobile, MAX_QTY, MAX_LINES, validPrice } from '../../shared/pricing.js';
 import { conditions, conditionShort, notes as noteLabels, warranties, governorates } from '../../shared/labels.js';
 
@@ -10,7 +11,7 @@ const state = {
   language: local.read('trio-language') === 'en' ? 'en' : 'ar',
   content: null, source: 'seed', saved: new Set(), bag: [], route: { name: 'home' },
   category: 'all', query: '', brand: 'all', sort: 'featured', cond: 'all',
-  heroCategory: 'phones', selected: {}, checkoutToken: '', checkoutStarted: 0, lastOrder: local.read('trio-last-order'), busy: false,
+  heroCategory: 'phones', selected: {}, checkoutToken: '', checkoutSignature: '', checkoutStarted: 0, lastOrder: null, busy: false,
 };
 
 const words = {
@@ -34,11 +35,11 @@ const words = {
     askWhatsapp: 'اسأل على واتساب', call: 'اتصل بتريو', ask: 'اسألنا على إنستغرام', source: 'شوف المنشور على إنستغرام', imageCard: 'صورة الجهاز قريباً',
     notFound: 'الجهاز مش موجود بهالقائمة.', notFoundText: 'ارجع للأجهزة لتشوف تشكيلة تريو.',
     bagTitle: 'السلة', bagEmpty: 'السلة فاضية.', bagEmptyText: 'اختار جهاز وأضفه للسلة.', remove: 'شيل', qty: 'العدد', subtotal: 'المجموع', delivery: 'التوصيل', deliveryValue: 'نأكده معك بالاتصال',
-    total: 'المجموع', bagFull: 'السلة فيها أكبر عدد أجهزة لطلب واحد.', checkout: 'تواصل لتأكيد الأجهزة', keepShopping: 'كمّل تسوّق', bagFixed: 'في جهاز بالسلة صار غير متوفر وانشال.',
+    total: 'المجموع', bagFull: 'السلة فيها أكبر عدد أجهزة لطلب واحد.', checkout: 'تواصل لتأكيد الأجهزة', checkoutLive: 'أكمل الطلب', keepShopping: 'كمّل تسوّق', bagFixed: 'في جهاز بالسلة صار غير متوفر وانشال.',
     checkoutTitle: 'تفاصيل الطلب', checkoutIntro: 'أكمل بيانات التواصل والاستلام.', name: 'الاسم', mobile: 'رقم الموبايل', mobileHint: 'مثال: 0791234567', fulfilment: 'الاستلام', deliveryOpt: 'توصيل', pickupOpt: 'استلام من المحل',
     governorate: 'المحافظة', address: 'العنوان', addressHint: 'المنطقة، الشارع، أقرب معلم', notes: 'ملاحظات (اختياري)', placeOrder: 'أرسل الطلب', sending: 'عم نرسل…',
     payCash: 'راجع الأجهزة والخيارات اللي اخترتها قبل إكمال الطلب.', privacy: 'نستخدم اسمك ورقمك وعنوانك بس لتأكيد الطلب وتوصيله.', ordersOff: 'لإكمال تفاصيل طلبك، انتقل لصفحة زورونا.',
-    sendWhatsapp: 'ابعت الطلب على واتساب', doneTitle: 'وصلنا طلبك!', doneText: 'رقم طلبك', doneNext: 'رح نتصل فيك قريباً لنأكد الجهاز والتوصيل. إذا حاب، ابعت رقم الطلب على واتساب.',
+    sendWhatsapp: 'ابعت الطلب على واتساب', doneTitle: 'تم استلام طلبك', doneText: 'رقم طلبك', doneNext: 'تم تسجيل طلبك لدى تريو. سيتواصل معك المحل لتأكيد الأجهزة وتفاصيل الاستلام.', receiptMissing: 'لا يوجد تأكيد طلب محفوظ هنا.', receiptMissingText: 'يظهر التأكيد بعد إرسال الطلب بنجاح. ارجع للسلة لإكمال طلبك.',
     demoNote: 'نسخة عرض: الطلب انحفظ على هالمتصفح بس، وما انبعت للمحل.',
     errors: { 'bad-name': 'اكتب اسمك (حرفين على الأقل).', 'bad-mobile': 'اكتب رقم موبايل أردني صحيح، مثل 0791234567.', 'bad-governorate': 'اختار المحافظة.', 'bad-address': 'اكتب العنوان للتوصيل.',
       'price-changed': 'تغيّر سعر جهاز بالسلة. راجع السلة وجرّب مرة ثانية.', 'sold-out': 'جهاز بالسلة نفد. راجع السلة.', unknown: 'جهاز بالسلة ما عاد موجود. راجع السلة.', 'orders-off': 'الطلب من الموقع متوقف حالياً.',
@@ -70,11 +71,11 @@ const words = {
     askWhatsapp: 'Ask on WhatsApp', call: 'Call Trio', ask: 'Ask us on Instagram', source: 'See the post on Instagram', imageCard: 'Photo coming soon',
     notFound: 'This device is not in the collection.', notFoundText: 'Browse devices to explore Trio’s collection.',
     bagTitle: 'Your bag', bagEmpty: 'Your bag is empty.', bagEmptyText: 'Pick a device and add it to your bag.', remove: 'Remove', qty: 'Qty', subtotal: 'Subtotal', delivery: 'Delivery', deliveryValue: 'Confirmed by phone',
-    total: 'Total', bagFull: 'Your bag holds the most devices one order can take.', checkout: 'Ask Trio about your bag', keepShopping: 'Keep shopping', bagFixed: 'A device in your bag is no longer available and was removed.',
+    total: 'Total', bagFull: 'Your bag holds the most devices one order can take.', checkout: 'Ask Trio about your bag', checkoutLive: 'Checkout', keepShopping: 'Keep shopping', bagFixed: 'A device in your bag is no longer available and was removed.',
     checkoutTitle: 'Order details', checkoutIntro: 'Complete your contact and collection details.', name: 'Name', mobile: 'Mobile number', mobileHint: 'e.g. 0791234567', fulfilment: 'Delivery or pickup', deliveryOpt: 'Delivery', pickupOpt: 'Pick up in store',
     governorate: 'Governorate', address: 'Address', addressHint: 'Area, street, nearest landmark', notes: 'Notes (optional)', placeOrder: 'Send order', sending: 'Sending…',
     payCash: 'Review your selected devices and configurations before continuing.', privacy: 'We use your name, number and address only to confirm and deliver your order.', ordersOff: 'Continue to Visit us to complete your request.',
-    sendWhatsapp: 'Send order on WhatsApp', doneTitle: 'We got your order!', doneText: 'Your order number', doneNext: 'We will call you soon to confirm the device and delivery. You can also send the order number on WhatsApp.',
+    sendWhatsapp: 'Send order on WhatsApp', doneTitle: 'Order received', doneText: 'Your order number', doneNext: 'Your order has been recorded with Trio. The store will contact you to confirm the devices and collection details.', receiptMissing: 'No saved order confirmation here.', receiptMissingText: 'A confirmation appears after your order is sent successfully. Return to your bag to complete your order.',
     demoNote: 'Demo copy: the order was saved in this browser only and not sent to the store.',
     errors: { 'bad-name': 'Enter your name (at least 2 letters).', 'bad-mobile': 'Enter a valid Jordanian mobile number, like 0791234567.', 'bad-governorate': 'Choose a governorate.', 'bad-address': 'Enter the delivery address.',
       'price-changed': 'A price in your bag changed. Check your bag and try again.', 'sold-out': 'A device in your bag sold out. Check your bag.', unknown: 'A device in your bag is no longer listed. Check your bag.', 'orders-off': 'Ordering on the site is paused.',
@@ -97,6 +98,7 @@ const icon = (name) => `<svg class="icon" aria-hidden="true"><use href="#icon-${
 const money = (fils) => formatJD(fils, state.language);
 const num = (n) => new Intl.NumberFormat(state.language === 'ar' ? 'ar-JO' : 'en').format(n);
 const S = () => state.content.settings;
+const ordersEnabled = () => MODE !== 'pages' && S().ordersOn === true;
 const visitorKey = (name) => `trio-${state.source === 'preview' ? 'preview-' : ''}${name}`;
 const offersHeading = () => L(S().offersTitle) || t('offersTitle');
 const products = () => visibleProducts(state.content);
@@ -361,7 +363,7 @@ function bagLine(line) {
   return `<li class="bag-line"><a class="bag-thumb device-media" href="${productUrl(p)}">${media(p)}</a><div class="bag-info"><a class="bag-name" href="${productUrl(p)}" dir="auto">${esc(L(p.name))}</a><p class="bag-variant" dir="auto">${esc(variantLabel(v))}</p><div class="bag-row"><div class="qty" role="group" aria-label="${esc(t('qty'))}"><button type="button" data-qty="${esc(line.id)}" data-delta="-1" aria-label="−"${line.qty <= 1 ? ' disabled' : ''}>−</button><output>${line.qty}</output><button type="button" data-qty="${esc(line.id)}" data-delta="1" aria-label="+"${line.qty >= MAX_QTY ? ' disabled' : ''}>+</button></div><strong class="bag-price"><bdi>${esc(money(line.totalFils))}</bdi></strong></div><button type="button" class="bag-remove" data-remove="${esc(line.id)}">${esc(t('remove'))}</button></div></li>`;
 }
 function summary(priced, withButton) {
-  return `<aside class="bag-summary"><dl><div><dt>${esc(t('subtotal'))}</dt><dd><bdi>${esc(money(priced.totalFils))}</bdi></dd></div><div><dt>${esc(t('delivery'))}</dt><dd>${esc(t('deliveryValue'))}</dd></div><div class="is-total"><dt>${esc(t('total'))}</dt><dd><bdi>${esc(money(priced.totalFils))}</bdi></dd></div></dl><p class="summary-note">${esc(t('payCash'))}</p>${withButton ? `<a class="button button-primary button-wide" href="#/checkout">${esc(t('checkout'))}${arrow}</a><a class="text-link" href="#/shop">${esc(t('keepShopping'))}</a>` : ''}</aside>`;
+  return `<aside class="bag-summary"><dl><div><dt>${esc(t('subtotal'))}</dt><dd><bdi>${esc(money(priced.totalFils))}</bdi></dd></div><div><dt>${esc(t('delivery'))}</dt><dd>${esc(t('deliveryValue'))}</dd></div><div class="is-total"><dt>${esc(t('total'))}</dt><dd><bdi>${esc(money(priced.totalFils))}</bdi></dd></div></dl><p class="summary-note">${esc(t('payCash'))}</p>${withButton ? `<a class="button button-primary button-wide" href="#/checkout">${esc(t(ordersEnabled() ? 'checkoutLive' : 'checkout'))}${arrow}</a><a class="text-link" href="#/shop">${esc(t('keepShopping'))}</a>` : ''}</aside>`;
 }
 function renderBag() {
   const fixed = cleanBag();
@@ -377,34 +379,33 @@ function renderInquiry() {
   return `<div class="container page-shell inquiry-page"><div class="page-heading"><h1>${esc(t('checkoutTitle'))}</h1><p class="page-intro">${esc(t('ordersOff'))}</p></div><div class="contact-actions"><a class="button button-primary" href="#/contact">${esc(t('contact'))}${arrow}</a><a class="button button-outline" href="#/bag">${esc(t('bag'))}</a></div></div>`;
 }
 function renderCheckout() {
-  if (MODE === 'pages') return renderInquiry();
+  if (!ordersEnabled()) return renderInquiry();
   cleanBag();
   const priced = bagPriced();
   if (!priced.ok || !priced.lines.length) { location.replace('#/bag'); return ''; }
   if (!state.checkoutToken) { state.checkoutToken = randomToken(); state.checkoutStarted = Date.now(); }
-  const draft = local.read('trio-checkout', {}) || {};
-  const ordersOn = S().ordersOn !== false;
+  const draft = { name: customerProfile()?.name || '', mobile: customerProfile()?.mobile || '', ...(local.read(checkoutKey(), {}) || {}) };
   const gov = governorates.map(([id, ar, en]) => `<option value="${id}"${(draft.governorate || 'amman') === id ? ' selected' : ''}>${esc(state.language === 'ar' ? ar : en)}</option>`).join('');
   const pickup = draft.fulfilment === 'pickup';
   return `<div class="container page-shell checkout-page"><div class="page-heading"><h1>${esc(t('checkoutTitle'))}</h1><p class="page-intro">${esc(t('checkoutIntro'))}</p></div><div class="bag-layout">
-  ${ordersOn ? `<form id="checkout-form" class="checkout-form" novalidate><p class="form-alert" id="form-alert" role="alert" hidden></p>
-  <label class="field"><span>${esc(t('name'))}</span><input name="name" autocomplete="name" maxlength="60" required value="${esc(draft.name || '')}"></label>
+  <form id="checkout-form" class="checkout-form" novalidate><p class="form-alert" id="form-alert" role="alert" hidden></p>
+  <label class="field"><span>${esc(t('name'))}</span><input name="name" autocomplete="name" minlength="2" maxlength="60" required value="${esc(draft.name || '')}"></label>
   <label class="field"><span>${esc(t('mobile'))}</span><input name="mobile" type="tel" inputmode="tel" dir="ltr" autocomplete="tel" maxlength="20" placeholder="${esc(t('mobileHint'))}" required value="${esc(draft.mobile || '')}"></label>
   <fieldset class="field choice"><legend>${esc(t('fulfilment'))}</legend><label><input type="radio" name="fulfilment" value="delivery"${pickup ? '' : ' checked'}><span>${esc(t('deliveryOpt'))}</span></label><label><input type="radio" name="fulfilment" value="pickup"${pickup ? ' checked' : ''}><span>${esc(t('pickupOpt'))}</span></label></fieldset>
-  <div class="delivery-fields"${pickup ? ' hidden' : ''}><label class="field"><span>${esc(t('governorate'))}</span><select name="governorate">${gov}</select></label>
-  <label class="field"><span>${esc(t('address'))}</span><input name="address" autocomplete="street-address" maxlength="200" placeholder="${esc(t('addressHint'))}" value="${esc(draft.address || '')}"></label></div>
+  <div class="delivery-fields"${pickup ? ' hidden' : ''}><label class="field"><span>${esc(t('governorate'))}</span><select name="governorate"${pickup ? ' disabled' : ' required'}>${gov}</select></label>
+  <label class="field"><span>${esc(t('address'))}</span><input name="address" autocomplete="street-address" minlength="4" maxlength="200"${pickup ? ' disabled' : ' required'} placeholder="${esc(t('addressHint'))}" value="${esc(draft.address || '')}"></label></div>
   <label class="field"><span>${esc(t('notes'))}</span><textarea name="notes" rows="3" maxlength="300">${esc(draft.notes || '')}</textarea></label>
   <label class="hp" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
   <p class="summary-note">${esc(t('privacy'))}</p>
-  <button class="button button-primary button-wide" type="submit">${esc(t('placeOrder'))}</button></form>`
-    : `<div class="empty-state"><h2>${esc(t('ordersOff'))}</h2><a class="button button-whatsapp" href="${esc(waHref(orderText(priced)))}" ${external}>${icon('whatsapp')}${esc(t('sendWhatsapp'))}</a></div>`}
+  <button class="button button-primary button-wide" type="submit">${esc(t('placeOrder'))}</button></form>
   <div><ul class="bag-lines is-compact">${priced.lines.map((l) => `<li class="bag-line"><span class="bag-thumb device-media">${media(l.product)}</span><div class="bag-info"><span class="bag-name" dir="auto">${esc(L(l.product.name))} × ${l.qty}</span><p class="bag-variant" dir="auto">${esc(variantLabel(l.variant))}</p><strong class="bag-price"><bdi>${esc(money(l.totalFils))}</bdi></strong></div></li>`).join('')}</ul>${summary(priced, false)}</div></div></div>`;
 }
 function renderDone(number) {
   if (MODE === 'pages') return renderInquiry();
-  const order = state.lastOrder && state.lastOrder.number === number ? state.lastOrder : null;
-  const text = order ? order.text : `${t('waHello')} ${t('waNumber')}: ${number}`;
-  return `<div class="container page-shell done-page"><div class="done-card"><span class="done-icon" aria-hidden="true">✓</span><h1>${esc(t('doneTitle'))}</h1><p>${esc(t('doneText'))}</p><p class="order-number" dir="ltr">${esc(number)}</p><p>${esc(t('doneNext'))}</p>${MODE === 'demo' ? `<p class="form-alert">${esc(t('demoNote'))}</p>` : ''}<div class="contact-actions"><a class="button button-whatsapp" href="${esc(waHref(text))}" ${external}>${icon('whatsapp')}${esc(t('sendWhatsapp'))}</a><a class="button button-outline" href="${esc(phoneHref())}">${icon('phone')}${esc(t('call'))}</a></div><a class="text-link" href="#/shop">${esc(t('keepShopping'))}</a></div></div>`;
+  const order = state.lastOrder && state.lastOrder.number === number && state.lastOrder.channel === MODE ? state.lastOrder : null;
+  if (!order) return `<div class="container page-shell done-page"><div class="done-card"><h1>${esc(t('receiptMissing'))}</h1><p>${esc(t('receiptMissingText'))}</p><a class="button button-primary" href="#/bag">${esc(t('bag'))}</a></div></div>`;
+  const details = Array.isArray(order.lines) ? `<ul class="bag-lines is-compact">${order.lines.map((line) => `<li class="bag-line"><div class="bag-info"><span class="bag-name" dir="auto">${esc(L(line.name))} × ${line.qty}</span>${line.storage ? `<p class="bag-variant" dir="auto">${esc(line.storage)}</p>` : ''}<strong class="bag-price"><bdi>${esc(money(line.unitFils * line.qty))}</bdi></strong></div></li>`).join('')}</ul>` : '';
+  return `<div class="container page-shell done-page"><div class="done-card"><span class="done-icon" aria-hidden="true">✓</span><h1>${esc(t('doneTitle'))}</h1><p>${esc(t('doneText'))}</p><p class="order-number" dir="ltr">${esc(number)}</p><p>${esc(t('doneNext'))}</p>${details}${Number.isInteger(order.totalFils) ? `<p class="total"><span>${esc(t('total'))}</span> <strong><bdi>${esc(money(order.totalFils))}</bdi></strong></p>` : ''}${MODE === 'demo' ? `<p class="form-alert">${esc(t('demoNote'))}</p>` : ''}<div class="contact-actions">${S().whatsapp ? `<a class="button button-whatsapp" href="${esc(waHref(order.text || ''))}" ${external}>${icon('whatsapp')}${esc(t('sendWhatsapp'))}</a>` : ''}<a class="button button-outline" href="${esc(phoneHref())}">${icon('phone')}${esc(t('call'))}</a></div><a class="text-link" href="#/shop">${esc(t('keepShopping'))}</a></div></div>`;
 }
 function randomToken() {
   const bytes = new Uint8Array(16);
@@ -420,23 +421,32 @@ function showFormError(code) {
 }
 async function submitCheckout(form) {
   if (state.busy) return;
+  if (!ordersEnabled()) { showFormError('orders-off'); return; }
   const data = Object.fromEntries(new FormData(form).entries());
   const draft = { name: (data.name || '').trim(), mobile: (data.mobile || '').trim(), fulfilment: data.fulfilment === 'pickup' ? 'pickup' : 'delivery', governorate: data.governorate || 'amman', address: (data.address || '').trim(), notes: (data.notes || '').trim() };
-  local.write('trio-checkout', { ...draft, notes: '' });
+  local.write(checkoutKey(), { ...draft, notes: '' });
   if (draft.name.length < 2) return showFormError('bad-name');
   if (!normaliseMobile(draft.mobile)) return showFormError('bad-mobile');
+  if (draft.fulfilment === 'delivery' && !governorates.some(([id]) => id === draft.governorate)) return showFormError('bad-governorate');
   if (draft.fulfilment === 'delivery' && draft.address.length < 4) return showFormError('bad-address');
   const priced = bagPriced();
   if (!priced.ok) return showFormError(priced.error);
+  const accountId = customerProfile()?.id || 'guest';
+  const signature = JSON.stringify({ lines: state.bag, totalFils: priced.totalFils, customer: draft, accountId });
+  if (!state.checkoutToken || (state.checkoutSignature && state.checkoutSignature !== signature)) state.checkoutToken = randomToken();
+  state.checkoutSignature = signature;
   const button = form.querySelector('[type=submit]');
   state.busy = true; button.disabled = true; button.textContent = t('sending');
   try {
     const order = { token: state.checkoutToken, lines: state.bag.map((l) => ({ id: l.id, qty: l.qty })), totalFils: priced.totalFils, customer: { name: draft.name, mobile: draft.mobile, governorate: draft.fulfilment === 'delivery' ? draft.governorate : '', address: draft.fulfilment === 'delivery' ? draft.address : '', notes: draft.notes }, fulfilment: draft.fulfilment, lang: state.language, website: data.website || '', elapsedMs: Date.now() - state.checkoutStarted };
     const result = await api.placeOrder(order);
-    state.lastOrder = { number: result.number, text: orderText(priced, result.number) };
-    local.write('trio-last-order', state.lastOrder);
-    state.bag = []; saveBag(); state.checkoutToken = '';
+    if (!result || typeof result.number !== 'string' || !/^[A-Za-z0-9-]{1,64}$/.test(result.number) || !Number.isSafeInteger(result.totalFils) || result.totalFils <= 0) throw new ApiError('generic');
+    if ((customerProfile()?.id || 'guest') !== accountId) return;
+    state.lastOrder = { number: result.number, channel: MODE, totalFils: result.totalFils, text: orderText(priced, result.number), lines: priced.lines.map((line) => ({ name: line.product.name, storage: line.variant.storage, qty: line.qty, unitFils: line.unitFils })) };
+    local.write(`trio-last-order-${accountId}`, state.lastOrder);
+    state.bag = []; saveBag(); state.checkoutToken = ''; state.checkoutSignature = '';
     location.hash = `#/done/${encodeURIComponent(result.number)}`;
+    loadAccount();
   } catch (error) {
     const code = error instanceof ApiError ? error.code : 'generic';
     if (code === 'price-changed' || code === 'sold-out' || code === 'unknown') { await refreshContent(); }
@@ -466,7 +476,7 @@ function readRoute() {
   const path0 = Object.hasOwn(legacy, hash) ? legacy[hash] : hash;
   const [path, query = ''] = path0.replace(/^\/+/, '').split('?');
   const parts = path.split('/').filter(Boolean).map((p) => { try { return decodeURIComponent(p); } catch { return p; } });
-  const allowed = ['shop', 'offers', 'saved', 'p', 'bag', 'checkout', 'done', 'maintenance', 'trade-in', 'contact'];
+  const allowed = ['shop', 'offers', 'saved', 'p', 'bag', 'checkout', 'done', 'maintenance', 'trade-in', 'contact', 'account'];
   const name = allowed.includes(parts[0]) ? parts[0] : 'home';
   const categoryAliases = { computers: 'laptops', wearables: 'watches' };
   const category = categoryAliases[parts[1]] || parts[1];
@@ -522,6 +532,7 @@ function translateShell() {
   $$('[data-ar][data-en]').forEach((n) => { n.textContent = n.getAttribute(`data-${lang}`); });
   for (const [key, attr] of [['label', 'aria-label'], ['placeholder', 'placeholder']]) $$(`[data-ar-${key}][data-en-${key}]`).forEach((n) => n.setAttribute(attr, n.getAttribute(`data-${lang}-${key}`)));
   const b = $('#language-toggle'); if (b) { b.textContent = lang === 'ar' ? 'English' : 'عربي'; b.lang = lang === 'ar' ? 'en' : 'ar'; b.setAttribute('aria-label', t('switchLang')); }
+  $$('[data-account-link]').forEach((link) => { link.textContent = accountLabel(lang); });
   $$('[data-phone-link]').forEach((a) => { a.href = phoneHref(); }); $$('[data-phone-text]').forEach((a) => { a.textContent = phoneText(); });
   $$('[data-address]').forEach((n) => { n.textContent = L(S().address); });
   $$('[data-wa-link]').forEach((a) => { a.hidden = !S().whatsapp; if (S().whatsapp) a.href = waHref(t('waHello')); else a.removeAttribute('href'); });
@@ -547,6 +558,7 @@ function renderRoute({ focus = false } = {}) {
     case 'maintenance': html = renderService(); break;
     case 'trade-in': html = renderService(true); break;
     case 'contact': html = renderContact(); break;
+    case 'account': html = renderAccount(state.language); break;
     default: html = renderHome();
   }
   main.innerHTML = html;
@@ -607,7 +619,7 @@ document.addEventListener('change', (event) => {
   if (id === 'brand-filter') state.brand = event.target.value;
   else if (id === 'sort-order') state.sort = event.target.value;
   else if (id === 'cond-filter') state.cond = event.target.value;
-  else if (event.target.name === 'fulfilment') { const box = $('.delivery-fields'); if (box) box.hidden = event.target.value === 'pickup'; return; }
+  else if (event.target.name === 'fulfilment') { const box = $('.delivery-fields'); if (box) { const pickup = event.target.value === 'pickup'; box.hidden = pickup; $$('input,select', box).forEach((field) => { field.disabled = pickup; field.required = !pickup; }); } return; }
   else return;
   syncFilterUrl(); updateResults();
 });
@@ -625,7 +637,7 @@ document.addEventListener('error', (event) => {
   card.innerHTML = `<span class="name-card-name" dir="ltr">${esc(img.alt)}</span>`;
   img.replaceWith(card);
 }, true);
-window.addEventListener('hashchange', () => renderRoute({ focus: true }));
+window.addEventListener('hashchange', () => { renderRoute({ focus: true }); if (state.route.name === 'account') loadAccount(); });
 window.matchMedia?.('(min-width: 641px)').addEventListener('change', (event) => { $('.catalog-filter-panel')?.toggleAttribute('open', event.matches); });
 window.addEventListener('storage', (event) => {
   if (event.key === visitorKey('bag')) { state.bag = loadBag(); updateCounts(); if (['bag', 'checkout'].includes(state.route.name)) renderRoute(); }
@@ -647,6 +659,24 @@ async function start() {
   const firstCat = homeCategoryIds()[0]; if (firstCat && !homeCategoryIds().includes(state.heroCategory)) state.heroCategory = firstCat;
   translateShell();
   renderRoute();
+  loadAccount();
   document.documentElement.classList.add('is-ready');
 }
+const checkoutKey = () => `trio-checkout-${customerProfile()?.id || 'guest'}`;
+let accountIdentity;
+bindAccount(() => {
+  const identity = customerProfile()?.id || 'guest';
+  if (accountIdentity !== undefined && accountIdentity !== identity) {
+    // Contact drafts and receipts belong to one identity on shared devices.
+    local.remove(`trio-checkout-${accountIdentity}`);
+    local.remove(`trio-last-order-${accountIdentity}`);
+    local.remove('trio-checkout');
+    local.remove('trio-last-order');
+    state.lastOrder = null; state.checkoutToken = ''; state.checkoutSignature = '';
+  }
+  if (accountIdentity === undefined) state.lastOrder = local.read(`trio-last-order-${identity}`);
+  accountIdentity = identity;
+  $$('[data-account-link]').forEach((link) => { link.textContent = accountLabel(state.language); });
+  if (state.content && ['account', 'checkout', 'done'].includes(state.route.name)) renderRoute();
+});
 start();

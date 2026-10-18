@@ -23,7 +23,11 @@ The [browser-only admin editor](https://yallarideapp.github.io/Trio/admin/) is a
 
 Home features Phones, Laptops, Watches and Audio. All Devices retains the six independent categories, including Tablets and Accessories.
 
-The fixed corner **Admin panel** shortcut opens the editor from any storefront page, above the phone navigation. The editor now includes an **Orders** tab (`admin/#orders`) for manually recording local orders, with catalog-priced line items, status filters, customer/device search, notes and JSON export. Records start empty, use `LOCAL-` numbers, and stay in this browser. Ordinary checkout remains contact-only. Catalog preview resets preserve these order records; they are stored separately from the catalog, bag and favorites.
+The fixed corner **Admin panel** shortcut opens the editor from any storefront page. Its **Orders** tab explains the shared service connection and preserves export access to any older local records; manual order creation is removed.
+
+**Sign in** is visible in the desktop and mobile headers. The customer page includes Create account, profile/mobile editing, password changes and private order history. The current GitHub Pages preview cannot authenticate customers: its forms clearly show that the account service is not connected. It does not save passwords or simulate an account in browser storage.
+
+The live Worker automatically records submitted checkout orders in D1, links signed-in customers to their own orders, and shows new orders in the protected admin with status updates and notes. Guest checkout also works. Customer sessions and admin sessions are separate. Account forms become functional when the Worker and database are connected; no production activation is claimed.
 
 The supplied Worker source is preserved for a future separately configured backend deployment. Its D1/KV bindings are placeholders; no Cloudflare deployment has been performed. `npm run build` produces the live Worker assets; `npm run demo:build` produces a clearly labeled local-only demo. See `Cloudflare-guide.md` for the supplied setup guide.
 

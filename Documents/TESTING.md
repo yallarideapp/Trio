@@ -1,5 +1,14 @@
 # Replacement storefront verification — 18 October 2026
 
+## Customer accounts and automatic orders — current update
+
+- Added visible Arabic/English Sign in and Create account navigation, customer profile/mobile editing, password changes and private order history. Checked account forms in Chromium at 320px and 1024px; no horizontal overflow. Pages explicitly disables account submission while the shared service is disconnected.
+- The actual Worker handlers pass against SQLite with every migration: registration, normalized unique email, salted password hashes, sign-in/logout, profile validation, password/session rotation, separate customer/admin access, two shoppers' private histories, and guest orders. Submitted checkout orders appear automatically in the authenticated admin list. Tests cover server totals, spoofed ownership, invalid requests, concurrent retries, unique order numbers, status changes, notes and database reopen durability.
+- Wrangler 4.140.0 applied both migrations locally and served the real Worker. HTTP checks passed for registration, Arabic profile/mobile normalization, password change, logout/login and denied customer access to admin. A signed-in checkout saved an order in local D1, appeared in its customer's history with the correct total, and retrying created no duplicate.
+- Account interface regression tests cover profile/logout races, account switching during history loads, expired sessions, network retries and pending sign-in guards. Checkout contact drafts and receipts are isolated by customer identity. Independent backend review found an admin pagination snapshot race; order headers and lines now load in one transactional batch.
+- Live and Pages builds, the full check suite and whitespace checks pass. Public manual order entry is removed; Pages retains export of older local records only.
+- No production Cloudflare account, D1/KV bindings, deployment, real email delivery, production password CPU measurements or physical iPhone/Android tests were performed. The public Pages preview cannot accept shared accounts/orders until the owner completes the Cloudflare connection.
+
 The editable Source folder from the supplied Trio-complete-with-demo delivery replaces the previous storefront. The generated GitHub Pages folder is website/.
 
 Passed on the final source:

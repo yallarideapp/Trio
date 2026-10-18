@@ -2,6 +2,7 @@ import { Env, HttpError, json, fail } from './util';
 import { getContent, publicCopy } from './content';
 import { placeOrder } from './orders';
 import { handleAdmin } from './admin';
+import { handleCustomer } from './customer';
 
 const PHOTO = /^\/api\/photo\/([a-f0-9]{32})$/;
 
@@ -12,6 +13,7 @@ export default {
     try {
       if (url.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(url.hostname)) throw new HttpError(403, 'https-only');
       const path = url.pathname;
+      if (path.startsWith('/api/customer/')) return await handleCustomer(request, env, url, path.slice('/api/customer/'.length));
       if (path === '/api/content' && request.method === 'GET') {
         const { version, content, fromSeed } = await getContent(env);
         if (fromSeed) return json({ error: 'not-published' }, 404);

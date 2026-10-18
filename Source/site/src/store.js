@@ -59,7 +59,14 @@ async function request(path, { method = 'GET', body, raw } = {}) {
 }
 
 // ---------- GitHub Pages (no backend) ----------
+const accountUnavailable = async () => { throw new ApiError('accounts-unavailable', 503); };
+const offlineAccounts = {
+  async session() { return { configured: false, signedIn: false, customer: null }; },
+  register: accountUnavailable, login: accountUnavailable, logout: accountUnavailable,
+  profile: accountUnavailable, password: accountUnavailable, orders: accountUnavailable,
+};
 const pages = {
+  account: offlineAccounts,
   async loadContent() {
     const saved = previewRequested() ? readPreview() : null;
     const content = withDefaults(clone(saved?.content || seedContent));
@@ -75,6 +82,15 @@ const pages = {
 
 // ---------- live ----------
 const live = {
+  account: {
+    session: () => request('/api/customer/session'),
+    register: (body) => request('/api/customer/register', { method: 'POST', body }),
+    login: (body) => request('/api/customer/login', { method: 'POST', body }),
+    logout: () => request('/api/customer/logout', { method: 'POST', body: {} }),
+    profile: (body) => request('/api/customer/profile', { method: 'PATCH', body }),
+    password: (body) => request('/api/customer/password', { method: 'POST', body }),
+    orders: (before = '') => request(`/api/customer/orders${before ? `?before=${encodeURIComponent(before)}` : ''}`),
+  },
   async loadContent() {
     try {
       const data = await request('/api/content');
@@ -95,7 +111,7 @@ const live = {
     content: () => request('/api/admin/content'),
     publish: (content, baseVersion) => request('/api/admin/content', { method: 'PUT', body: { content, baseVersion } }),
     uploadPhoto: (blob) => request('/api/admin/photo', { method: 'POST', raw: blob }),
-    orders: (status = '') => request(`/api/admin/orders${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+    orders: (status = '', before = '') => { const params = new URLSearchParams(); if (status) params.set('status', status); if (before) params.set('before', before); return request(`/api/admin/orders${params.size ? `?${params}` : ''}`); },
     updateOrder: (number, patch) => request(`/api/admin/orders/${encodeURIComponent(number)}`, { method: 'PATCH', body: patch }),
   },
 };
@@ -107,6 +123,7 @@ const demoContent = () => {
   return saved && saved.content ? { content: withDefaults(saved.content), version: saved.version } : { content: withDefaults(clone(seedContent)), version: 0 };
 };
 const demo = {
+  account: offlineAccounts,
   async loadContent() {
     const saved = local.read(DEMO.content);
     const current = demoContent();

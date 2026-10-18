@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import seed from '../shared/catalog.js';
+import deviceSpecifications from '../shared/device-specs.js';
 import * as pricing from '../shared/pricing.js';
 import { conditions, notes as noteLabels, warranties, orderStatuses, governorates } from '../shared/labels.js';
 import { ApiError, local, withDefaults } from '../site/src/store.js';
@@ -333,7 +334,7 @@ function verifyEditorViews(content, orders) {
   const source = readFileSync(new URL('../site/admin/src/admin.js', import.meta.url), 'utf8')
     .replace(/^import[^\n]*\n/gm, '').replace(/\(async function start\(\) \{[\s\S]*$/, '');
   const context = vm.createContext({
-    ...pricing, conditions, noteLabels, warranties, orderStatuses, governorates,
+    ...pricing, conditions, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications,
     api: {}, pagesAdmin, MODE: 'pages', ApiError, local, withDefaults, document,
     console, setTimeout, clearTimeout,
   });
@@ -351,7 +352,7 @@ function verifyEditorViews(content, orders) {
       const html = root.innerHTML;
       assert.equal(document.documentElement.lang, language);
       assert.equal(document.documentElement.dir, language === 'ar' ? 'rtl' : 'ltr');
-      const localNotice = view === 'orders' ? (language === 'ar' ? 'سجل الطلبات المحلي' : 'Local order book') : (language === 'ar' ? 'معاينة في هذا المتصفح فقط' : 'Browser-only preview');
+      const localNotice = view === 'orders' ? (language === 'ar' ? 'خدمة الطلبات المشتركة غير متصلة' : 'Shared order service not connected') : (language === 'ar' ? 'معاينة في هذا المتصفح فقط' : 'Browser-only preview');
       assert(html.includes(localNotice), `${language}: editor explicitly labels browser-only changes`);
       assert(html.includes(language === 'ar' ? 'احفظ المعاينة' : 'Save preview'), `${language}: editor calls the action saving a preview`);
       assert(html.includes('href="../index.html?preview=draft#/"'), 'preview link opts into local changes');
@@ -360,10 +361,10 @@ function verifyEditorViews(content, orders) {
       assert(html.includes('data-view="orders"'), `${language}: local orders are reachable from the editor tabs`);
       assert(!/id="(?:sign-form|password-form|logout)"|name="ordersOn"/.test(html), `${language}: no authentication or public checkout controls are shown`);
       if (view === 'orders') {
-        assert(html.includes(language === 'ar' ? 'سجل الطلبات المحلي' : 'Local order book'), `${language}: manual orders are clearly labeled as local`);
-        assert(html.includes(language === 'ar' ? 'طلبات تسجلها يدوياً وتُحفظ في هذا المتصفح فقط.' : 'Manual orders saved in this browser only.'), `${language}: the order page explains browser-only persistence`);
-        assert(html.includes(language === 'ar' ? 'الطلب الإلكتروني مغلق.' : 'Online checkout is off.'), `${language}: the order page explains disabled online checkout`);
-        assert(html.includes('data-new-order') && html.includes('data-export-orders'), `${language}: manual creation and order export are accessible`);
+        assert(html.includes(language === 'ar' ? 'ستظهر طلبات العملاء هنا بعد ربط خدمة الطلبات المشتركة.' : 'Customer orders will appear here after the shared order service is connected.'), `${language}: the page explains what enables automatic customer orders`);
+        assert(html.includes(language === 'ar' ? 'هذا الموقع لا يستقبل طلبات إلكترونية حالياً.' : 'This website currently accepts no online orders.'), `${language}: Pages explains disabled online checkout`);
+        assert(!html.includes('data-new-order') && !html.includes('id="new-order-form"'), `${language}: Pages cannot create records that look like customer checkout`);
+        assert(html.includes('data-export-orders'), `${language}: existing browser records remain exportable`);
         for (const order of orders) assert(html.includes(`data-open-order="${order.number}"`), `${language}: saved manual order is reachable`);
       }
     }
@@ -373,13 +374,11 @@ function verifyEditorViews(content, orders) {
     assert(root.innerHTML.includes('id="order-form"') && root.innerHTML.includes('name="status"') && root.innerHTML.includes('name="note"'), `${language}: local order details allow status and private note updates`);
     assert(root.innerHTML.includes(orders[0].number), `${language}: order details identify the selected record`);
     ui.state.orderOpen = null;
-    ui.state.newOrder = { customer: { name: '', mobile: '', notes: '' }, fulfilment: 'pickup', lines: [{ id: 'airtag:one', qty: 1 }], token: 'test-local-form' };
+    ui.state.orders = [];
     ui.render();
-    assert(root.innerHTML.includes('id="new-order-form"'), `${language}: manual orders have a creation form`);
-    for (const name of ['customer.name', 'customer.mobile', 'customer.notes', 'fulfilment', 'line.0.id', 'line.0.qty']) assert(root.innerHTML.includes(`name="${name}"`), `${language}: manual order input ${name} is accessible`);
-    assert(root.innerHTML.includes(pricing.formatJD(28000, language)), `${language}: manual order form shows the exact catalog total`);
-    assert(!/id="(?:sign-form|password-form|logout)"|name="ordersOn"/.test(root.innerHTML), `${language}: creating manual records does not add authentication or checkout controls`);
-    ui.state.newOrder = null;
+    assert(root.innerHTML.includes(language === 'ar' ? 'خدمة الطلبات المشتركة غير متصلة' : 'Shared order service not connected'), `${language}: an empty order page explains the disconnected shared service`);
+    assert(!root.innerHTML.includes('data-new-order') && !root.innerHTML.includes('id="new-order-form"'), `${language}: an empty Pages order book offers no manual creation`);
+    ui.state.orders = copy(orders);
     ui.state.view = 'devices';
     ui.state.editing = { index: 0 };
     ui.render();

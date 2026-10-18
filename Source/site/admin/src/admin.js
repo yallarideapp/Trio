@@ -1,9 +1,11 @@
 import { api, local, MODE, ApiError, withDefaults } from '../../src/store.js';
-import { validPrice, toFils, formatJD, fromPrice, priceLines, variantId, normaliseMobile, MAX_QTY, MAX_LINES } from '../../../shared/pricing.js';
+import { validPrice, toFils, formatJD, fromPrice, normaliseMobile } from '../../../shared/pricing.js';
 import { conditions, notes as noteLabels, warranties, orderStatuses, governorates } from '../../../shared/labels.js';
 import { pagesAdmin } from './pages-store.js';
+import deviceSpecifications from '../../../shared/device-specs.js';
 
 const IS_PAGES = MODE === 'pages';
+const USE_TECHNICAL = MODE !== 'demo';
 const adminApi = IS_PAGES ? pagesAdmin : api.admin;
 const draftKey = IS_PAGES ? 'trio-pages-editor-draft-v1' : 'trio-admin-draft';
 
@@ -61,6 +63,12 @@ const AR = {
   'Add at least one available device.': 'أضف جهازاً متاحاً واحداً على الأقل.', 'Maximum {max} items per order.': 'الحد الأقصى {max} خيارات للطلب.', 'No available devices in the saved catalog.': 'لا توجد أجهزة متاحة في الكتالوج المحفوظ.',
   'Local record': 'سجل محلي', 'Customer': 'العميل', 'Local note': 'ملاحظة محلية', 'Refresh orders': 'تحديث الطلبات', 'Could not save this order. Check its customer and device details.': 'تعذر حفظ الطلب. تحقق من بيانات العميل والأجهزة.',
   'The order prices changed. Reload the saved catalog and review the total.': 'تغيّرت أسعار الطلب. أعد تحميل الكتالوج المحفوظ وراجع المجموع.', 'Reload saved catalog': 'إعادة تحميل الكتالوج المحفوظ', 'Order limit reached. Export your orders to keep a copy.': 'وصل سجل الطلبات إلى الحد الأقصى. صدّر الطلبات للاحتفاظ بنسخة.',
+  'Shared order service not connected': 'خدمة الطلبات المشتركة غير متصلة',
+  'Customer orders will appear here after the shared order service is connected.': 'ستظهر طلبات العملاء هنا بعد ربط خدمة الطلبات المشتركة.',
+  'This website currently accepts no online orders. Customer checkout and automatic order delivery to this panel require the shared service.': 'هذا الموقع لا يستقبل طلبات إلكترونية حالياً. إتمام طلب العميل ووصوله تلقائياً إلى هذه اللوحة يتطلب ربط الخدمة المشتركة.',
+  'Previous browser records': 'سجلات المتصفح السابقة', 'These earlier records exist only in this browser. They are separate from customer checkout orders.': 'هذه السجلات السابقة موجودة في هذا المتصفح فقط، وهي منفصلة عن طلبات العملاء الإلكترونية.',
+  'Export previous records': 'تصدير السجلات السابقة', 'Customer orders': 'طلبات العملاء', 'Customer checkout orders arrive here automatically. This list refreshes every 15 seconds while the panel is visible.': 'تصل طلبات العملاء من الموقع إلى هنا تلقائياً. تتحدث القائمة كل 15 ثانية أثناء عرض اللوحة.',
+  'Load older orders': 'تحميل الطلبات الأقدم',
 };
 let lang = local.read('trio-admin-lang') === 'en' ? 'en' : 'ar';
 const t = (s, vars = {}) => (lang === 'ar' ? AR[s] || s : s).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
@@ -68,7 +76,7 @@ const L = (o) => (o && typeof o === 'object' ? o[lang] || o.ar || o.en || '' : S
 const money = (jd) => formatJD(toFils(jd), lang);
 
 const initialView = IS_PAGES ? ({ '#orders': 'orders', '#settings': 'settings' }[globalThis.location?.hash] || 'devices') : 'orders';
-const state = { view: initialView, signedIn: IS_PAGES, setup: true, published: null, version: 0, draft: null, dirty: false, orders: [], orderFilter: '', orderOpen: null, orderQuery: '', newOrder: null, editing: null, category: 'all', query: '', message: '' };
+const state = { view: initialView, signedIn: IS_PAGES, setup: true, published: null, version: 0, draft: null, dirty: false, orders: [], orderFilter: '', orderOpen: null, orderQuery: '', orderBefore: null, editing: null, category: 'all', query: '', message: '' };
 
 function saveDraft() {
   state.dirty = JSON.stringify(state.draft) !== JSON.stringify(state.published);
@@ -130,11 +138,11 @@ function signInView() {
 const fmtDate = (iso) => { try { return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-JO' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Amman' }).format(new Date(iso)); } catch { return iso; } };
 const fils = (n) => formatJD(n, lang);
 function localOrdersNotice() {
-  return `<aside class="preview-notice order-notice"><div><strong>${esc(t('Local order book'))}</strong><p>${esc(t('Manual orders saved in this browser only. They are not sent to Trio or shared with other devices. Online checkout is off.'))}</p></div></aside>`;
+  return `<aside class="preview-notice order-notice"><div><strong>${esc(t('Shared order service not connected'))}</strong><p>${esc(t('Customer orders will appear here after the shared order service is connected.'))}</p><p>${esc(t('This website currently accepts no online orders. Customer checkout and automatic order delivery to this panel require the shared service.'))}</p></div></aside>`;
 }
 function ordersView() {
-  const notice = IS_PAGES ? localOrdersNotice() : '';
-  if (IS_PAGES && state.newOrder) return `${notice}${newOrderView()}`;
+  const notice = IS_PAGES ? localOrdersNotice() : MODE === 'live' ? `<aside class="preview-notice order-notice"><div><strong>${esc(t('Customer orders'))}</strong><p>${esc(t('Customer checkout orders arrive here automatically. This list refreshes every 15 seconds while the panel is visible.'))}</p></div></aside>` : '';
+  if (IS_PAGES && !state.orders.length) return `${notice}<div class="head"><h1>${esc(t('Orders'))}</h1></div>`;
   if (state.orderOpen) {
     const order = state.orders.find((o) => o.number === state.orderOpen);
     if (order) return `${notice}${orderDetail(order)}`;
@@ -143,9 +151,9 @@ function ordersView() {
   const counts = Object.fromEntries(orderStatuses.map((s) => [s, state.orders.filter((o) => o.status === s).length]));
   const query = state.orderQuery.trim().toLowerCase();
   const list = state.orders.filter((o) => (!state.orderFilter || o.status === state.orderFilter) && (!query || `${o.number} ${o.customer.name} ${o.customer.mobile || ''} ${o.lines.map((line) => `${line.name} ${line.nameAr || ''}`).join(' ')}`.toLowerCase().includes(query)));
-  return `${notice}<div class="head"><h1>${esc(t('Orders'))}</h1>${IS_PAGES ? `<div class="btns order-actions"><button type="button" class="btn primary" data-new-order>${esc(t('Add local order'))}</button><button type="button" class="btn ghost" data-export-orders${state.orders.length ? '' : ' disabled'}>${esc(t('Export orders'))}</button><button type="button" class="btn ghost" data-refresh-orders aria-label="${esc(t('Refresh orders'))}">↻</button></div>` : ''}</div>
-  <label class="f search"><span class="sr">${esc(t('Search orders'))}</span><input id="order-search" type="search" placeholder="${esc(t('Search orders'))}" value="${esc(state.orderQuery)}"></label><div class="chips">${[['', t('All'), state.orders.length], ...orderStatuses.map((s) => [s, t(s), counts[s]])].map(([id, label, n]) => `<button type="button" class="chip" data-order-filter="${id}" aria-pressed="${state.orderFilter === id}">${esc(label)} <span>${n}</span></button>`).join('')}</div>
-  ${list.length ? `<ul class="rows order-rows">${list.map((o) => `<li><button type="button" class="row order-row" data-open-order="${esc(o.number)}"><span class="o-num" dir="ltr">${esc(o.number)}</span><span class="o-main"><strong>${esc(o.customer.name)}</strong>${o.customer.mobile ? `<small dir="ltr">${esc(o.customer.mobile)}</small>` : ''}</span><span class="o-meta"><small>${esc(fmtDate(o.createdAt))}</small><strong>${esc(fils(o.totalFils))}</strong></span><span class="status s-${esc(o.status)}">${esc(t(o.status))}</span></button></li>`).join('')}</ul>` : `<div class="empty"><p>${esc(t(state.orders.length ? 'No matching orders.' : IS_PAGES ? 'No local orders yet.' : 'No orders here yet.'))}</p>${IS_PAGES && !state.orders.length ? `<p class="muted">${esc(t('Record your first order using the button above.'))}</p>` : ''}</div>`}`;
+  return `${notice}<div class="head"><h1>${esc(t(IS_PAGES ? 'Previous browser records' : 'Orders'))}</h1><div class="btns order-actions">${IS_PAGES ? `<button type="button" class="btn ghost" data-export-orders>${esc(t('Export previous records'))}</button>` : ''}<button type="button" class="btn ghost" data-refresh-orders aria-label="${esc(t('Refresh orders'))}">↻</button></div></div>${IS_PAGES ? `<p class="muted">${esc(t('These earlier records exist only in this browser. They are separate from customer checkout orders.'))}</p>` : ''}
+  <label class="f search"><span class="sr">${esc(t('Search orders'))}</span><input id="order-search" type="search" placeholder="${esc(t('Search orders'))}" value="${esc(state.orderQuery)}"></label><div class="chips">${[['', t('All'), state.orders.length], ...orderStatuses.map((s) => [s, t(s), counts[s]])].map(([id, label, n]) => `<button type="button" class="chip" data-order-filter="${id}" aria-pressed="${state.orderFilter === id}">${esc(label)}${MODE === 'live' ? '' : ` <span>${n}</span>`}</button>`).join('')}</div>
+  ${list.length ? `<ul class="rows order-rows">${list.map((o) => `<li><button type="button" class="row order-row" data-open-order="${esc(o.number)}"><span class="o-num" dir="ltr">${esc(o.number)}</span><span class="o-main"><strong>${esc(o.customer.name)}</strong>${o.customer.mobile ? `<small dir="ltr">${esc(o.customer.mobile)}</small>` : ''}</span><span class="o-meta"><small>${esc(fmtDate(o.createdAt))}</small><strong>${esc(fils(o.totalFils))}</strong></span><span class="status s-${esc(o.status)}">${esc(t(o.status))}</span></button></li>`).join('')}</ul>` : `<div class="empty"><p>${esc(t(state.orders.length ? 'No matching orders.' : 'No orders here yet.'))}</p></div>`}${MODE === 'live' && state.orderBefore ? `<div class="btns"><button type="button" class="btn" data-load-older-orders>${esc(t('Load older orders'))}</button></div>` : ''}`;
 }
 function orderDetail(o) {
   if (!o) { state.orderOpen = null; return ordersView(); }
@@ -159,35 +167,15 @@ function orderDetail(o) {
   <section class="card"><ul class="lines">${o.lines.map((l) => `<li><span dir="auto">${esc(lang === 'ar' ? l.nameAr || l.name : l.name)}${l.storage ? ` · ${esc(l.storage)}` : ''}${l.condition ? ` · ${esc(L(conditions[l.condition]))}` : ''}</span><span>× ${l.qty}</span><strong>${esc(fils(l.unitFils * l.qty))}</strong></li>`).join('')}</ul><p class="total"><span>${esc(t('Total'))}</span><strong>${esc(fils(o.totalFils))}</strong></p>
   <form id="order-form" data-number="${esc(o.number)}"><label class="f"><span>${esc(t('Status'))}</span><select name="status">${orderStatuses.map((s) => `<option value="${s}"${o.status === s ? ' selected' : ''}>${esc(t(s))}</option>`).join('')}</select></label><label class="f"><span>${esc(t(IS_PAGES ? 'Local note' : 'Private note'))}</span><textarea name="note" rows="3" maxlength="500">${esc(o.note || '')}</textarea></label><button class="btn primary" type="submit">${esc(t(IS_PAGES ? 'Save local order' : 'Save'))}</button></form></section></div>`;
 }
-async function loadOrders() {
-  const data = await guard(() => adminApi.orders());
-  if (data) state.orders = data.orders || [];
-}
-function orderChoices() {
-  return (state.published?.products || []).filter((product) => !product.hidden).flatMap((product) => (product.variants || []).filter((variant) => !variant.soldOut && validPrice(variant.price)).map((variant) => ({ id: variantId(product.id, variant.key), product, variant })));
-}
-function orderOptionLabel(choice) {
-  return [L(choice.product.name), choice.variant.storage, L(conditions[choice.variant.condition]), money(choice.variant.price)].filter(Boolean).join(' · ');
-}
-function orderPreviewPrice() {
-  return priceLines(state.published, state.newOrder?.lines || []);
-}
-function newOrderView() {
-  const order = state.newOrder;
-  const choices = orderChoices();
-  const priced = orderPreviewPrice();
-  return `<div class="head"><button type="button" class="btn ghost small" data-cancel-order>← ${esc(t('Back'))}</button><h1>${esc(t('New local order'))}</h1></div><form id="new-order-form" class="edit"><div class="grid2"><section class="card"><h2>${esc(t('Customer'))}</h2>${field('Customer name', 'customer.name', order.customer.name, { attrs: 'required minlength="2" maxlength="100" autocomplete="off"' })}${field('Mobile (optional)', 'customer.mobile', order.customer.mobile, { type: 'tel', dir: 'ltr', attrs: 'maxlength="30" inputmode="tel" autocomplete="off"' })}<label class="f"><span>${esc(t('Fulfilment'))}</span><select name="fulfilment"><option value="pickup"${order.fulfilment === 'pickup' ? ' selected' : ''}>${esc(t('Pickup in store'))}</option><option value="delivery"${order.fulfilment === 'delivery' ? ' selected' : ''}>${esc(t('Delivery'))}</option></select></label>${field('Customer notes', 'customer.notes', order.customer.notes, { type: 'textarea', attrs: 'maxlength="500"' })}</section>
-  <section class="card"><h2>${esc(t('Order items'))}</h2><p class="muted small order-catalog-note">${esc(t('Prices use the last saved preview catalog. Save device changes before creating an order.'))}</p>${choices.length ? `<div class="local-order-lines">${order.lines.map((line, index) => `<div class="local-order-line"><label class="f order-choice"><span>${esc(t('Device and option'))}</span><select name="line.${index}.id" required><option value="">${esc(t('Choose a device'))}</option>${choices.map((choice) => `<option value="${esc(choice.id)}"${choice.id === line.id ? ' selected' : ''}>${esc(orderOptionLabel(choice))}</option>`).join('')}</select></label><label class="f order-quantity"><span>${esc(t('Quantity'))}</span><input name="line.${index}.qty" type="number" inputmode="numeric" min="1" max="${MAX_QTY}" step="1" value="${esc(line.qty)}" required></label><button type="button" class="btn ghost small" data-remove-order-line="${index}"${order.lines.length < 2 ? ' disabled' : ''}>${esc(t('Remove'))}</button></div>`).join('')}</div><button type="button" class="btn ghost small" data-add-order-line${order.lines.length >= MAX_LINES ? ' disabled' : ''}>${esc(t('Add item'))}</button>` : `<p class="empty">${esc(t('No available devices in the saved catalog.'))}</p>`}<p class="total local-order-total"><span>${esc(t('Total'))}</span><strong id="new-order-total" aria-live="polite">${esc(priced.ok ? fils(priced.totalFils) : '—')}</strong></p><p id="new-order-error" class="error" role="alert" hidden></p><div class="btns"><button type="submit" class="btn primary"${choices.length ? '' : ' disabled'}>${esc(t('Save local order'))}</button><button type="button" class="btn ghost" data-cancel-order>${esc(t('Cancel'))}</button></div></section></div></form>`;
-}
-function readNewOrderForm(form) {
-  if (!state.newOrder) return;
-  const get = (name) => form.elements.namedItem(name)?.value || '';
-  state.newOrder.customer = { name: get('customer.name'), mobile: get('customer.mobile'), notes: get('customer.notes') };
-  state.newOrder.fulfilment = get('fulfilment') || 'pickup';
-  state.newOrder.lines = state.newOrder.lines.map((line, index) => ({ id: get(`line.${index}.id`), qty: Number(get(`line.${index}.qty`)) }));
-  const total = $('#new-order-total');
-  const priced = orderPreviewPrice();
-  if (total) total.textContent = priced.ok ? fils(priced.totalFils) : '—';
+async function loadOrders({ append = false } = {}) {
+  const filter = MODE === 'live' ? state.orderFilter : '';
+  const before = append ? state.orderBefore : '';
+  const data = await guard(() => adminApi.orders(filter, before));
+  if (!data || (MODE === 'live' && filter !== state.orderFilter)) return false;
+  const incoming = data.orders || [];
+  state.orders = append ? [...new Map([...state.orders, ...incoming].map((order) => [order.number, order])).values()] : incoming;
+  state.orderBefore = MODE === 'live' && Number.isSafeInteger(data.nextBefore) && data.nextBefore > 0 ? data.nextBefore : null;
+  return true;
 }
 async function exportOrders() {
   try {
@@ -227,11 +215,11 @@ function editView() {
   const warOpts = Object.keys(warranties).map((k) => [k, k ? L(warranties[k]) : t('none')]);
   return `<div class="head"><button type="button" class="btn ghost small" data-close-edit>← ${esc(t('Done'))}</button><h1 dir="auto">${esc(L(p.name) || t('Add device'))}</h1><div class="btns"><button type="button" class="btn ghost small" data-duplicate>${esc(t('Duplicate'))}</button><button type="button" class="btn danger small" data-delete>${esc(t('Delete'))}</button></div></div>
   <form id="device-form" class="edit" autocomplete="off"><div class="grid2"><section class="card"><div class="grid2 tight">${field('Name (Arabic)', 'name.ar', p.name.ar, { dir: 'auto' })}${field('Name (English)', 'name.en', p.name.en, { dir: 'ltr' })}${field('Brand', 'brand', p.brand, { dir: 'ltr' })}<label class="f"><span>${esc(t('Category'))}</span>${sel('category', p.category, state.draft.categories.map((c) => [c.id, L(c.name)]))}</label></div>
-  ${IS_PAGES ? `${field('Summary (Arabic)', 'technical.summary.ar', p.technical?.summary?.ar || '', { type: 'textarea', dir: 'rtl', attrs: 'maxlength="1200"' })}${field('Summary (English)', 'technical.summary.en', p.technical?.summary?.en || '', { type: 'textarea', dir: 'ltr', attrs: 'maxlength="1200"' })}` : `${field('Short line (Arabic)', 'tagline.ar', p.tagline?.ar || '')}${field('Short line (English)', 'tagline.en', p.tagline?.en || '', { dir: 'ltr' })}${field('About (Arabic)', 'about.ar', p.about?.ar || '', { type: 'textarea' })}${field('About (English)', 'about.en', p.about?.en || '', { type: 'textarea', dir: 'ltr' })}`}
+  ${USE_TECHNICAL ? `${field('Summary (Arabic)', 'technical.summary.ar', p.technical?.summary?.ar || '', { type: 'textarea', dir: 'rtl', attrs: 'maxlength="1200"' })}${field('Summary (English)', 'technical.summary.en', p.technical?.summary?.en || '', { type: 'textarea', dir: 'ltr', attrs: 'maxlength="1200"' })}` : `${field('Short line (Arabic)', 'tagline.ar', p.tagline?.ar || '')}${field('Short line (English)', 'tagline.en', p.tagline?.en || '', { dir: 'ltr' })}${field('About (Arabic)', 'about.ar', p.about?.ar || '', { type: 'textarea' })}${field('About (English)', 'about.en', p.about?.en || '', { type: 'textarea', dir: 'ltr' })}`}
   <div class="checks"><label><input type="checkbox" name="offer"${p.offer ? ' checked' : ''}> ${esc(t('Show in offers'))}</label><label><input type="checkbox" name="featured"${p.featured ? ' checked' : ''}> ${esc(t('Show on home page'))}</label><label><input type="checkbox" name="hidden"${p.hidden ? ' checked' : ''}> ${esc(t('Hide from the site'))}</label></div>
-  ${IS_PAGES ? '' : field('Instagram post link (optional)', 'source', p.source || '', { type: 'url', dir: 'ltr' })}<p class="muted small">${esc(t('Device id'))}: <code dir="ltr">${esc(p.id)}</code></p></section>
+  ${USE_TECHNICAL ? '' : field('Instagram post link (optional)', 'source', p.source || '', { type: 'url', dir: 'ltr' })}<p class="muted small">${esc(t('Device id'))}: <code dir="ltr">${esc(p.id)}</code></p></section>
   <section class="card"><h2>${esc(t('Photo'))}</h2><div class="photo">${thumb(p)}</div><p class="muted small">${esc(t('A photo with a plain or transparent background looks best.'))}</p><div class="btns"><label class="btn"><input type="file" id="photo-input" accept="image/*" hidden>${esc(t('Upload photo'))}</label>${p.photo ? `<button type="button" class="btn ghost" data-clear-photo>${esc(t('Use the shipped photo'))}</button>` : ''}</div>
-  <h2>${esc(t('Specs'))}</h2><div class="specs">${IS_PAGES ? technicalFields(p) : (p.specs || []).map((s, i) => `<div class="spec"><input name="spec.${i}.ar" value="${esc(s.ar)}" placeholder="${esc(t('Arabic'))}"><input name="spec.${i}.en" value="${esc(s.en)}" placeholder="${esc(t('English'))}" dir="ltr"><button type="button" class="btn ghost small" data-remove-spec="${i}" aria-label="${esc(t('Remove'))}">×</button></div>`).join('')}</div><button type="button" class="btn ghost small" data-add-spec>${esc(t('Add line'))}</button></section></div>
+  <h2>${esc(t('Specs'))}</h2><div class="specs">${USE_TECHNICAL ? technicalFields(p) : (p.specs || []).map((s, i) => `<div class="spec"><input name="spec.${i}.ar" value="${esc(s.ar)}" placeholder="${esc(t('Arabic'))}"><input name="spec.${i}.en" value="${esc(s.en)}" placeholder="${esc(t('English'))}" dir="ltr"><button type="button" class="btn ghost small" data-remove-spec="${i}" aria-label="${esc(t('Remove'))}">×</button></div>`).join('')}</div><button type="button" class="btn ghost small" data-add-spec>${esc(t('Add line'))}</button></section></div>
   <section class="card"><h2>${esc(t('Options and prices'))}</h2><div class="variants">${p.variants.map((v, i) => `<div class="variant"><label class="f"><span>${esc(t('Storage / size'))}</span><input name="v.${i}.storage" value="${esc(v.storage)}" dir="ltr"></label><label class="f"><span>${esc(t('Condition'))}</span>${sel(`v.${i}.condition`, v.condition || '', condOpts)}</label><label class="f"><span>${esc(t('Warranty'))}</span>${sel(`v.${i}.warranty`, v.warranty || '', warOpts)}</label><label class="f price"><span>${esc(t('Price (JD)'))}</span><input name="v.${i}.price" type="number" inputmode="decimal" min="0.001" step="0.001" value="${esc(v.price ?? '')}" dir="ltr"${validPrice(v.price) ? '' : ' aria-invalid="true"'}></label>
   <div class="checks small">${Object.keys(noteLabels).map((n) => `<label><input type="checkbox" name="v.${i}.note.${n}"${(v.notes || []).includes(n) ? ' checked' : ''}> ${esc(L(noteLabels[n]))}</label>`).join('')}<label><input type="checkbox" name="v.${i}.soldOut"${v.soldOut ? ' checked' : ''}> ${esc(t('Sold out'))}</label></div><button type="button" class="btn ghost small" data-remove-variant="${i}"${p.variants.length < 2 ? ' disabled' : ''}>${esc(t('Remove'))}</button></div>`).join('')}</div><button type="button" class="btn small" data-add-variant>${esc(t('Add option'))}</button></section></form>`;
 }
@@ -242,7 +230,7 @@ function readDeviceForm(form) {
   const get = (n) => form.elements[n];
   p.name = { ar: get('name.ar').value.trim(), en: get('name.en').value.trim() };
   p.brand = get('brand').value.trim(); p.category = get('category').value;
-  if (IS_PAGES) {
+  if (USE_TECHNICAL) {
     p.technical ||= { summary: { ar: '', en: '' }, specs: [] };
     p.technical.summary = { ar: get('technical.summary.ar').value.trim(), en: get('technical.summary.en').value.trim() };
     p.technical.specs = (p.technical.specs || []).map((s, i) => ({
@@ -324,12 +312,17 @@ async function publish() {
     else flash(errorText(error), 'error');
   } finally { if (button.isConnected) { button.textContent = t(IS_PAGES ? 'Save preview' : 'Publish'); updateBar(); } }
 }
+function editableContent(content) {
+  const result = withDefaults(content);
+  if (USE_TECHNICAL) for (const product of result.products) product.technical ||= clone(deviceSpecifications[product.id] || { summary: { ar: '', en: '' }, specs: [] });
+  return result;
+}
 async function loadContent({ keepDraft = true } = {}) {
   const data = await guard(() => adminApi.content());
   if (!data) return false;
-  state.published = withDefaults(data.content); state.version = data.version || 0;
+  state.published = editableContent(data.content); state.version = data.version || 0;
   const saved = keepDraft ? local.read(draftKey) : null;
-  state.draft = saved && saved.content && saved.baseVersion === state.version ? withDefaults(saved.content) : clone(state.published);
+  state.draft = saved && saved.content && saved.baseVersion === state.version ? editableContent(saved.content) : clone(state.published);
   if (saved && saved.baseVersion !== state.version) local.remove(draftKey);
   state.dirty = JSON.stringify(state.draft) !== JSON.stringify(state.published);
   return true;
@@ -371,31 +364,10 @@ document.addEventListener('click', async (e) => {
   if (hit('#discard')) { if (confirmed(t(IS_PAGES ? 'Discard changes since the last saved preview?' : 'Discard all unpublished changes?'))) { state.draft = clone(state.published); state.editing = null; saveDraft(); render(); } return; }
   if (hit('[data-reload-published]')) { await loadContent({ keepDraft: false }); state.editing = null; render(); return; }
   if (hit('#logout') && !IS_PAGES) { await guard(() => adminApi.logout()); state.signedIn = false; render(); return; }
-  if (hit('[data-order-filter]')) { state.orderFilter = hit('[data-order-filter]').dataset.orderFilter; render(); return; }
-  if (IS_PAGES && hit('[data-new-order]')) {
-    if (!state.newOrder) {
-      await loadContent();
-      state.newOrder = { customer: { name: '', mobile: '', notes: '' }, fulfilment: 'pickup', lines: [{ id: '', qty: 1 }], token: crypto.randomUUID() };
-    }
-    state.orderOpen = null; render(); window.scrollTo(0, 0); return;
-  }
-  if (IS_PAGES && hit('[data-cancel-order]')) { state.newOrder = null; render(); return; }
+  if (hit('[data-order-filter]')) { state.orderFilter = hit('[data-order-filter]').dataset.orderFilter; if (MODE === 'live') await loadOrders(); render(); return; }
+  if (MODE === 'live' && hit('[data-load-older-orders]')) { const button = hit('[data-load-older-orders]'); button.disabled = true; await loadOrders({ append: true }); render(); return; }
   if (IS_PAGES && hit('[data-export-orders]')) { await exportOrders(); return; }
-  if (IS_PAGES && hit('[data-refresh-orders]')) { await loadOrders(); render(); return; }
-  if (IS_PAGES && hit('[data-refresh-order-catalog]')) {
-    const form = $('#new-order-form'); if (form) readNewOrderForm(form);
-    await loadContent(); render(); return;
-  }
-  if (IS_PAGES && hit('[data-add-order-line]') && state.newOrder) {
-    readNewOrderForm($('#new-order-form'));
-    if (state.newOrder.lines.length >= MAX_LINES) { flash(t('Maximum {max} items per order.', { max: MAX_LINES }), 'error'); return; }
-    state.newOrder.lines.push({ id: '', qty: 1 }); render(); return;
-  }
-  if (IS_PAGES && hit('[data-remove-order-line]') && state.newOrder) {
-    readNewOrderForm($('#new-order-form'));
-    if (state.newOrder.lines.length > 1) state.newOrder.lines.splice(Number(hit('[data-remove-order-line]').dataset.removeOrderLine), 1);
-    render(); return;
-  }
+  if (hit('[data-refresh-orders]')) { await loadOrders(); render(); return; }
   if (hit('[data-open-order]')) { state.orderOpen = hit('[data-open-order]').dataset.openOrder; render(); window.scrollTo(0, 0); return; }
   if (hit('[data-close-order]')) { state.orderOpen = null; render(); return; }
   if (hit('[data-cat]')) { state.category = hit('[data-cat]').dataset.cat; render(); return; }
@@ -404,7 +376,7 @@ document.addEventListener('click', async (e) => {
   if (hit('[data-move]')) { const b = hit('[data-move]'); const i = Number(b.dataset.move); const j = i + Number(b.dataset.dir); const list = state.draft.products; if (j >= 0 && j < list.length) { [list[i], list[j]] = [list[j], list[i]]; saveDraft(); render(); } return; }
   if (hit('[data-add-device]')) {
     const cat = state.category !== 'all' ? state.category : state.draft.categories[0].id;
-    const p = { _new: true, id: uniqueId('device'), category: cat, brand: 'Apple', name: { ar: '', en: '' }, image: '', photo: '', hidden: true, offer: false, featured: false, tagline: { ar: '', en: '' }, about: { ar: '', en: '' }, specs: [], source: '', ...(IS_PAGES ? { technical: { summary: { ar: '', en: '' }, specs: [] } } : {}), variants: [{ key: 'a', storage: '', condition: 'new-sealed', notes: [], warranty: '', price: null, soldOut: false }] };
+    const p = { _new: true, id: uniqueId('device'), category: cat, brand: 'Apple', name: { ar: '', en: '' }, image: '', photo: '', hidden: true, offer: false, featured: false, tagline: { ar: '', en: '' }, about: { ar: '', en: '' }, specs: [], source: '', ...(USE_TECHNICAL ? { technical: { summary: { ar: '', en: '' }, specs: [] } } : {}), variants: [{ key: 'a', storage: '', condition: 'new-sealed', notes: [], warranty: '', price: null, soldOut: false }] };
     state.draft.products.unshift(p); state.editing = { index: 0 }; saveDraft(); render(); return;
   }
   const form = $('#device-form');
@@ -414,15 +386,14 @@ document.addEventListener('click', async (e) => {
     if (hit('[data-delete]')) { if (confirmed(t('Delete this device?'))) { state.draft.products.splice(state.editing.index, 1); state.editing = null; saveDraft(); render(); } return; }
     if (hit('[data-add-variant]')) { readDeviceForm(form); const keys = new Set(p.variants.map((v) => v.key)); let k = 1; while (keys.has(`o${k}`)) k++; p.variants.push({ key: `o${k}`, storage: '', condition: p.variants[0]?.condition || 'new-sealed', notes: [], warranty: '', price: null, soldOut: false }); saveDraft(); render(); return; }
     if (hit('[data-remove-variant]')) { readDeviceForm(form); p.variants.splice(Number(hit('[data-remove-variant]').dataset.removeVariant), 1); saveDraft(); render(); return; }
-    if (hit('[data-add-spec]')) { readDeviceForm(form); if (IS_PAGES) p.technical.specs.push({ label: { ar: '', en: '' }, value: { ar: '', en: '' } }); else (p.specs ||= []).push({ ar: '', en: '' }); saveDraft(); render(); return; }
-    if (hit('[data-remove-spec]')) { readDeviceForm(form); (IS_PAGES ? p.technical.specs : p.specs).splice(Number(hit('[data-remove-spec]').dataset.removeSpec), 1); saveDraft(); render(); return; }
+    if (hit('[data-add-spec]')) { readDeviceForm(form); if (USE_TECHNICAL) p.technical.specs.push({ label: { ar: '', en: '' }, value: { ar: '', en: '' } }); else (p.specs ||= []).push({ ar: '', en: '' }); saveDraft(); render(); return; }
+    if (hit('[data-remove-spec]')) { readDeviceForm(form); (USE_TECHNICAL ? p.technical.specs : p.specs).splice(Number(hit('[data-remove-spec]').dataset.removeSpec), 1); saveDraft(); render(); return; }
     if (hit('[data-clear-photo]')) { p.photo = ''; saveDraft(); render(); return; }
   }
 });
 function confirmed(text) { try { return window.confirm(text); } catch { return true; } }
 document.addEventListener('change', async (e) => {
   const form = e.target.closest && e.target.closest('form');
-  if (IS_PAGES && form?.id === 'new-order-form') { readNewOrderForm(form); return; }
   if (IS_PAGES && e.target.id === 'import-draft' && e.target.files?.[0]) {
     const file = e.target.files[0];
     try {
@@ -449,37 +420,12 @@ document.addEventListener('input', (e) => {
   if (e.target.id === 'device-search') { state.query = e.target.value; const pos = e.target.selectionStart; render(); const box = $('#device-search'); box.focus(); box.setSelectionRange(pos, pos); }
   if (e.target.id === 'order-search') { state.orderQuery = e.target.value; const pos = e.target.selectionStart; render(); const box = $('#order-search'); box.focus(); if (pos !== null) box.setSelectionRange(pos, pos); }
   const form = e.target.closest && e.target.closest('form');
-  if (IS_PAGES && form?.id === 'new-order-form') readNewOrderForm(form);
   if (form && form.id === 'device-form' && e.target.type !== 'file') readDeviceForm(form);
   if (form && form.id === 'settings-form') readSettings(form);
 });
 document.addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = e.target;
-  if (IS_PAGES && f.id === 'new-order-form') {
-    readNewOrderForm(f);
-    const errorBox = $('#new-order-error');
-    const show = (message) => { errorBox.hidden = false; errorBox.textContent = message; };
-    errorBox.hidden = true;
-    const order = state.newOrder;
-    if (order.customer.name.trim().length < 2) { show(t('Customer name is required.')); return; }
-    if (order.customer.mobile.trim() && !normaliseMobile(order.customer.mobile)) { show(t('Enter a valid Jordanian mobile number, or leave it empty.')); return; }
-    const priced = orderPreviewPrice();
-    if (!priced.ok) {
-      show(t(priced.error === 'duplicate' ? 'Each option can appear only once. Increase its quantity instead.' : priced.error === 'empty' ? 'Add at least one available device.' : 'Choose available devices and quantities from 1 to {max}.', { max: MAX_QTY }));
-      return;
-    }
-    const button = f.querySelector('[type="submit"]'); button.disabled = true;
-    try {
-      const result = await adminApi.createOrder({ ...order, totalFils: priced.totalFils, lang });
-      state.newOrder = null; state.orderOpen = result.number; state.orderFilter = ''; state.orderQuery = '';
-      await loadOrders(); render(); flash(t('Local order saved.'));
-    } catch (error) {
-      show(errorText(error));
-      if (error instanceof ApiError && error.code === 'price-changed') errorBox.insertAdjacentHTML('beforeend', ` <button type="button" class="btn ghost small" data-refresh-order-catalog>${esc(t('Reload saved catalog'))}</button>`);
-    } finally { if (button.isConnected) button.disabled = false; }
-    return;
-  }
   if (f.id === 'sign-form') {
     const err = $('#sign-error'); err.hidden = true;
     const show = (m) => { err.textContent = m; err.hidden = false; };
@@ -506,7 +452,30 @@ document.addEventListener('submit', async (e) => {
     if (ok) { f.reset(); flash(t('Password changed.')); }
   }
 });
-if (!IS_PAGES) setInterval(async () => { if (state.signedIn && document.visibilityState === 'visible') { const before = state.orders.filter((o) => o.status === 'new').length; await loadOrders(); const after = state.orders.filter((o) => o.status === 'new').length; if (after !== before && state.view === 'orders' && !state.orderOpen) render(); else { const b = $('[data-view=orders]'); if (b) b.innerHTML = `${esc(t('Orders'))}${after ? `<span class="badge">${after}</span>` : ''}`; } } }, 60000);
+let pollingOrders = false;
+async function pollOrders() {
+  if (IS_PAGES || pollingOrders || !state.signedIn || document.visibilityState !== 'visible' || state.orderOpen) return;
+  pollingOrders = true;
+  const previous = JSON.stringify(state.orders);
+  const search = $('#order-search');
+  const focused = document.activeElement === search;
+  const position = focused ? search.selectionStart : null;
+  try {
+    if (!await loadOrders()) return;
+    const count = state.orders.filter((order) => order.status === 'new').length;
+    if (state.view === 'orders' && previous !== JSON.stringify(state.orders)) {
+      render();
+      if (focused) { const field = $('#order-search'); field?.focus(); if (position !== null) field?.setSelectionRange(position, position); }
+    } else {
+      const button = $('[data-view=orders]');
+      if (button) button.innerHTML = `${esc(t('Orders'))}${count ? `<span class="badge">${count}</span>` : ''}`;
+    }
+  } finally { pollingOrders = false; }
+}
+if (!IS_PAGES) {
+  setInterval(pollOrders, MODE === 'live' ? 15000 : 60000);
+  document.addEventListener('visibilitychange', pollOrders);
+}
 
 (async function start() {
   try {

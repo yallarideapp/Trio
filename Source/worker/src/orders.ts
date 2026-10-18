@@ -1,5 +1,6 @@
 import { Env, HttpError, json, readJson, checkOrigin, clientIp, sha256, takeSlots, str } from './util';
 import { getContent } from './content';
+import { customerId } from './customer';
 // @ts-ignore shared plain-JS modules
 import { priceLines, normaliseMobile, formatJD } from '../../shared/pricing.js';
 // @ts-ignore
@@ -15,7 +16,7 @@ export async function placeOrder(request: Request, env: Env, ctx: ExecutionConte
   checkOrigin(request);
   const body = await readJson(request, 16 * 1024);
   const { content } = await getContent(env, { fresh: true });
-  if (content.settings?.ordersOn === false) throw new HttpError(403, 'orders-off');
+  if (content.settings?.ordersOn !== true) throw new HttpError(403, 'orders-off');
   if (str(body.website, 200)) throw new HttpError(400, 'bad-request'); // honeypot
   if (!(Number(body.elapsedMs) >= 3000)) throw new HttpError(400, 'too-fast');
   const token = String(body.token || '');
@@ -33,7 +34,8 @@ export async function placeOrder(request: Request, env: Env, ctx: ExecutionConte
   if (name.length < 2) throw new HttpError(400, 'bad-name');
   const mobile = normaliseMobile(c.mobile);
   if (!mobile) throw new HttpError(400, 'bad-mobile');
-  const fulfilment = body.fulfilment === 'pickup' ? 'pickup' : 'delivery';
+  if (!['pickup', 'delivery'].includes(body.fulfilment)) throw new HttpError(400, 'bad-fulfilment');
+  const fulfilment = body.fulfilment;
   let governorate = '';
   let address = '';
   if (fulfilment === 'delivery') {
@@ -44,6 +46,7 @@ export async function placeOrder(request: Request, env: Env, ctx: ExecutionConte
   }
   const notes = str(c.notes, 300);
   const lang = body.lang === 'en' ? 'en' : 'ar';
+  const owner = await customerId(request, env);
 
   const ipKey = await sha256(`trio-order:${clientIp(request)}`);
   await takeSlots(env, [[`order:${ipKey}`, 10, 3600], ['order:*', 300, 3600]]);
@@ -52,8 +55,8 @@ export async function placeOrder(request: Request, env: Env, ctx: ExecutionConte
   const db = env.DB;
   const statements = [
     db.prepare("UPDATE counters SET value = value + 1 WHERE name = 'order'"),
-    db.prepare("INSERT INTO orders (number, seq, token, created_at, status, name, mobile, governorate, address, notes, fulfilment, lang, total_fils) SELECT 'T-' || value, value, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ? FROM counters WHERE name = 'order'")
-      .bind(token, createdAt, name, mobile, governorate, address, notes, fulfilment, lang, priced.totalFils),
+    db.prepare("INSERT INTO orders (number, seq, token, created_at, status, name, mobile, governorate, address, notes, fulfilment, lang, total_fils, customer_id) SELECT 'T-' || value, value, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ? FROM counters WHERE name = 'order'")
+      .bind(token, createdAt, name, mobile, governorate, address, notes, fulfilment, lang, priced.totalFils, owner),
     ...priced.lines.map((line: any, position: number) => db.prepare("INSERT INTO order_lines (order_number, position, variant_id, name, name_ar, storage, condition, qty, unit_fils) SELECT 'T-' || value, ?, ?, ?, ?, ?, ?, ?, ? FROM counters WHERE name = 'order'")
       .bind(position, line.id, line.product.name.en, line.product.name.ar, line.variant.storage || '', line.variant.condition || '', line.qty, line.unitFils)),
     db.prepare('SELECT number FROM orders WHERE token = ?').bind(token),
@@ -97,18 +100,24 @@ async function sendOrderEmail(env: Env, o: any) {
 
 export async function listOrders(env: Env, url: URL): Promise<Response> {
   const status = url.searchParams.get('status') || '';
-  const rows = status
-    ? await env.DB.prepare('SELECT * FROM orders WHERE status = ? ORDER BY seq DESC LIMIT 300').bind(status).all<any>()
-    : await env.DB.prepare('SELECT * FROM orders ORDER BY seq DESC LIMIT 300').all<any>();
-  const orders = rows.results || [];
-  const lines = orders.length
-    ? (status
-      ? await env.DB.prepare('SELECT l.* FROM order_lines l JOIN (SELECT number FROM orders WHERE status = ? ORDER BY seq DESC LIMIT 300) o ON o.number = l.order_number ORDER BY l.order_number, l.position').bind(status).all<any>()
-      : await env.DB.prepare('SELECT l.* FROM order_lines l JOIN (SELECT number FROM orders ORDER BY seq DESC LIMIT 300) o ON o.number = l.order_number ORDER BY l.order_number, l.position').all<any>()).results || []
-    : [];
+  if (status && !STATUSES.includes(status)) throw new HttpError(400, 'bad-status');
+  const before = url.searchParams.get('before');
+  if (before && (!/^\d{1,15}$/.test(before) || Number(before) < 1)) throw new HttpError(400, 'bad-cursor');
+  const filters: string[] = []; const values: unknown[] = [];
+  if (status) { filters.push('status = ?'); values.push(status); }
+  if (before) { filters.push('seq < ?'); values.push(Number(before)); }
+  const where = filters.length ? ` WHERE ${filters.join(' AND ')}` : '';
+  // One transactional snapshot keeps headers and lines on the same page while
+  // new orders arrive concurrently.
+  const [rows, lineRows] = await env.DB.batch([
+    env.DB.prepare(`SELECT * FROM orders${where} ORDER BY seq DESC LIMIT 300`).bind(...values),
+    env.DB.prepare(`SELECT l.* FROM order_lines l JOIN (SELECT number FROM orders${where} ORDER BY seq DESC LIMIT 300) o ON o.number = l.order_number ORDER BY l.order_number, l.position`).bind(...values),
+  ]);
+  const orders = (rows.results || []) as any[];
+  const lines = (lineRows.results || []) as any[];
   const byOrder = new Map<string, any[]>();
   for (const l of lines) { if (!byOrder.has(l.order_number)) byOrder.set(l.order_number, []); byOrder.get(l.order_number)!.push({ id: l.variant_id, name: l.name, nameAr: l.name_ar, storage: l.storage, condition: l.condition, qty: l.qty, unitFils: l.unit_fils }); }
-  return json({ orders: orders.map((o: any) => ({ number: o.number, createdAt: o.created_at, status: o.status, note: o.note, fulfilment: o.fulfilment, lang: o.lang, totalFils: o.total_fils, customer: { name: o.name, mobile: o.mobile, governorate: o.governorate, address: o.address, notes: o.notes }, lines: byOrder.get(o.number) || [] })) });
+  return json({ orders: orders.map((o: any) => ({ number: o.number, createdAt: o.created_at, status: o.status, note: o.note, fulfilment: o.fulfilment, lang: o.lang, totalFils: o.total_fils, customer: { name: o.name, mobile: o.mobile, governorate: o.governorate, address: o.address, notes: o.notes }, lines: byOrder.get(o.number) || [] })), nextBefore: orders.length === 300 ? orders[orders.length - 1].seq : null });
 }
 
 const STATUSES = ['new', 'confirmed', 'out', 'delivered', 'cancelled'];
