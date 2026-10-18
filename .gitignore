@@ -9,3 +9,9 @@ node_modules/
 __pycache__/
 playwright-report/
 test-results/
+
+# Downloaded delivery archives; editable source is maintained in Source/.
+/Trio-complete-with-demo/
+/Trio-complete-with-demo.zip
+/Source/dist/
+/Demo/

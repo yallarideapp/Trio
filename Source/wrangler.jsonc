@@ -1,0 +1,26 @@
+{
+  // TRIO Mobile — one Worker serves the site (dist/) and answers /api/*.
+  // The Worker's name in the Cloudflare dashboard must match "name".
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "trio-mobile",
+  "main": "worker/src/index.ts",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "trio-db", "database_id": "REPLACE_WITH_D1_DATABASE_ID", "migrations_dir": "migrations" }
+  ],
+  "kv_namespaces": [
+    { "binding": "PHOTOS", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }
+  ],
+  "observability": { "enabled": true }
+  // Secrets (set in the dashboard or with `npx wrangler secret put NAME`, never here):
+  //   SETUP_CODE      first admin sign-in code (8+ characters)
+  //   RESEND_API_KEY  optional, order emails through Resend
+  //   ORDER_EMAIL     optional, where order emails go
+  //   ORDER_FROM      optional, sender on a verified Resend domain
+}

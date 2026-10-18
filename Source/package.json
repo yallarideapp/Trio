@@ -1,0 +1,19 @@
+{
+  "name": "trio-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs live",
+    "build:pages": "node tools/build.mjs pages",
+    "demo:build": "node tools/build.mjs demo",
+    "dev": "node tools/build.mjs live && wrangler dev",
+    "db:local": "wrangler d1 migrations apply DB --local",
+    "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy",
+    "test": "node tests/check.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "wrangler": "4.140.0"
+  }
+}
