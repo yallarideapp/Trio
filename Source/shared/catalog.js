@@ -37,8 +37,10 @@ export const seed = {
   },
   categories: [
     { id: 'phones', name: { ar: 'هواتف', en: 'Phones' } },
-    { id: 'computers', name: { ar: 'لابتوب وتابلت', en: 'Laptops & tablets' } },
-    { id: 'wearables', name: { ar: 'ساعات وسماعات', en: 'Watches & audio' } },
+    { id: 'laptops', name: { ar: 'لابتوبات', en: 'Laptops' } },
+    { id: 'tablets', name: { ar: 'تابلت', en: 'Tablets' } },
+    { id: 'watches', name: { ar: 'ساعات', en: 'Watches' } },
+    { id: 'audio', name: { ar: 'سماعات', en: 'Audio' } },
     { id: 'accessories', name: { ar: 'إكسسوارات', en: 'Accessories' } },
   ],
   products: [
@@ -161,7 +163,7 @@ export const seed = {
       variants: [v('128-new', '128GB', 'new-sealed', 299, { posted: '2026-10-11' })],
     },
     {
-      id: 'apple-watch-s11', category: 'wearables', brand: 'Apple', name: { ar: 'Apple Watch Series 11', en: 'Apple Watch Series 11' },
+      id: 'apple-watch-s11', category: 'watches', brand: 'Apple', name: { ar: 'Apple Watch Series 11', en: 'Apple Watch Series 11' },
       image: 'assets/devices/apple-watch.webp', featured: true,
       tagline: { ar: 'لكل يوم، ولكل ستايل', en: 'For every day, every style' },
       about: { ar: 'Apple Watch S11 جديدة مسكّرة بالكرتونة، بمقاسي 42mm و46mm.', en: 'Apple Watch S11, sealed new in box, in 42mm and 46mm.' },
@@ -172,7 +174,7 @@ export const seed = {
       ],
     },
     {
-      id: 'apple-watch-ultra-3', category: 'wearables', brand: 'Apple', name: { ar: 'Apple Watch Ultra 3', en: 'Apple Watch Ultra 3' },
+      id: 'apple-watch-ultra-3', category: 'watches', brand: 'Apple', name: { ar: 'Apple Watch Ultra 3', en: 'Apple Watch Ultra 3' },
       image: 'assets/devices/apple-watch-ultra-3.png',
       tagline: { ar: 'أقوى. أذكى. أبعد.', en: 'Tougher. Smarter. Further.' },
       about: { ar: 'Apple Watch Ultra 3 جديدة مسكّرة بالكرتونة.', en: 'Apple Watch Ultra 3, sealed new in box.' },
@@ -180,7 +182,7 @@ export const seed = {
       variants: [v('49', '49mm', 'new-sealed', 488, { posted: '2026-10-07' })],
     },
     {
-      id: 'apple-watch-se-3', category: 'wearables', brand: 'Apple', name: { ar: 'Apple Watch SE 3', en: 'Apple Watch SE 3' },
+      id: 'apple-watch-se-3', category: 'watches', brand: 'Apple', name: { ar: 'Apple Watch SE 3', en: 'Apple Watch SE 3' },
       image: 'assets/devices/apple-watch-se-3.png',
       tagline: { ar: 'أكثر من مجرد ساعة', en: 'More than a watch' },
       about: { ar: 'Apple Watch SE 3 جديدة مسكّرة بالكرتونة، بمقاسي 40mm و44mm.', en: 'Apple Watch SE 3, sealed new in box, in 40mm and 44mm.' },
@@ -191,7 +193,7 @@ export const seed = {
       ],
     },
     {
-      id: 'huawei-watch-gt6', category: 'wearables', brand: 'Huawei', name: { ar: 'Huawei Watch GT 6', en: 'Huawei Watch GT 6' },
+      id: 'huawei-watch-gt6', category: 'watches', brand: 'Huawei', name: { ar: 'Huawei Watch GT 6', en: 'Huawei Watch GT 6' },
       image: 'assets/devices/huawei-watch-gt6.webp',
       tagline: { ar: 'خيار جديد ليومك', en: 'A new choice for your day' },
       about: { ar: 'عرض منشور لـ Huawei Watch GT 6 جديدة ومسكّرة بالكرتونة. أكّد التوفر والتفاصيل الحالية مع تريو.', en: 'Published offer for a brand-new, sealed Huawei Watch GT 6. Confirm current availability and details with Trio.' },
@@ -199,7 +201,7 @@ export const seed = {
       variants: [v('one', '', 'new-sealed', 139, { posted: '2026-10-04' })],
     },
     {
-      id: 'airpods-max-2', category: 'wearables', brand: 'Apple', name: { ar: 'AirPods Max 2', en: 'AirPods Max 2' },
+      id: 'airpods-max-2', category: 'audio', brand: 'Apple', name: { ar: 'AirPods Max 2', en: 'AirPods Max 2' },
       image: 'assets/devices/airpods-max.webp', featured: true,
       tagline: { ar: 'المنشور يذكر كل الألوان · كفالة Apple سنة', en: 'Post lists all colours · 1-year Apple warranty' },
       about: { ar: 'منشور تريو بتاريخ 17 تشرين الأول يذكر Apple AirPods Max 2 بجميع الألوان مع كفالة سنة من Apple. أكّد اللون والتوفر والكفالة الحالية مباشرة مع المحل.', en: 'Trio’s 17 October post lists Apple AirPods Max 2 in all colours with a 1-year Apple warranty. Confirm current colour, availability and warranty directly with the shop.' },
@@ -207,7 +209,7 @@ export const seed = {
       variants: [v('one', '', '', 339, { warranty: 'apple1', posted: '2026-10-17' })],
     },
     {
-      id: 'macbook-pro-16-m5-max', category: 'computers', brand: 'Apple', name: { ar: 'MacBook Pro 16" M5 Max', en: 'MacBook Pro 16" M5 Max' },
+      id: 'macbook-pro-16-m5-max', category: 'laptops', brand: 'Apple', name: { ar: 'MacBook Pro 16" M5 Max', en: 'MacBook Pro 16" M5 Max' },
       image: 'assets/devices/macbook-pro.webp',
       tagline: { ar: 'أقوى.. أسرع.. للمحترفين بلا حدود', en: 'Stronger, faster, for professionals' },
       about: { ar: 'MacBook Pro بقياس 16 إنش مع شريحة M5 Max، ذاكرة 64GB وسعة 2TB، جديد ومسكّر بالكرتونة.', en: '16-inch MacBook Pro with M5 Max, 64GB memory and 2TB storage, brand new and sealed.' },
@@ -215,7 +217,7 @@ export const seed = {
       variants: [v('64-2tb', '64GB · 2TB', 'new-sealed', 3999, { posted: '2026-10-01' })],
     },
     {
-      id: 'macbook-pro-16-m5-pro', category: 'computers', brand: 'Apple', name: { ar: 'MacBook Pro 16" M5 Pro', en: 'MacBook Pro 16" M5 Pro' },
+      id: 'macbook-pro-16-m5-pro', category: 'laptops', brand: 'Apple', name: { ar: 'MacBook Pro 16" M5 Pro', en: 'MacBook Pro 16" M5 Pro' },
       image: 'assets/devices/macbook-pro.webp', featured: true,
       tagline: { ar: 'قوة أكبر.. لطموحات أكبر', en: 'More power for bigger plans' },
       about: { ar: 'MacBook Pro بقياس 16 إنش مع شريحة M5 Pro، جديد ومسكّر بالكرتونة، بثلاث سعات.', en: '16-inch MacBook Pro with M5 Pro, brand new and sealed, in three configurations.' },
@@ -227,7 +229,7 @@ export const seed = {
       ],
     },
     {
-      id: 'macbook-pro-14-m5-pro', category: 'computers', brand: 'Apple', name: { ar: 'MacBook Pro 14" M5 Pro', en: 'MacBook Pro 14" M5 Pro' },
+      id: 'macbook-pro-14-m5-pro', category: 'laptops', brand: 'Apple', name: { ar: 'MacBook Pro 14" M5 Pro', en: 'MacBook Pro 14" M5 Pro' },
       image: 'assets/devices/macbook-pro-14-m5-pro.png',
       tagline: { ar: 'أداء احترافي.. بحجم مثالي', en: 'Pro performance, ideal size' },
       about: { ar: 'MacBook Pro بقياس 14 إنش مع شريحة M5 Pro، ذاكرة 24GB وسعة 1TB، جديد ومسكّر بالكرتونة. وفي نسخة MDM (جهاز مُدار) بسعر أقل.', en: '14-inch MacBook Pro with M5 Pro, 24GB memory and 1TB storage, brand new and sealed, plus a lower-priced MDM (managed device) unit.' },
@@ -238,7 +240,7 @@ export const seed = {
       ],
     },
     {
-      id: 'macbook-air-15-m5', category: 'computers', brand: 'Apple', name: { ar: 'MacBook Air 15" M5', en: 'MacBook Air 15" M5' },
+      id: 'macbook-air-15-m5', category: 'laptops', brand: 'Apple', name: { ar: 'MacBook Air 15" M5', en: 'MacBook Air 15" M5' },
       image: 'assets/devices/macbook-air.webp', featured: true,
       tagline: { ar: 'مكفول سنة كاملة من Apple', en: 'Full 1-year Apple warranty' },
       about: { ar: 'MacBook Air M5 بقياس 15 إنش، رام 16GB وسعة 512GB، مكفول سنة كاملة من Apple.', en: '15-inch MacBook Air M5 with 16GB RAM and 512GB storage, with a full 1-year Apple warranty.' },
@@ -246,7 +248,7 @@ export const seed = {
       variants: [v('16-512', '16GB · 512GB', '', 888, { warranty: 'apple1', posted: '2026-10-06' })],
     },
     {
-      id: 'ipad-a16', category: 'computers', brand: 'Apple', name: { ar: 'iPad A16', en: 'iPad A16' },
+      id: 'ipad-a16', category: 'tablets', brand: 'Apple', name: { ar: 'iPad A16', en: 'iPad A16' },
       image: 'assets/devices/ipad.webp',
       tagline: { ar: 'خيارات Wi‑Fi من المنشور', en: 'Wi‑Fi options from the post' },
       about: { ar: 'عروض منشورة لـ iPad A16 جديد مسكّر بالكرتونة بنسخة Wi‑Fi بسعتي 128GB و256GB. لم نربط خيار 128GB بسعر 379 دينار بنوع اتصال لأن ربط صور المنشور غير واضح؛ أكّد أي خيار خلوي مع تريو.', en: 'Published offers for sealed-new iPad A16 Wi‑Fi in 128GB and 256GB. The 128GB/JD 379 image was not assigned a connectivity type because the post’s image mapping is unclear; confirm any cellular option with Trio.' },
@@ -257,7 +259,7 @@ export const seed = {
       ],
     },
     {
-      id: 'ipad-pro-m5', category: 'computers', brand: 'Apple', name: { ar: 'iPad Pro M5', en: 'iPad Pro M5' },
+      id: 'ipad-pro-m5', category: 'tablets', brand: 'Apple', name: { ar: 'iPad Pro M5', en: 'iPad Pro M5' },
       image: 'assets/devices/ipad-pro-m5.png',
       tagline: { ar: 'قوة الـ M5 · 11 و13 إنش', en: 'M5 power · 11 and 13 inch' },
       about: { ar: 'عروض منشورة لـ iPad Pro مع شريحة M5 بقياسي 11 و13 إنش، جديد No Active مع الكرتونة. خيار 11 إنش بسعة 512GB غير معروض هنا لتعارض السعر بين صور المنشور؛ أكّده مباشرة مع تريو.', en: 'Published offers for iPad Pro with M5 in 11-inch and 13-inch, new and never activated, with box. The 11-inch/512GB option is omitted because its price conflicts across the post’s images; confirm it directly with Trio.' },
