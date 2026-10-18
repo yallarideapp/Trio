@@ -1,5 +1,5 @@
 import { api, local, MODE, ApiError, withDefaults } from '../../src/store.js';
-import { validPrice, toFils, formatJD, fromPrice } from '../../../shared/pricing.js';
+import { validPrice, toFils, formatJD, fromPrice, priceLines, variantId, normaliseMobile, MAX_QTY, MAX_LINES } from '../../../shared/pricing.js';
 import { conditions, notes as noteLabels, warranties, orderStatuses, governorates } from '../../../shared/labels.js';
 import { pagesAdmin } from './pages-store.js';
 
@@ -51,13 +51,24 @@ const AR = {
   'Storage is full. Export your draft to keep a copy.': 'مساحة التخزين ممتلئة. صدّر المسودة للاحتفاظ بنسخة.', 'Preview storage is full. Export a copy or remove unused photos.': 'مساحة تخزين المعاينة ممتلئة. صدّر نسخة أو احذف الصور غير المستخدمة.',
   'Social link for the Repair and Visit us pages': 'الرابط الاجتماعي لصفحتي الصيانة وزيارتنا', 'Offers heading': 'عنوان العروض',
   'Check device names, prices and options, or import a valid Trio catalog export.': 'تحقق من أسماء الأجهزة والأسعار والخيارات، أو استورد ملف كتالوج تريو صحيحاً.', 'The photo could not be saved. Choose another image.': 'تعذر حفظ الصورة. اختر صورة أخرى.',
+  'Local order book': 'سجل الطلبات المحلي', 'Manual orders saved in this browser only. They are not sent to Trio or shared with other devices. Online checkout is off.': 'طلبات تسجلها يدوياً وتُحفظ في هذا المتصفح فقط. لا تُرسل إلى تريو ولا تظهر على الأجهزة الأخرى. الطلب الإلكتروني مغلق.',
+  'Add local order': 'أضف طلباً محلياً', 'New local order': 'طلب محلي جديد', 'Save local order': 'احفظ الطلب محلياً', 'Local order saved.': 'تم حفظ الطلب محلياً.', 'Export orders': 'تصدير الطلبات', 'Orders exported from this browser.': 'تم تصدير طلبات هذا المتصفح.',
+  'Search orders': 'ابحث في الطلبات', 'No local orders yet.': 'لا توجد طلبات محلية بعد.', 'Record your first order using the button above.': 'سجّل أول طلب باستخدام الزر أعلاه.', 'No matching orders.': 'لا توجد طلبات مطابقة.',
+  'Customer name': 'اسم العميل', 'Mobile (optional)': 'رقم الموبايل (اختياري)', 'Customer name is required.': 'اكتب اسم العميل.', 'Enter a valid Jordanian mobile number, or leave it empty.': 'اكتب رقم موبايل أردنياً صحيحاً، أو اتركه فارغاً.',
+  'Fulfilment': 'طريقة الاستلام', 'Order items': 'أجهزة الطلب', 'Device and option': 'الجهاز والخيار', 'Quantity': 'الكمية', 'Add item': 'أضف جهازاً', 'Cancel': 'إلغاء', 'Choose a device': 'اختر جهازاً',
+  'Prices use the last saved preview catalog. Save device changes before creating an order.': 'الأسعار من آخر كتالوج محفوظ للمعاينة. احفظ تعديلات الأجهزة قبل تسجيل الطلب.',
+  'Choose available devices and quantities from 1 to {max}.': 'اختر أجهزة متاحة وكميات من 1 إلى {max}.', 'Each option can appear only once. Increase its quantity instead.': 'يمكن إضافة كل خيار مرة واحدة. غيّر كميته لطلب أكثر من جهاز.',
+  'Add at least one available device.': 'أضف جهازاً متاحاً واحداً على الأقل.', 'Maximum {max} items per order.': 'الحد الأقصى {max} خيارات للطلب.', 'No available devices in the saved catalog.': 'لا توجد أجهزة متاحة في الكتالوج المحفوظ.',
+  'Local record': 'سجل محلي', 'Customer': 'العميل', 'Local note': 'ملاحظة محلية', 'Refresh orders': 'تحديث الطلبات', 'Could not save this order. Check its customer and device details.': 'تعذر حفظ الطلب. تحقق من بيانات العميل والأجهزة.',
+  'The order prices changed. Reload the saved catalog and review the total.': 'تغيّرت أسعار الطلب. أعد تحميل الكتالوج المحفوظ وراجع المجموع.', 'Reload saved catalog': 'إعادة تحميل الكتالوج المحفوظ', 'Order limit reached. Export your orders to keep a copy.': 'وصل سجل الطلبات إلى الحد الأقصى. صدّر الطلبات للاحتفاظ بنسخة.',
 };
 let lang = local.read('trio-admin-lang') === 'en' ? 'en' : 'ar';
 const t = (s, vars = {}) => (lang === 'ar' ? AR[s] || s : s).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
 const L = (o) => (o && typeof o === 'object' ? o[lang] || o.ar || o.en || '' : String(o || ''));
 const money = (jd) => formatJD(toFils(jd), lang);
 
-const state = { view: IS_PAGES ? 'devices' : 'orders', signedIn: IS_PAGES, setup: true, published: null, version: 0, draft: null, dirty: false, orders: [], orderFilter: '', orderOpen: null, editing: null, category: 'all', query: '', message: '' };
+const initialView = IS_PAGES ? ({ '#orders': 'orders', '#settings': 'settings' }[globalThis.location?.hash] || 'devices') : 'orders';
+const state = { view: initialView, signedIn: IS_PAGES, setup: true, published: null, version: 0, draft: null, dirty: false, orders: [], orderFilter: '', orderOpen: null, orderQuery: '', newOrder: null, editing: null, category: 'all', query: '', message: '' };
 
 function saveDraft() {
   state.dirty = JSON.stringify(state.draft) !== JSON.stringify(state.published);
@@ -73,7 +84,7 @@ function flash(text, kind = 'ok') {
 }
 function errorText(error) {
   const code = error instanceof ApiError ? error.code : '';
-  return ({ 'bad-password': t('Wrong password.'), 'bad-code': t('Wrong setup code.'), 'locked': t('Too many tries. Wait 15 minutes and try again.'), network: t('Could not reach the server.'), 'weak-password': t('At least 16 characters.'), 'storage-full': t('Preview storage is full. Export a copy or remove unused photos.'), 'invalid-draft': t('Check device names, prices and options, or import a valid Trio catalog export.'), 'invalid-photo': t('The photo could not be saved. Choose another image.'), 'too-large': t('This file is too large.') })[code] || `${t('Something went wrong.')}${code ? ` (${code})` : ''}`;
+  return ({ 'bad-password': t('Wrong password.'), 'bad-code': t('Wrong setup code.'), 'locked': t('Too many tries. Wait 15 minutes and try again.'), network: t('Could not reach the server.'), 'weak-password': t('At least 16 characters.'), 'storage-full': t('Preview storage is full. Export a copy or remove unused photos.'), 'invalid-draft': t('Check device names, prices and options, or import a valid Trio catalog export.'), 'invalid-photo': t('The photo could not be saved. Choose another image.'), 'too-large': t('This file is too large.'), 'bad-order': t('Could not save this order. Check its customer and device details.'), 'bad-mobile': t('Enter a valid Jordanian mobile number, or leave it empty.'), 'price-changed': t('The order prices changed. Reload the saved catalog and review the total.'), 'orders-full': t('Order limit reached. Export your orders to keep a copy.') })[code] || `${t('Something went wrong.')}${code ? ` (${code})` : ''}`;
 }
 async function guard(fn) {
   try { return await fn(); } catch (error) {
@@ -85,7 +96,7 @@ async function guard(fn) {
 // ---------- shell ----------
 function topBar() {
   const n = state.orders.filter((o) => o.status === 'new').length;
-  const tabs = IS_PAGES ? [['devices', 'Devices'], ['settings', 'Settings']] : [['orders', 'Orders'], ['devices', 'Devices'], ['settings', 'Settings']];
+  const tabs = IS_PAGES ? [['devices', 'Devices'], ['orders', 'Orders'], ['settings', 'Settings']] : [['orders', 'Orders'], ['devices', 'Devices'], ['settings', 'Settings']];
   return `<header class="bar"><div class="bar-in"><a class="brand" href="../index.html#/" ${MODE === 'demo' ? '' : 'target="_blank" rel="noopener"'}><img src="../assets/instagram/logo.jpg" alt="" width="34" height="34"><span dir="ltr">TRIO</span><small>${esc(t(IS_PAGES ? 'Catalog editor' : 'Admin'))}</small></a>
   <nav class="tabs">${tabs.map(([id, label]) => `<button type="button" data-view="${id}" aria-current="${state.view === id}">${esc(t(label))}${id === 'orders' && n ? `<span class="badge">${n}</span>` : ''}</button>`).join('')}</nav>
   <div class="bar-actions"><span id="draft-state" class="draft-state" role="status"></span><button type="button" id="publish" class="btn primary">${esc(t(IS_PAGES ? 'Save preview' : 'Publish'))}</button>${IS_PAGES ? `<a class="btn ghost" href="../index.html?preview=draft#/" target="_blank" rel="noopener">${esc(t('View preview'))} ↗</a>` : ''}<button type="button" id="lang" class="btn ghost" lang="${lang === 'ar' ? 'en' : 'ar'}">${lang === 'ar' ? 'EN' : 'ع'}</button>${MODE === 'demo' || IS_PAGES ? '' : `<button type="button" id="logout" class="btn ghost">${esc(t('Sign out'))}</button>`}</div></div>
@@ -107,7 +118,7 @@ function render() {
   document.body.classList.toggle('pages-editor', IS_PAGES);
   const root = $('#admin');
   if (!state.signedIn) { root.innerHTML = signInView(); return; }
-  root.innerHTML = `${topBar()}<main class="wrap">${IS_PAGES ? previewTools() : ''}${state.view === 'orders' && !IS_PAGES ? ordersView() : state.view === 'devices' ? (state.editing ? editView() : devicesView()) : settingsView()}</main><p id="flash" class="flash" role="status" hidden></p>`;
+  root.innerHTML = `${topBar()}<main class="wrap">${IS_PAGES && state.view !== 'orders' ? previewTools() : ''}${state.view === 'orders' ? ordersView() : state.view === 'devices' ? (state.editing ? editView() : devicesView()) : settingsView()}</main><p id="flash" class="flash" role="status" hidden></p>`;
   updateBar();
 }
 function signInView() {
@@ -118,27 +129,76 @@ function signInView() {
 // ---------- orders ----------
 const fmtDate = (iso) => { try { return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-JO' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Amman' }).format(new Date(iso)); } catch { return iso; } };
 const fils = (n) => formatJD(n, lang);
+function localOrdersNotice() {
+  return `<aside class="preview-notice order-notice"><div><strong>${esc(t('Local order book'))}</strong><p>${esc(t('Manual orders saved in this browser only. They are not sent to Trio or shared with other devices. Online checkout is off.'))}</p></div></aside>`;
+}
 function ordersView() {
-  if (state.orderOpen) return orderDetail(state.orders.find((o) => o.number === state.orderOpen));
+  const notice = IS_PAGES ? localOrdersNotice() : '';
+  if (IS_PAGES && state.newOrder) return `${notice}${newOrderView()}`;
+  if (state.orderOpen) {
+    const order = state.orders.find((o) => o.number === state.orderOpen);
+    if (order) return `${notice}${orderDetail(order)}`;
+    state.orderOpen = null;
+  }
   const counts = Object.fromEntries(orderStatuses.map((s) => [s, state.orders.filter((o) => o.status === s).length]));
-  const list = state.orderFilter ? state.orders.filter((o) => o.status === state.orderFilter) : state.orders;
-  return `<div class="head"><h1>${esc(t('Orders'))}</h1></div><div class="chips">${[['', t('All'), state.orders.length], ...orderStatuses.map((s) => [s, t(s), counts[s]])].map(([id, label, n]) => `<button type="button" class="chip" data-order-filter="${id}" aria-pressed="${state.orderFilter === id}">${esc(label)} <span>${n}</span></button>`).join('')}</div>
-  ${list.length ? `<ul class="rows">${list.map((o) => `<li><button type="button" class="row order-row" data-open-order="${esc(o.number)}"><span class="o-num" dir="ltr">${esc(o.number)}</span><span class="o-main"><strong>${esc(o.customer.name)}</strong><small dir="ltr">${esc(o.customer.mobile)}</small></span><span class="o-meta"><small>${esc(fmtDate(o.createdAt))}</small><strong>${esc(fils(o.totalFils))}</strong></span><span class="status s-${esc(o.status)}">${esc(t(o.status))}</span></button></li>`).join('')}</ul>` : `<p class="empty">${esc(t('No orders here yet.'))}</p>`}`;
+  const query = state.orderQuery.trim().toLowerCase();
+  const list = state.orders.filter((o) => (!state.orderFilter || o.status === state.orderFilter) && (!query || `${o.number} ${o.customer.name} ${o.customer.mobile || ''} ${o.lines.map((line) => `${line.name} ${line.nameAr || ''}`).join(' ')}`.toLowerCase().includes(query)));
+  return `${notice}<div class="head"><h1>${esc(t('Orders'))}</h1>${IS_PAGES ? `<div class="btns order-actions"><button type="button" class="btn primary" data-new-order>${esc(t('Add local order'))}</button><button type="button" class="btn ghost" data-export-orders${state.orders.length ? '' : ' disabled'}>${esc(t('Export orders'))}</button><button type="button" class="btn ghost" data-refresh-orders aria-label="${esc(t('Refresh orders'))}">↻</button></div>` : ''}</div>
+  <label class="f search"><span class="sr">${esc(t('Search orders'))}</span><input id="order-search" type="search" placeholder="${esc(t('Search orders'))}" value="${esc(state.orderQuery)}"></label><div class="chips">${[['', t('All'), state.orders.length], ...orderStatuses.map((s) => [s, t(s), counts[s]])].map(([id, label, n]) => `<button type="button" class="chip" data-order-filter="${id}" aria-pressed="${state.orderFilter === id}">${esc(label)} <span>${n}</span></button>`).join('')}</div>
+  ${list.length ? `<ul class="rows order-rows">${list.map((o) => `<li><button type="button" class="row order-row" data-open-order="${esc(o.number)}"><span class="o-num" dir="ltr">${esc(o.number)}</span><span class="o-main"><strong>${esc(o.customer.name)}</strong>${o.customer.mobile ? `<small dir="ltr">${esc(o.customer.mobile)}</small>` : ''}</span><span class="o-meta"><small>${esc(fmtDate(o.createdAt))}</small><strong>${esc(fils(o.totalFils))}</strong></span><span class="status s-${esc(o.status)}">${esc(t(o.status))}</span></button></li>`).join('')}</ul>` : `<div class="empty"><p>${esc(t(state.orders.length ? 'No matching orders.' : IS_PAGES ? 'No local orders yet.' : 'No orders here yet.'))}</p>${IS_PAGES && !state.orders.length ? `<p class="muted">${esc(t('Record your first order using the button above.'))}</p>` : ''}</div>`}`;
 }
 function orderDetail(o) {
   if (!o) { state.orderOpen = null; return ordersView(); }
-  const wa = `https://wa.me/962${o.customer.mobile.replace(/^0/, '')}`;
+  const mobile = String(o.customer.mobile || '');
+  const normalised = normaliseMobile(mobile);
+  const wa = normalised ? `https://wa.me/962${normalised.replace(/^0/, '')}` : '';
   const gov = governorates.find(([id]) => id === o.customer.governorate);
   return `<div class="head"><button type="button" class="btn ghost small" data-close-order>← ${esc(t('Back'))}</button><h1 dir="ltr">${esc(o.number)}</h1><span class="status s-${esc(o.status)}">${esc(t(o.status))}</span></div>
-  <div class="grid2"><section class="card"><h2>${esc(o.customer.name)}</h2><p dir="ltr" class="big">${esc(o.customer.mobile)}</p><div class="btns"><a class="btn primary" href="tel:${esc(o.customer.mobile)}">${esc(t('Call'))}</a><a class="btn wa" href="${esc(wa)}" target="_blank" rel="noopener">${esc(t('WhatsApp'))}</a></div>
-  <p><strong>${esc(o.fulfilment === 'pickup' ? t('Pickup in store') : t('Delivery'))}</strong>${o.fulfilment === 'pickup' ? '' : ` — ${esc(gov ? (lang === 'ar' ? gov[1] : gov[2]) : o.customer.governorate)}`}</p>${o.customer.address ? `<p>${esc(o.customer.address)}</p>` : ''}${o.customer.notes ? `<p class="muted"><strong>${esc(t('Customer notes'))}:</strong> ${esc(o.customer.notes)}</p>` : ''}<p class="muted">${esc(fmtDate(o.createdAt))}</p></section>
+  <div class="grid2"><section class="card"><h2>${esc(o.customer.name)}</h2>${mobile ? `<p dir="ltr" class="big">${esc(mobile)}</p><div class="btns"><a class="btn primary" href="tel:${esc(mobile)}">${esc(t('Call'))}</a>${wa ? `<a class="btn wa" href="${esc(wa)}" target="_blank" rel="noopener">${esc(t('WhatsApp'))}</a>` : ''}</div>` : ''}
+  <p><strong>${esc(o.fulfilment === 'pickup' ? t('Pickup in store') : t('Delivery'))}</strong>${o.fulfilment === 'pickup' || !o.customer.governorate ? '' : ` — ${esc(gov ? (lang === 'ar' ? gov[1] : gov[2]) : o.customer.governorate)}`}</p>${o.customer.address ? `<p>${esc(o.customer.address)}</p>` : ''}${o.customer.notes ? `<p class="muted"><strong>${esc(t('Customer notes'))}:</strong> ${esc(o.customer.notes)}</p>` : ''}<p class="muted">${esc(fmtDate(o.createdAt))}</p></section>
   <section class="card"><ul class="lines">${o.lines.map((l) => `<li><span dir="auto">${esc(lang === 'ar' ? l.nameAr || l.name : l.name)}${l.storage ? ` · ${esc(l.storage)}` : ''}${l.condition ? ` · ${esc(L(conditions[l.condition]))}` : ''}</span><span>× ${l.qty}</span><strong>${esc(fils(l.unitFils * l.qty))}</strong></li>`).join('')}</ul><p class="total"><span>${esc(t('Total'))}</span><strong>${esc(fils(o.totalFils))}</strong></p>
-  <form id="order-form" data-number="${esc(o.number)}"><label class="f"><span>${esc(t('Status'))}</span><select name="status">${orderStatuses.map((s) => `<option value="${s}"${o.status === s ? ' selected' : ''}>${esc(t(s))}</option>`).join('')}</select></label><label class="f"><span>${esc(t('Private note'))}</span><textarea name="note" rows="3" maxlength="500">${esc(o.note || '')}</textarea></label><button class="btn primary" type="submit">${esc(t('Save'))}</button></form></section></div>`;
+  <form id="order-form" data-number="${esc(o.number)}"><label class="f"><span>${esc(t('Status'))}</span><select name="status">${orderStatuses.map((s) => `<option value="${s}"${o.status === s ? ' selected' : ''}>${esc(t(s))}</option>`).join('')}</select></label><label class="f"><span>${esc(t(IS_PAGES ? 'Local note' : 'Private note'))}</span><textarea name="note" rows="3" maxlength="500">${esc(o.note || '')}</textarea></label><button class="btn primary" type="submit">${esc(t(IS_PAGES ? 'Save local order' : 'Save'))}</button></form></section></div>`;
 }
 async function loadOrders() {
-  if (IS_PAGES) return;
   const data = await guard(() => adminApi.orders());
   if (data) state.orders = data.orders || [];
+}
+function orderChoices() {
+  return (state.published?.products || []).filter((product) => !product.hidden).flatMap((product) => (product.variants || []).filter((variant) => !variant.soldOut && validPrice(variant.price)).map((variant) => ({ id: variantId(product.id, variant.key), product, variant })));
+}
+function orderOptionLabel(choice) {
+  return [L(choice.product.name), choice.variant.storage, L(conditions[choice.variant.condition]), money(choice.variant.price)].filter(Boolean).join(' · ');
+}
+function orderPreviewPrice() {
+  return priceLines(state.published, state.newOrder?.lines || []);
+}
+function newOrderView() {
+  const order = state.newOrder;
+  const choices = orderChoices();
+  const priced = orderPreviewPrice();
+  return `<div class="head"><button type="button" class="btn ghost small" data-cancel-order>← ${esc(t('Back'))}</button><h1>${esc(t('New local order'))}</h1></div><form id="new-order-form" class="edit"><div class="grid2"><section class="card"><h2>${esc(t('Customer'))}</h2>${field('Customer name', 'customer.name', order.customer.name, { attrs: 'required minlength="2" maxlength="100" autocomplete="off"' })}${field('Mobile (optional)', 'customer.mobile', order.customer.mobile, { type: 'tel', dir: 'ltr', attrs: 'maxlength="30" inputmode="tel" autocomplete="off"' })}<label class="f"><span>${esc(t('Fulfilment'))}</span><select name="fulfilment"><option value="pickup"${order.fulfilment === 'pickup' ? ' selected' : ''}>${esc(t('Pickup in store'))}</option><option value="delivery"${order.fulfilment === 'delivery' ? ' selected' : ''}>${esc(t('Delivery'))}</option></select></label>${field('Customer notes', 'customer.notes', order.customer.notes, { type: 'textarea', attrs: 'maxlength="500"' })}</section>
+  <section class="card"><h2>${esc(t('Order items'))}</h2><p class="muted small order-catalog-note">${esc(t('Prices use the last saved preview catalog. Save device changes before creating an order.'))}</p>${choices.length ? `<div class="local-order-lines">${order.lines.map((line, index) => `<div class="local-order-line"><label class="f order-choice"><span>${esc(t('Device and option'))}</span><select name="line.${index}.id" required><option value="">${esc(t('Choose a device'))}</option>${choices.map((choice) => `<option value="${esc(choice.id)}"${choice.id === line.id ? ' selected' : ''}>${esc(orderOptionLabel(choice))}</option>`).join('')}</select></label><label class="f order-quantity"><span>${esc(t('Quantity'))}</span><input name="line.${index}.qty" type="number" inputmode="numeric" min="1" max="${MAX_QTY}" step="1" value="${esc(line.qty)}" required></label><button type="button" class="btn ghost small" data-remove-order-line="${index}"${order.lines.length < 2 ? ' disabled' : ''}>${esc(t('Remove'))}</button></div>`).join('')}</div><button type="button" class="btn ghost small" data-add-order-line${order.lines.length >= MAX_LINES ? ' disabled' : ''}>${esc(t('Add item'))}</button>` : `<p class="empty">${esc(t('No available devices in the saved catalog.'))}</p>`}<p class="total local-order-total"><span>${esc(t('Total'))}</span><strong id="new-order-total" aria-live="polite">${esc(priced.ok ? fils(priced.totalFils) : '—')}</strong></p><p id="new-order-error" class="error" role="alert" hidden></p><div class="btns"><button type="submit" class="btn primary"${choices.length ? '' : ' disabled'}>${esc(t('Save local order'))}</button><button type="button" class="btn ghost" data-cancel-order>${esc(t('Cancel'))}</button></div></section></div></form>`;
+}
+function readNewOrderForm(form) {
+  if (!state.newOrder) return;
+  const get = (name) => form.elements.namedItem(name)?.value || '';
+  state.newOrder.customer = { name: get('customer.name'), mobile: get('customer.mobile'), notes: get('customer.notes') };
+  state.newOrder.fulfilment = get('fulfilment') || 'pickup';
+  state.newOrder.lines = state.newOrder.lines.map((line, index) => ({ id: get(`line.${index}.id`), qty: Number(get(`line.${index}.qty`)) }));
+  const total = $('#new-order-total');
+  const priced = orderPreviewPrice();
+  if (total) total.textContent = priced.ok ? fils(priced.totalFils) : '—';
+}
+async function exportOrders() {
+  try {
+    const data = await adminApi.exportOrders();
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url; link.download = `trio-local-orders-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.append(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    flash(t('Orders exported from this browser.'));
+  } catch (error) { flash(errorText(error), 'error'); }
 }
 
 // ---------- devices ----------
@@ -299,7 +359,7 @@ document.addEventListener('click', async (e) => {
   const el = e.target instanceof Element ? e.target : null; if (!el) return;
   const hit = (s) => el.closest(s);
   if (hit('#lang')) { lang = lang === 'ar' ? 'en' : 'ar'; local.write('trio-admin-lang', lang); render(); return; }
-  if (hit('[data-view]')) { const view = hit('[data-view]').dataset.view; if (IS_PAGES && !['devices', 'settings'].includes(view)) return; state.view = view; state.editing = null; state.orderOpen = null; if (state.view === 'orders') await loadOrders(); render(); return; }
+  if (hit('[data-view]')) { const view = hit('[data-view]').dataset.view; if (IS_PAGES && !['devices', 'orders', 'settings'].includes(view)) return; state.view = view; state.editing = null; state.orderOpen = null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); if (state.view === 'orders') await loadOrders(); render(); return; }
   if (hit('#publish')) { publish(); return; }
   if (IS_PAGES && hit('#export-draft')) { await exportDraft(); return; }
   if (IS_PAGES && hit('#reset-preview')) {
@@ -312,6 +372,30 @@ document.addEventListener('click', async (e) => {
   if (hit('[data-reload-published]')) { await loadContent({ keepDraft: false }); state.editing = null; render(); return; }
   if (hit('#logout') && !IS_PAGES) { await guard(() => adminApi.logout()); state.signedIn = false; render(); return; }
   if (hit('[data-order-filter]')) { state.orderFilter = hit('[data-order-filter]').dataset.orderFilter; render(); return; }
+  if (IS_PAGES && hit('[data-new-order]')) {
+    if (!state.newOrder) {
+      await loadContent();
+      state.newOrder = { customer: { name: '', mobile: '', notes: '' }, fulfilment: 'pickup', lines: [{ id: '', qty: 1 }], token: crypto.randomUUID() };
+    }
+    state.orderOpen = null; render(); window.scrollTo(0, 0); return;
+  }
+  if (IS_PAGES && hit('[data-cancel-order]')) { state.newOrder = null; render(); return; }
+  if (IS_PAGES && hit('[data-export-orders]')) { await exportOrders(); return; }
+  if (IS_PAGES && hit('[data-refresh-orders]')) { await loadOrders(); render(); return; }
+  if (IS_PAGES && hit('[data-refresh-order-catalog]')) {
+    const form = $('#new-order-form'); if (form) readNewOrderForm(form);
+    await loadContent(); render(); return;
+  }
+  if (IS_PAGES && hit('[data-add-order-line]') && state.newOrder) {
+    readNewOrderForm($('#new-order-form'));
+    if (state.newOrder.lines.length >= MAX_LINES) { flash(t('Maximum {max} items per order.', { max: MAX_LINES }), 'error'); return; }
+    state.newOrder.lines.push({ id: '', qty: 1 }); render(); return;
+  }
+  if (IS_PAGES && hit('[data-remove-order-line]') && state.newOrder) {
+    readNewOrderForm($('#new-order-form'));
+    if (state.newOrder.lines.length > 1) state.newOrder.lines.splice(Number(hit('[data-remove-order-line]').dataset.removeOrderLine), 1);
+    render(); return;
+  }
   if (hit('[data-open-order]')) { state.orderOpen = hit('[data-open-order]').dataset.openOrder; render(); window.scrollTo(0, 0); return; }
   if (hit('[data-close-order]')) { state.orderOpen = null; render(); return; }
   if (hit('[data-cat]')) { state.category = hit('[data-cat]').dataset.cat; render(); return; }
@@ -338,6 +422,7 @@ document.addEventListener('click', async (e) => {
 function confirmed(text) { try { return window.confirm(text); } catch { return true; } }
 document.addEventListener('change', async (e) => {
   const form = e.target.closest && e.target.closest('form');
+  if (IS_PAGES && form?.id === 'new-order-form') { readNewOrderForm(form); return; }
   if (IS_PAGES && e.target.id === 'import-draft' && e.target.files?.[0]) {
     const file = e.target.files[0];
     try {
@@ -362,13 +447,39 @@ document.addEventListener('change', async (e) => {
 });
 document.addEventListener('input', (e) => {
   if (e.target.id === 'device-search') { state.query = e.target.value; const pos = e.target.selectionStart; render(); const box = $('#device-search'); box.focus(); box.setSelectionRange(pos, pos); }
+  if (e.target.id === 'order-search') { state.orderQuery = e.target.value; const pos = e.target.selectionStart; render(); const box = $('#order-search'); box.focus(); if (pos !== null) box.setSelectionRange(pos, pos); }
   const form = e.target.closest && e.target.closest('form');
+  if (IS_PAGES && form?.id === 'new-order-form') readNewOrderForm(form);
   if (form && form.id === 'device-form' && e.target.type !== 'file') readDeviceForm(form);
   if (form && form.id === 'settings-form') readSettings(form);
 });
 document.addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = e.target;
+  if (IS_PAGES && f.id === 'new-order-form') {
+    readNewOrderForm(f);
+    const errorBox = $('#new-order-error');
+    const show = (message) => { errorBox.hidden = false; errorBox.textContent = message; };
+    errorBox.hidden = true;
+    const order = state.newOrder;
+    if (order.customer.name.trim().length < 2) { show(t('Customer name is required.')); return; }
+    if (order.customer.mobile.trim() && !normaliseMobile(order.customer.mobile)) { show(t('Enter a valid Jordanian mobile number, or leave it empty.')); return; }
+    const priced = orderPreviewPrice();
+    if (!priced.ok) {
+      show(t(priced.error === 'duplicate' ? 'Each option can appear only once. Increase its quantity instead.' : priced.error === 'empty' ? 'Add at least one available device.' : 'Choose available devices and quantities from 1 to {max}.', { max: MAX_QTY }));
+      return;
+    }
+    const button = f.querySelector('[type="submit"]'); button.disabled = true;
+    try {
+      const result = await adminApi.createOrder({ ...order, totalFils: priced.totalFils, lang });
+      state.newOrder = null; state.orderOpen = result.number; state.orderFilter = ''; state.orderQuery = '';
+      await loadOrders(); render(); flash(t('Local order saved.'));
+    } catch (error) {
+      show(errorText(error));
+      if (error instanceof ApiError && error.code === 'price-changed') errorBox.insertAdjacentHTML('beforeend', ` <button type="button" class="btn ghost small" data-refresh-order-catalog>${esc(t('Reload saved catalog'))}</button>`);
+    } finally { if (button.isConnected) button.disabled = false; }
+    return;
+  }
   if (f.id === 'sign-form') {
     const err = $('#sign-error'); err.hidden = true;
     const show = (m) => { err.textContent = m; err.hidden = false; };
@@ -386,7 +497,7 @@ document.addEventListener('submit', async (e) => {
   if (f.id === 'order-form') {
     const number = f.dataset.number;
     const ok = await guard(() => adminApi.updateOrder(number, { status: f.status.value, note: f.note.value }));
-    if (ok) { const o = state.orders.find((x) => x.number === number); if (o) { o.status = f.status.value; o.note = f.note.value; } flash(t('Saved.')); render(); }
+    if (ok) { const o = state.orders.find((x) => x.number === number); if (o) { o.status = f.status.value; o.note = f.note.value; } render(); flash(t(IS_PAGES ? 'Local order saved.' : 'Saved.')); }
     return;
   }
   if (f.id === 'password-form') {

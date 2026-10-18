@@ -1,10 +1,11 @@
-// Browser-only catalog editor. No remote publication, authentication or orders.
+// Browser-only catalog editor and manual order records. No remote publication.
 import seed from '../../../shared/catalog.js';
 import specifications from '../../../shared/device-specs.js';
 import { validPrice } from '../../../shared/pricing.js';
 import { conditions, notes, warranties } from '../../../shared/labels.js';
 import { ApiError, withDefaults } from '../../src/store.js';
 import { PREVIEW_KEY, PHOTO_KEY, EDITOR_KEY, readLocal, readPreview, validPhoto } from '../../src/pages-preview.js';
+import { localOrders } from './pages-orders.js';
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const save = (key, value) => {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { throw new ApiError('storage-full', 507); }
@@ -63,6 +64,10 @@ function packageDraft(content) {
   return { format: 'trio-catalog-draft', schemaVersion: 1, exportedAt: new Date().toISOString(), content: current, photos };
 }
 export const pagesAdmin = {
+  orders: localOrders.orders,
+  updateOrder: localOrders.updateOrder,
+  exportOrders: localOrders.exportOrders,
+  async createOrder(order) { return localOrders.createOrder(order, (await pagesAdmin.content()).content); },
   async content() {
     const saved = readPreview();
     return { content: editable(saved?.content || seed), version: saved?.version || 0 };

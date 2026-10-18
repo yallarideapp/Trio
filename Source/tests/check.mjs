@@ -130,16 +130,21 @@ if (process.argv.includes('--pages')) {
     const bundle = readFileSync(bundlePath, 'utf8');
     ok(!bundle.includes('/api/'), 'Pages bundle has no live backend endpoints');
     ok(!/trio-demo-(?:content|orders|photos|counter)/.test(bundle), 'Pages bundle has no local demo data adapter');
+    ok(!bundle.includes('trio-pages-orders-v1'), 'public storefront does not ship the private browser order book');
   }
   ok(existsSync(path.join(website, '.nojekyll')), 'Pages serves static files directly');
+  const storefrontHtml = readFileSync(path.join(website, 'index.html'), 'utf8');
+  ok(/<a\b[^>]*class="admin-corner"[^>]*href="admin\/index\.html"/.test(storefrontHtml), 'Pages exposes a repository-relative admin link in the page corner');
+  ok(storefrontHtml.includes('data-ar-label="لوحة التحكم"') && storefrontHtml.includes('data-en-label="Admin panel"'), 'the corner admin link has Arabic and English accessible labels');
   const adminBundlePath = path.join(website, 'admin/admin.js');
   ok(existsSync(adminBundlePath), 'Pages ships the browser catalog editor');
   ok(existsSync(path.join(website, 'admin/admin.css')), 'Pages ships editor styles');
   if (existsSync(adminBundlePath)) {
     const adminBundle = readFileSync(adminBundlePath, 'utf8');
     ok(!adminBundle.includes('/api/'), 'Pages editor has no live backend endpoints');
-    ok(!/trio-demo-(?:content|orders|photos|counter)/.test(adminBundle), 'Pages editor has no simulated order adapter');
+    ok(!/trio-demo-(?:content|orders|photos|counter)/.test(adminBundle), 'Pages editor keeps the legacy demo order adapter out of the build');
     ok(adminBundle.includes('Browser-only preview') && adminBundle.includes('Save preview'), 'Pages editor clearly labels browser-only previews');
+    ok(adminBundle.includes('trio-pages-orders-v1') && adminBundle.includes('Local order book'), 'Pages editor ships the explicitly local manual order book');
   }
   const adminPath = path.join(website, 'admin/index.html');
   ok(existsSync(adminPath), 'Pages has a runnable editor entry point');

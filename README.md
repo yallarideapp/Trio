@@ -23,6 +23,8 @@ The [browser-only admin editor](https://yallarideapp.github.io/Trio/admin/) is a
 
 Home features Phones, Laptops, Watches and Audio. All Devices retains the six independent categories, including Tablets and Accessories.
 
+The fixed corner **Admin panel** shortcut opens the editor from any storefront page, above the phone navigation. The editor now includes an **Orders** tab (`admin/#orders`) for manually recording local orders, with catalog-priced line items, status filters, customer/device search, notes and JSON export. Records start empty, use `LOCAL-` numbers, and stay in this browser. Ordinary checkout remains contact-only. Catalog preview resets preserve these order records; they are stored separately from the catalog, bag and favorites.
+
 The supplied Worker source is preserved for a future separately configured backend deployment. Its D1/KV bindings are placeholders; no Cloudflare deployment has been performed. `npm run build` produces the live Worker assets; `npm run demo:build` produces a clearly labeled local-only demo. See `Cloudflare-guide.md` for the supplied setup guide.
 
 Prices, condition and warranty descriptions are attributed to dated public Instagram posts, not a claim of current stock or terms. Confirm current details directly with Trio. Unconfirmed WhatsApp and inferred catalog options are excluded from this release.

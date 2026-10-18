@@ -176,7 +176,7 @@ function heroProduct() {
 }
 function categoryArtwork(id, { eager = false } = {}) {
   const picture = id === 'watches'
-    ? ['assets/devices/apple-watch-se-3.png', 'Apple Watch SE 3']
+    ? ['assets/devices/huawei-watch-gt6.webp', 'Huawei Watch GT 6']
     : id === 'audio'
       ? ['assets/categories/airpods-pro.png', 'AirPods']
       : null;

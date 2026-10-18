@@ -597,3 +597,9 @@ html[lang=en] .device-specs h2{font-size:18px;font-weight:600;letter-spacing:0}
   .detail-image{height:250px}
   .detail-copy h1{font-size:24px}
 }
+
+/* Direct editor access, above the phone navigation and purchase controls. */
+.admin-corner{position:fixed;z-index:44;inset-inline-start:16px;bottom:16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 15px;border:1px solid #70f33680;border-radius:24px;background:#121410f5;color:var(--accent);font-size:12px;font-weight:700;box-shadow:0 5px 20px #0005;backdrop-filter:blur(10px)}
+.admin-corner .icon{width:17px;height:17px}.admin-corner:hover{background:var(--accent);color:var(--ink)}
+@media(max-width:640px){.admin-corner{inset-inline-start:12px;bottom:calc(84px + env(safe-area-inset-bottom));padding:10px 12px}.toast{bottom:calc(140px + env(safe-area-inset-bottom))}body[data-route=p] .toast{bottom:calc(140px + env(safe-area-inset-bottom))}}
+@media(min-width:641px){.toast{bottom:76px}}

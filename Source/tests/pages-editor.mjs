@@ -1,5 +1,5 @@
 // The Pages editor creates an explicit, portable browser preview. It must not
-// change an ordinary visitor's catalog or simulate authentication and orders.
+// change an ordinary visitor's catalog or simulate authentication and checkout.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -44,7 +44,7 @@ export async function verifyPagesEditor() {
     const { api, MODE } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
     assert.equal(MODE, 'pages');
     assert(!Object.hasOwn(api, 'admin'), 'the public catalog has no admin API');
-    for (const name of ['status', 'setup', 'login', 'logout', 'password', 'orders', 'updateOrder']) assert(!Object.hasOwn(pagesAdmin, name), `browser editor has no ${name} operation`);
+    for (const name of ['status', 'setup', 'login', 'logout', 'password']) assert(!Object.hasOwn(pagesAdmin, name), `browser editor has no ${name} operation`);
 
     const initial = await pagesAdmin.content();
     assert.equal(initial.version, 0, 'an untouched editor starts at version zero');
@@ -204,10 +204,11 @@ export async function verifyPagesEditor() {
     assert.equal(api.photoUrl(photo.id), '', 'saving prunes the replaced active image');
     assert(!values.get(PREVIEW_KEY).includes(collisionData), 'subsequent saves still keep image bytes only in the photo bank');
 
-    verifyEditorViews((await pagesAdmin.content()).content);
-    assert.equal(network, 0, 'editing, previews, imports, exports, and photos require no API calls');
-    assert(![...values.keys()].some((key) => /orders|session|password/.test(key)), 'the editor creates no simulated orders or authentication records');
-    console.log('Pages editor checks passed: isolated explicit previews, editable specs, version conflicts, portable photos, photo cleanup and collision isolation, validated imports, quota errors, reset, and bilingual editor views');
+    const localOrders = await verifyLocalOrders(api, values, (full) => { storageFull = full; });
+    verifyEditorViews((await pagesAdmin.content()).content, localOrders);
+    assert.equal(network, 0, 'editing, previews, imports, exports, photos and local order records require no API calls');
+    assert(![...values.keys()].some((key) => /session|password/.test(key)), 'the editor creates no simulated authentication records');
+    console.log('Pages editor checks passed: isolated explicit previews, editable specs, version conflicts, portable photos, photo cleanup and collision isolation, validated imports, quota errors, reset, local orders, and bilingual editor views');
   } finally {
     for (const [key, descriptor] of Object.entries(original)) {
       if (descriptor) Object.defineProperty(globalThis, key, descriptor);
@@ -216,7 +217,113 @@ export async function verifyPagesEditor() {
   }
 }
 
-function verifyEditorViews(content) {
+async function verifyLocalOrders(api, values, setStorageFull) {
+  const key = 'trio-pages-orders-v1';
+  assert.deepEqual(await pagesAdmin.orders(), { orders: [] }, 'the local order book starts empty');
+  const { content } = await pagesAdmin.content();
+  const device = content.products[0];
+  const lines = [{ id: `${device.id}:${device.variants[0].key}`, qty: 1 }, { id: 'airtag:one', qty: 2 }];
+  const expected = pricing.priceLines(content, lines);
+  assert(expected.ok);
+  const payload = {
+    customer: { name: 'Test customer', mobile: '+962 79 123 4567', notes: 'Manual record' },
+    fulfilment: 'pickup', lines, lang: 'en', token: 'test-local-order-0001', totalFils: expected.totalFils,
+  };
+  const first = await pagesAdmin.createOrder(payload);
+  assert.deepEqual(first, { number: 'LOCAL-1001', totalFils: expected.totalFils }, 'local order numbers are distinguishable and totals use the saved preview catalog');
+  assert.equal(expected.lines[0].unitFils, 123000, 'the local order uses the edited preview price');
+  const afterFirst = values.get(key);
+  assert.deepEqual(await pagesAdmin.createOrder(copy(payload)), first, 'retrying a token returns the original record');
+  assert.equal(values.get(key), afterFirst, 'a retried token creates no duplicate or counter change');
+  const second = await pagesAdmin.createOrder({ ...copy(payload), token: 'test-local-order-0002', customer: { name: 'Second customer', mobile: '' }, fulfilment: 'delivery' });
+  const withoutToken = copy(payload);
+  delete withoutToken.token;
+  const third = await pagesAdmin.createOrder(withoutToken);
+  assert.deepEqual([first.number, second.number, third.number], ['LOCAL-1001', 'LOCAL-1002', 'LOCAL-1003'], 'new manual records get unique persistent local numbers');
+  let rows = (await pagesAdmin.orders()).orders;
+  assert.equal(rows.length, 3);
+  const saved = rows.find((order) => order.number === first.number);
+  assert.equal(saved.customer.mobile, '0791234567', 'optional Jordanian mobile numbers are normalized');
+  assert.equal(saved.customer.name, payload.customer.name);
+  assert.equal(saved.customer.notes, payload.customer.notes);
+  assert.equal(saved.status, 'new');
+  assert.equal(saved.totalFils, expected.totalFils);
+  assert.equal(saved.lines.reduce((sum, line) => sum + line.unitFils * line.qty, 0), expected.totalFils, 'stored line snapshots add up exactly in fils');
+  assert.deepEqual(saved.lines.map((line) => [line.id, line.qty, line.unitFils]), expected.lines.map((line) => [line.id, line.qty, line.unitFils]), 'saved line quantities and prices match catalog pricing');
+  saved.customer.name = 'Mutated list result';
+  assert.equal((await pagesAdmin.orders()).orders.find((order) => order.number === first.number).customer.name, payload.customer.name, 'reading orders returns independent records');
+
+  const invalidCases = [
+    ['bad-name', 400, (data) => { data.customer.name = 'x'; }],
+    ['bad-mobile', 400, (data) => { data.customer.mobile = '123'; }],
+    ['bad-note', 400, (data) => { data.customer.notes = 'n'.repeat(1001); }],
+    ['bad-fulfilment', 400, (data) => { data.fulfilment = 'other'; }],
+    ['bad-token', 400, (data) => { data.token = 'short'; }],
+    ['bad-qty', 400, (data) => { data.lines[0].qty = 0; }],
+    ['bad-qty', 400, (data) => { data.lines[0].qty = pricing.MAX_QTY + 1; }],
+    ['bad-qty', 400, (data) => { data.lines[0].qty = 1.5; }],
+    ['unknown', 400, (data) => { data.lines[0].id = 'missing:option'; }],
+    ['duplicate', 400, (data) => { data.lines.push(copy(data.lines[0])); }],
+    ['empty', 400, (data) => { data.lines = []; }],
+    ['too-many-lines', 400, (data) => { data.lines = Array.from({ length: pricing.MAX_LINES + 1 }, () => copy(data.lines[0])); }],
+    ['price-changed', 409, (data) => { data.totalFils++; }],
+  ];
+  for (const [code, status, mutate] of invalidCases) {
+    const invalid = copy(payload);
+    delete invalid.token;
+    mutate(invalid);
+    const before = values.get(key);
+    await assert.rejects(pagesAdmin.createOrder(invalid), errorIs(code, status));
+    assert.equal(values.get(key), before, `${code}: invalid local records leave the order book intact`);
+  }
+  for (const status of orderStatuses) {
+    assert.deepEqual(await pagesAdmin.updateOrder(first.number, { status, note: `Reviewed: ${status}` }), { ok: true });
+    const current = (await pagesAdmin.orders(status)).orders;
+    assert(current.some((order) => order.number === first.number), `${status}: updated orders appear in the matching filter`);
+    assert(current.every((order) => order.status === status), `${status}: filters exclude other order states`);
+    assert.equal(current.find((order) => order.number === first.number).note, `Reviewed: ${status}`);
+  }
+  const beforeInvalidUpdates = values.get(key);
+  await assert.rejects(pagesAdmin.updateOrder(first.number, { status: 'unknown' }), errorIs('bad-status', 400));
+  await assert.rejects(pagesAdmin.updateOrder(first.number, { note: 'n'.repeat(501) }), errorIs('bad-note', 400));
+  await assert.rejects(pagesAdmin.updateOrder('LOCAL-missing', { status: 'new' }), errorIs('not-found', 404));
+  assert.equal(values.get(key), beforeInvalidUpdates, 'invalid order updates preserve saved records');
+
+  const exported = await pagesAdmin.exportOrders();
+  assert.equal(exported.format, 'trio-local-orders');
+  assert.equal(exported.schemaVersion, 1);
+  assert(Number.isFinite(Date.parse(exported.exportedAt)));
+  assert.deepEqual(exported.orders, (await pagesAdmin.orders()).orders, 'export includes current local records and status notes');
+  const beforeQuota = values.get(key);
+  setStorageFull(true);
+  try {
+    await assert.rejects(pagesAdmin.createOrder(withoutToken), errorIs('storage-full', 507));
+    await assert.rejects(pagesAdmin.updateOrder(first.number, { status: 'confirmed' }), errorIs('storage-full', 507));
+  } finally { setStorageFull(false); }
+  assert.equal(values.get(key), beforeQuota, 'quota failures do not change saved local orders');
+  const capacity = { next: 1500, orders: Array.from({ length: 500 }, (_, index) => ({ ...copy(exported.orders[0]), number: `LOCAL-${index + 1001}` })) };
+  values.set(key, JSON.stringify(capacity));
+  await assert.rejects(pagesAdmin.createOrder(withoutToken), errorIs('orders-full', 507));
+  assert.equal(JSON.parse(values.get(key)).orders.length, 500, 'reaching capacity never drops existing records');
+  values.set(key, beforeQuota);
+
+  const privateSnapshot = values.get(key);
+  values.delete(key);
+  assert.deepEqual(await pagesAdmin.orders(), { orders: [] }, 'a different browser has an empty independent order book');
+  values.set(key, privateSnapshot);
+  await pagesAdmin.reset();
+  assert.equal(values.get(key), privateSnapshot, 'resetting the catalog preview preserves local order records');
+  assert.equal((await pagesAdmin.orders()).orders.length, 3);
+  globalThis.location.search = '';
+  const beforePublic = [...values];
+  assert.equal((await api.loadContent()).source, 'seed');
+  await assert.rejects(api.placeOrder(payload), errorIs('orders-off', 403), 'public checkout remains disabled even when the admin has manual orders');
+  assert.deepEqual([...values], beforePublic, 'public browsing and rejected checkout cannot alter private local order records');
+  globalThis.location.search = '?preview=draft';
+  return (await pagesAdmin.orders()).orders;
+}
+
+function verifyEditorViews(content, orders) {
   const root = { innerHTML: '' };
   const document = {
     querySelector: (selector) => selector === '#admin' ? root : null,
@@ -233,22 +340,46 @@ function verifyEditorViews(content) {
   vm.runInContext(source + '\n globalThis.ui = { state, render, setLanguage: (value) => { lang = value; } };', context);
   const { ui } = context;
   ui.state.draft = copy(content);
+  ui.state.published = copy(content);
+  ui.state.orders = copy(orders);
   for (const language of ['ar', 'en']) {
     ui.setLanguage(language);
-    for (const view of ['devices', 'settings']) {
+    for (const view of ['orders', 'devices', 'settings']) {
       ui.state.view = view;
       ui.state.editing = null;
       ui.render();
       const html = root.innerHTML;
       assert.equal(document.documentElement.lang, language);
       assert.equal(document.documentElement.dir, language === 'ar' ? 'rtl' : 'ltr');
-      assert(html.includes(language === 'ar' ? 'معاينة في هذا المتصفح فقط' : 'Browser-only preview'), `${language}: editor explicitly labels browser-only changes`);
+      const localNotice = view === 'orders' ? (language === 'ar' ? 'سجل الطلبات المحلي' : 'Local order book') : (language === 'ar' ? 'معاينة في هذا المتصفح فقط' : 'Browser-only preview');
+      assert(html.includes(localNotice), `${language}: editor explicitly labels browser-only changes`);
       assert(html.includes(language === 'ar' ? 'احفظ المعاينة' : 'Save preview'), `${language}: editor calls the action saving a preview`);
       assert(html.includes('href="../index.html?preview=draft#/"'), 'preview link opts into local changes');
       assert(html.includes('href="../index.html#/"'), 'public store link excludes the preview parameter');
-      for (const id of ['export-draft', 'import-draft', 'reset-preview']) assert(html.includes(`id="${id}"`), `${language}: ${id} is accessible`);
-      assert(!/data-view="orders"|id="(?:sign-form|password-form|logout|order-form)"|name="ordersOn"/.test(html), `${language}: no orders or authentication controls are shown`);
+      if (view !== 'orders') for (const id of ['export-draft', 'import-draft', 'reset-preview']) assert(html.includes(`id="${id}"`), `${language}: ${id} is accessible`);
+      assert(html.includes('data-view="orders"'), `${language}: local orders are reachable from the editor tabs`);
+      assert(!/id="(?:sign-form|password-form|logout)"|name="ordersOn"/.test(html), `${language}: no authentication or public checkout controls are shown`);
+      if (view === 'orders') {
+        assert(html.includes(language === 'ar' ? 'سجل الطلبات المحلي' : 'Local order book'), `${language}: manual orders are clearly labeled as local`);
+        assert(html.includes(language === 'ar' ? 'طلبات تسجلها يدوياً وتُحفظ في هذا المتصفح فقط.' : 'Manual orders saved in this browser only.'), `${language}: the order page explains browser-only persistence`);
+        assert(html.includes(language === 'ar' ? 'الطلب الإلكتروني مغلق.' : 'Online checkout is off.'), `${language}: the order page explains disabled online checkout`);
+        assert(html.includes('data-new-order') && html.includes('data-export-orders'), `${language}: manual creation and order export are accessible`);
+        for (const order of orders) assert(html.includes(`data-open-order="${order.number}"`), `${language}: saved manual order is reachable`);
+      }
     }
+    ui.state.view = 'orders';
+    ui.state.orderOpen = orders[0].number;
+    ui.render();
+    assert(root.innerHTML.includes('id="order-form"') && root.innerHTML.includes('name="status"') && root.innerHTML.includes('name="note"'), `${language}: local order details allow status and private note updates`);
+    assert(root.innerHTML.includes(orders[0].number), `${language}: order details identify the selected record`);
+    ui.state.orderOpen = null;
+    ui.state.newOrder = { customer: { name: '', mobile: '', notes: '' }, fulfilment: 'pickup', lines: [{ id: 'airtag:one', qty: 1 }], token: 'test-local-form' };
+    ui.render();
+    assert(root.innerHTML.includes('id="new-order-form"'), `${language}: manual orders have a creation form`);
+    for (const name of ['customer.name', 'customer.mobile', 'customer.notes', 'fulfilment', 'line.0.id', 'line.0.qty']) assert(root.innerHTML.includes(`name="${name}"`), `${language}: manual order input ${name} is accessible`);
+    assert(root.innerHTML.includes(pricing.formatJD(28000, language)), `${language}: manual order form shows the exact catalog total`);
+    assert(!/id="(?:sign-form|password-form|logout)"|name="ordersOn"/.test(root.innerHTML), `${language}: creating manual records does not add authentication or checkout controls`);
+    ui.state.newOrder = null;
     ui.state.view = 'devices';
     ui.state.editing = { index: 0 };
     ui.render();
