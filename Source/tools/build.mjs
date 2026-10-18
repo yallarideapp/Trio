@@ -1,7 +1,7 @@
 // Builds the site.
 //   node tools/build.mjs live           -> dist/  (served by the Cloudflare Worker)
 //   node tools/build.mjs demo [outDir]  -> ../Demo/ (portable copy, opens from a folder)
-//   node tools/build.mjs pages         -> ../website/ (catalog, no order/admin API)
+//   node tools/build.mjs pages         -> ../website/ (catalog + browser-only editor)
 import { build } from 'esbuild';
 import { cp, mkdir, readFile, rm, writeFile, stat, lstat } from 'node:fs/promises';
 import path from 'node:path';
@@ -34,10 +34,9 @@ await mkdir(path.join(out, 'admin'), { recursive: true });
 
 const common = { bundle: true, format: 'iife', target: ['es2020', 'safari15'], minify: true, legalComments: 'none', define: { __MODE__: JSON.stringify(mode) }, logLevel: 'warning' };
 await build({ ...common, entryPoints: [path.join(source, 'site/src/app.js')], outfile: path.join(out, 'app.js') });
-if (mode !== 'pages') await build({ ...common, entryPoints: [path.join(source, 'site/admin/src/admin.js')], outfile: path.join(out, 'admin/admin.js') });
+await build({ ...common, entryPoints: [path.join(source, 'site/admin/src/admin.js')], outfile: path.join(out, 'admin/admin.js') });
 
-const htmlFiles = [['site/index.html', 'index.html']];
-if (mode !== 'pages') htmlFiles.push(['site/admin/index.html', 'admin/index.html']);
+const htmlFiles = [['site/index.html', 'index.html'], ['site/admin/index.html', 'admin/index.html']];
 for (const [from, to] of htmlFiles) {
   let html = (await readFile(path.join(source, from), 'utf8')).replaceAll('__BUILD__', stamp);
   if (mode === 'demo') html = html.replace(/\s*<link rel="preload"[^>]*>/g, '');
@@ -57,14 +56,11 @@ async function css(from, to) {
   await writeFile(path.join(out, to), text);
 }
 await css('site/styles.css', 'styles.css');
-if (mode !== 'pages') await css('site/admin/admin.css', 'admin/admin.css');
+await css('site/admin/admin.css', 'admin/admin.css');
 await cp(path.join(source, 'site/assets'), path.join(out, 'assets'), { recursive: true });
 
 if (mode === 'pages') {
   await writeFile(path.join(out, '.nojekyll'), '');
-  await writeFile(path.join(out, 'admin/index.html'), `<!doctype html>
-<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>TRIO Mobile · لوحة التحكم</title><link rel="stylesheet" href="../styles.css?v=${stamp}"></head>
-<body><main class="container page-shell"><h1>لوحة التحكم غير متاحة على هذه النسخة</h1><p>هذا الموقع يعرض الأجهزة ومعلومات التواصل. تواصل مع تريو للاستفسار عن الجهاز والسعر والتوفر.</p><p lang="en" dir="ltr">Admin and online ordering are unavailable on this site. Contact Trio to confirm device details, prices and availability.</p><a class="button button-dark" href="../index.html#/">العودة للموقع · Back to the store</a></main></body></html>`);
   await writeFile(path.join(out, 'robots.txt'), 'User-agent: *\nDisallow: /admin/\n');
 }
 
@@ -79,4 +75,4 @@ if (mode === 'live') {
 }
 
 const size = async (p) => (await stat(p)).size;
-console.log(JSON.stringify({ mode, out: path.relative(project, out), app: await size(path.join(out, 'app.js')), admin: mode === 'pages' ? null : await size(path.join(out, 'admin/admin.js')) }));
+console.log(JSON.stringify({ mode, out: path.relative(project, out), app: await size(path.join(out, 'app.js')), admin: await size(path.join(out, 'admin/admin.js')) }));

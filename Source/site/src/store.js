@@ -1,10 +1,11 @@
 // Data adapter. The live build talks to the Worker API on the same site; the demo
 // build (opened from a folder, no server) keeps everything in this browser.
-// The Pages build is a catalog only and never accepts orders or admin changes.
+// Pages has an explicitly selected browser preview; ordinary visits use the seed.
 // __MODE__ is replaced at build time with "live", "demo" or "pages".
 import seedContent from '../../shared/catalog.js';
 import { priceLines, normaliseMobile } from '../../shared/pricing.js';
 import { governorates } from '../../shared/labels.js';
+import { PHOTO_KEY, previewRequested, readLocal, readPreview, validPhoto } from './pages-preview.js';
 
 export const MODE = typeof __MODE__ === 'string' ? __MODE__ : 'live';
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -60,12 +61,16 @@ async function request(path, { method = 'GET', body, raw } = {}) {
 // ---------- GitHub Pages (no backend) ----------
 const pages = {
   async loadContent() {
-    const content = withDefaults(clone(seedContent));
+    const saved = previewRequested() ? readPreview() : null;
+    const content = withDefaults(clone(saved?.content || seedContent));
     content.settings.ordersOn = false;
-    return { content, source: 'seed', version: 0 };
+    return { content, source: previewRequested() ? 'preview' : 'seed', version: saved?.version || 0 };
   },
   async placeOrder() { throw new ApiError('orders-off', 403); },
-  photoUrl: () => '',
+  photoUrl(id) {
+    const value = previewRequested() ? readLocal(PHOTO_KEY, {})[id] : '';
+    return validPhoto(value) ? value : '';
+  },
 };
 
 // ---------- live ----------

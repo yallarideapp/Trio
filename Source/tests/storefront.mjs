@@ -8,21 +8,66 @@ import * as pricing from '../shared/pricing.js';
 import { conditions, conditionShort, notes, warranties, governorates } from '../shared/labels.js';
 
 export function verifyStorefront() {
+  const stored = new Map();
+  const windowEvents = new Map();
   const document = { querySelector: () => null, querySelectorAll: () => [], addEventListener() {} };
   const location = { hash: '#/' };
   const context = vm.createContext({
     ...pricing, deviceSpecifications, conditions, conditionShort, noteLabels: notes, warranties, governorates,
-    MODE: 'pages', api: { photoUrl: () => '' }, local: { read: (_key, fallback = null) => fallback },
-    document, location, window: { addEventListener() {} }, console, URLSearchParams, Intl, setTimeout, clearTimeout,
+    MODE: 'pages', api: { photoUrl: () => '' }, local: { read: (key, fallback = null) => stored.has(key) ? structuredClone(stored.get(key)) : fallback, write: (key, value) => { stored.set(key, structuredClone(value)); return true; } },
+    document, location, window: { addEventListener: (name, listener) => windowEvents.set(name, listener) }, console, URLSearchParams, Intl, setTimeout, clearTimeout,
   });
   const source = readFileSync(new URL('../site/src/app.js', import.meta.url), 'utf8')
     .replace(/^import[^\n]*\n/gm, '').replace(/^start\(\);\s*$/m, '');
-  vm.runInContext(source + '\n globalThis.ui = { state, renderHome, renderCatalog, renderProductResults, filteredProducts, readRoute, renderDetail, renderService, renderContact, renderBag, renderCheckout, renderDone, instagramAllowed };', context);
+  vm.runInContext(source + '\n globalThis.ui = { state, renderHome, renderCatalog, renderProductResults, filteredProducts, readRoute, renderDetail, renderService, renderContact, renderBag, renderCheckout, renderDone, instagramAllowed, loadBag, saveBag, cleanBag, toggleSaved, phoneHref, phoneText };', context);
   const ui = context.ui;
+  ui.state.content = structuredClone(seed);
+  // Editing a local preview must not remove a public shopping bag item or
+  // synchronize preview favorites back into the ordinary storefront.
+  const publicBag = [{ id: 'airtag:one', qty: 1 }];
+  stored.set('trio-bag', publicBag);
+  stored.set('trio-preview-bag', [{ id: 'airtag:one', qty: 2 }]);
+  stored.set('trio-saved', ['airtag']);
+  stored.set('trio-preview-saved', ['iphone-17']);
+  ui.state.source = 'preview';
+  ui.state.bag = ui.loadBag();
+  assert.equal(ui.state.bag[0].qty, 2, 'preview loads its own bag');
+  ui.state.content.products.find((product) => product.id === 'airtag').hidden = true;
+  assert.equal(ui.cleanBag(), true, 'preview cleans a device hidden in the draft');
+  assert.deepEqual(stored.get('trio-bag'), publicBag, 'cleaning the preview bag preserves the public bag');
+  assert.equal(stored.get('trio-preview-bag').length, 0, 'cleaning only changes the preview bag');
+  ui.state.saved = new Set(['iphone-17']);
+  ui.toggleSaved('iphone-17-pro');
+  assert.deepEqual(stored.get('trio-saved'), ['airtag'], 'preview favorites preserve public favorites');
+  assert(stored.get('trio-preview-saved').includes('iphone-17-pro'), 'preview favorites use their own key');
+  stored.set('trio-preview-bag', [{ id: 'airtag:one', qty: 3 }]);
+  windowEvents.get('storage')({ key: 'trio-bag' });
+  assert.equal(ui.state.bag.length, 0, 'public bag storage events do not affect a preview');
+  windowEvents.get('storage')({ key: 'trio-preview-bag' });
+  assert.equal(ui.state.bag[0].qty, 3, 'preview bag storage events synchronize preview tabs');
+  ui.state.source = 'seed';
+  ui.state.bag = ui.loadBag();
+  windowEvents.get('storage')({ key: 'trio-preview-bag' });
+  assert.equal(ui.state.bag[0].qty, 1, 'preview bag storage events do not affect the public bag');
+  windowEvents.get('storage')({ key: 'trio-preview-saved' });
+  assert(ui.state.saved.has('iphone-17-pro'), 'unrelated preview favorite events are ignored by the public store');
+  windowEvents.get('storage')({ key: 'trio-saved' });
+  assert.deepEqual([...ui.state.saved], ['airtag'], 'public favorites still synchronize across public tabs');
+  ui.state.content = structuredClone(seed);
+  ui.state.bag = [];
+  ui.state.saved = new Set();
+  for (const phone of ['0791234567', '+962 79 123 4567', '00962791234567', '962791234567', '٠٧٩١٢٣٤٥٦٧', '+٩٦٢٧٩١٢٣٤٥٦٧', '۰۰۹۶۲۷۹۱۲۳۴۵۶۷']) {
+    ui.state.content.settings.phone = phone;
+    assert.equal(ui.phoneHref(), 'tel:+962791234567', `${phone}: normalized call link`);
+    assert.equal(ui.phoneText(), '0791 234 567', `${phone}: readable local phone number`);
+  }
+  ui.state.content.settings.phone = 'invalid';
+  assert.equal(ui.phoneHref(), '#/contact', 'invalid phone values do not produce malformed call links');
   ui.state.content = structuredClone(seed);
   const instagram = /https?:\/\/(?:www\.)?instagram\.com|إنستغرام|انستغرام|(?:>|\s)Instagram(?:<|\s|↗|$)/i;
   const commentary = /منشور|غير موثق|أكّد|أكد|historical|not documented|confirm|\bposted\b/i;
   const categoryCounts = { phones: 12, laptops: 4, tablets: 2, watches: 4, audio: 1, accessories: 1 };
+  const homeCategories = ['phones', 'laptops', 'watches', 'audio'];
   const categoryMembers = {
     laptops: ['macbook-pro-16-m5-max', 'macbook-pro-16-m5-pro', 'macbook-pro-14-m5-pro', 'macbook-air-15-m5'],
     tablets: ['ipad-a16', 'ipad-pro-m5'],
@@ -36,6 +81,15 @@ export function verifyStorefront() {
   let productViews = 0;
   for (const language of ['ar', 'en']) {
     ui.state.language = language;
+    const originalOffersTitle = ui.state.content.settings.offersTitle;
+    ui.state.content.settings.offersTitle = { ar: 'تشكيلة خاصة', en: 'Editor offer selection' };
+    ui.state.route = { name: 'home' };
+    assert(ui.renderHome().includes(language === 'ar' ? 'تشكيلة خاصة' : 'Editor offer selection'), `${language}: home uses the edited offers heading`);
+    ui.state.route = { name: 'offers' };
+    assert(ui.renderCatalog().includes(`<h1>${ui.state.content.settings.offersTitle[language]}</h1>`), `${language}: offers page uses the edited heading`);
+    ui.state.content.settings.offersTitle = { ar: '', en: '' };
+    assert(ui.renderCatalog().includes(`<h1>${language === 'ar' ? 'عروض تريو' : 'Trio offers'}</h1>`), `${language}: empty offers headings use the translated fallback`);
+    ui.state.content.settings.offersTitle = originalOffersTitle;
     resetCatalog();
     const grouped = ui.renderProductResults(ui.filteredProducts());
     const groups = [...grouped.matchAll(/<section\b[^>]*\bdata-category-group="([^"]+)"[^>]*>([\s\S]*?)<\/section>/g)];
@@ -80,7 +134,38 @@ export function verifyStorefront() {
       assert.equal(route.params.get('q'), 'apple', `${language}: legacy category keeps query`);
     }
     ui.state.route = { name: 'home' };
-    assert(!instagram.test(ui.renderHome()), `${language}: home has no Instagram copy or links`);
+    const checkHome = (html) => {
+      assert.deepEqual([...html.matchAll(/<a class="category-card" href="#\/shop\/([^"]+)"/g)].map((match) => match[1]), homeCategories, `${language}: home category tiles contain only phones, laptops, watches and audio in order`);
+      assert.deepEqual([...html.matchAll(/data-hero-category="([^"]+)"/g)].map((match) => match[1]), homeCategories, `${language}: home hero offers the same four category choices`);
+      assert(!/#\/shop\/(?:tablets|accessories)(?:["?]|$)/.test(html), `${language}: home has no tablet or accessory category links`);
+      for (const id of cardIds(html)) assert(homeCategories.includes(seed.products.find((product) => product.id === id)?.category), `${language}/${id}: home product sections use only the four home categories`);
+      const productLinks = [...html.matchAll(/href="#\/p\/([^"]+)"/g)].map((match) => match[1]);
+      assert(productLinks.length, `${language}: home retains working device links`);
+      for (const id of productLinks) assert(homeCategories.includes(seed.products.find((product) => product.id === id)?.category), `${language}/${id}: home device links exclude tablets and accessories`);
+      assert(!instagram.test(html), `${language}: home has no Instagram copy or links`);
+    };
+    for (const category of homeCategories) {
+      ui.state.heroCategory = category;
+      const home = ui.renderHome();
+      checkHome(home);
+      assert(home.includes(`data-hero-category="${category}" aria-pressed="true"`), `${language}/${category}: selected home hero choice remains active`);
+    }
+    // Category restrictions must hold even when excluded devices lead the
+    // catalog and are promoted into both offers and featured products.
+    const contentBeforeHomeCheck = ui.state.content;
+    try {
+      ui.state.content = structuredClone(seed);
+      const excluded = ui.state.content.products.filter((product) => !homeCategories.includes(product.category));
+      excluded.forEach((product, index) => { product.offer = index % 2 === 0; product.featured = true; });
+      ui.state.content.products = [...excluded, ...ui.state.content.products.filter((product) => homeCategories.includes(product.category))];
+      for (const category of ['tablets', 'accessories']) {
+        ui.state.heroCategory = category;
+        checkHome(ui.renderHome());
+      }
+    } finally {
+      ui.state.content = contentBeforeHomeCheck;
+      ui.state.heroCategory = 'phones';
+    }
     for (const name of ['shop', 'offers', 'saved']) {
       ui.state.route = { name };
       assert(!instagram.test(ui.renderCatalog()), `${language}: ${name} has no Instagram copy`);
@@ -120,5 +205,5 @@ export function verifyStorefront() {
   }
   for (const name of ['home', 'shop', 'offers', 'saved', 'p', 'bag', 'checkout', 'done', 'trade-in']) assert(!ui.instagramAllowed(name), `${name}: footer social link hidden`);
   for (const name of ['maintenance', 'contact']) assert(ui.instagramAllowed(name), `${name}: footer social link allowed`);
-  console.log(`storefront checks passed: six separate categories, grouped catalog, global search/sort, ${productViews} bilingual device views, selected options, and route-specific contact rules`);
+  console.log(`storefront checks passed: four home categories, six separate catalog categories, grouped catalog, global search/sort, ${productViews} bilingual device views, selected options, and route-specific contact rules`);
 }

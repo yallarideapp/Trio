@@ -33,7 +33,7 @@ export const seed = {
     ordersOn: false,
     deliveryNote: { ar: 'لتأكيد خيارات الاستلام أو التوصيل وتكلفته وطريقة الدفع، تواصل مباشرة مع تريو بالهاتف أو إنستغرام.', en: 'Confirm collection or delivery options, delivery cost and payment methods directly with Trio by phone or Instagram.' },
     pricesNote: { ar: 'هذه أسعار عروض منشورة سابقاً، وليست تأكيداً للسعر أو التوفر الحالي. أكّد السعر والسعة والحالة والكفالة مباشرة مع تريو بالهاتف أو إنستغرام.', en: 'These are historical published offer prices, not confirmation of current price or availability. Confirm price, storage, condition and warranty directly with Trio by phone or Instagram.' },
-    offersTitle: { ar: 'من عروض تريو المنشورة', en: 'From Trio’s published offers' },
+    offersTitle: { ar: 'عروض تريو', en: 'Trio offers' },
   },
   categories: [
     { id: 'phones', name: { ar: 'هواتف', en: 'Phones' } },

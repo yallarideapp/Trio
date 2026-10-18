@@ -19,6 +19,10 @@ Commit the editable source and generated `website/` together. The build replaces
 
 GitHub Pages supports the catalog, offers, options, search, filters, favorites, bag, and direct phone/Instagram/map links. It does not accept online orders or run an admin API. Bag confirmation opens verified contact links; it never creates a local demo order or claims the store received one.
 
+The [browser-only admin editor](https://yallarideapp.github.io/Trio/admin/) is also linked in the footer. It edits devices, options, technical specifications, photos and contact settings. **Save preview** stores changes in this browser; **View preview** opens `?preview=draft`. Normal storefront visits continue to load the committed catalog. Export/import JSON transfers a draft together with its uploaded photos. Reset removes only the editor's local draft and preview, leaving favorites and the bag intact. No password or remote publication is implied. To publish an exported draft for everyone, its content must be integrated into the source and the generated website rebuilt and pushed.
+
+Home features Phones, Laptops, Watches and Audio. All Devices retains the six independent categories, including Tablets and Accessories.
+
 The supplied Worker source is preserved for a future separately configured backend deployment. Its D1/KV bindings are placeholders; no Cloudflare deployment has been performed. `npm run build` produces the live Worker assets; `npm run demo:build` produces a clearly labeled local-only demo. See `Cloudflare-guide.md` for the supplied setup guide.
 
 Prices, condition and warranty descriptions are attributed to dated public Instagram posts, not a claim of current stock or terms. Confirm current details directly with Trio. Unconfirmed WhatsApp and inferred catalog options are excluded from this release.

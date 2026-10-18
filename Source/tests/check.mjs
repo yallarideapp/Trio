@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import seed from '../shared/catalog.js';
 import { verifyStorefront } from './storefront.mjs';
 import { verifyCatalogImages } from './images.mjs';
+import { verifyPagesEditor } from './pages-editor.mjs';
 import { priceLines, normaliseMobile, fromPrice, toFils, validPrice, MAX_QTY, MAX_LINES } from '../shared/pricing.js';
 import { conditions, notes, warranties } from '../shared/labels.js';
 
@@ -60,18 +61,20 @@ for (const [input, want] of [['0791234567', '0791234567'], ['٠٧٩١٢٣٤٥٦�
   ok(normaliseMobile(input) === want, `mobile ${input} -> ${want}`);
 }
 
-// Pages must remain usable without a backend, and must never save simulated
-// orders or load a draft edited in a visitor's browser.
+// Ordinary Pages visits must remain usable without a backend, and must never
+// save simulated orders or load a draft without an explicit preview selection.
 const adapterPath = path.join(root, 'site/src/store.js');
 const adapterSource = readFileSync(adapterPath, 'utf8')
   .replace(/\b__MODE__\b/g, JSON.stringify('pages'))
   .replace(/from '([^']+)'/g, (_, ref) => `from ${JSON.stringify(pathToFileURL(path.resolve(path.dirname(adapterPath), ref)).href)}`);
 const originalFetch = globalThis.fetch;
 const originalStorage = globalThis.localStorage;
+const originalLocation = Object.getOwnPropertyDescriptor(globalThis, 'location');
 let pagesNetwork = 0;
 let pagesStorage = 0;
 try {
   globalThis.fetch = () => { pagesNetwork++; throw new Error('Pages must not call a backend'); };
+  globalThis.location = { search: '' };
   globalThis.localStorage = new Proxy({}, { get() { pagesStorage++; throw new Error('Pages must not read local content or orders'); } });
   const { api, local, MODE, ApiError } = await import(`data:text/javascript;base64,${Buffer.from(adapterSource).toString('base64')}`);
   const loaded = await api.loadContent();
@@ -101,6 +104,8 @@ try {
   globalThis.fetch = originalFetch;
   if (originalStorage === undefined) delete globalThis.localStorage;
   else globalThis.localStorage = originalStorage;
+  if (originalLocation) Object.defineProperty(globalThis, 'location', originalLocation);
+  else delete globalThis.location;
 }
 
 // built files
@@ -127,20 +132,29 @@ if (process.argv.includes('--pages')) {
     ok(!/trio-demo-(?:content|orders|photos|counter)/.test(bundle), 'Pages bundle has no local demo data adapter');
   }
   ok(existsSync(path.join(website, '.nojekyll')), 'Pages serves static files directly');
-  ok(!existsSync(path.join(website, 'admin/admin.js')), 'Pages does not ship admin application');
-  ok(!existsSync(path.join(website, 'admin/admin.css')), 'Pages does not ship admin application styles');
+  const adminBundlePath = path.join(website, 'admin/admin.js');
+  ok(existsSync(adminBundlePath), 'Pages ships the browser catalog editor');
+  ok(existsSync(path.join(website, 'admin/admin.css')), 'Pages ships editor styles');
+  if (existsSync(adminBundlePath)) {
+    const adminBundle = readFileSync(adminBundlePath, 'utf8');
+    ok(!adminBundle.includes('/api/'), 'Pages editor has no live backend endpoints');
+    ok(!/trio-demo-(?:content|orders|photos|counter)/.test(adminBundle), 'Pages editor has no simulated order adapter');
+    ok(adminBundle.includes('Browser-only preview') && adminBundle.includes('Save preview'), 'Pages editor clearly labels browser-only previews');
+  }
   const adminPath = path.join(website, 'admin/index.html');
-  ok(existsSync(adminPath), 'Pages explains unavailable admin');
+  ok(existsSync(adminPath), 'Pages has a runnable editor entry point');
   if (existsSync(adminPath)) {
     const admin = readFileSync(adminPath, 'utf8');
-    ok(admin.includes('href="../index.html#/"'), 'Pages admin fallback returns to repository-relative storefront');
-    ok(!/<script\b|<form\b/i.test(admin), 'Pages admin fallback cannot simulate login or changes');
+    ok(/<script\b[^>]*\bsrc="admin\.js\?v=/.test(admin), 'Pages editor loads its repository-relative application');
+    ok(/<link\b[^>]*\bhref="admin\.css\?v=/.test(admin), 'Pages editor loads its repository-relative styles');
+    ok(admin.includes('noindex, nofollow'), 'Pages editor opts out of search indexing');
   }
 }
 
 try { console.log('image checks passed:', JSON.stringify(verifyCatalogImages())); } catch (error) { ok(false, error.message); }
 
 try { verifyStorefront(); } catch (error) { ok(false, `storefront: ${error.message}`); }
+try { await verifyPagesEditor(); } catch (error) { ok(false, `Pages editor: ${error.stack || error.message}`); }
 
 console.log(failed ? `\n${failed} check(s) failed` : 'all checks passed');
 process.exit(failed ? 1 : 0);

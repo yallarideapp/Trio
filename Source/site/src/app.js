@@ -97,16 +97,21 @@ const icon = (name) => `<svg class="icon" aria-hidden="true"><use href="#icon-${
 const money = (fils) => formatJD(fils, state.language);
 const num = (n) => new Intl.NumberFormat(state.language === 'ar' ? 'ar-JO' : 'en').format(n);
 const S = () => state.content.settings;
+const visitorKey = (name) => `trio-${state.source === 'preview' ? 'preview-' : ''}${name}`;
+const offersHeading = () => L(S().offersTitle) || t('offersTitle');
 const products = () => visibleProducts(state.content);
 const categoryIds = () => state.content.categories.map((c) => c.id).filter((id) => products().some((p) => p.category === id));
+const homeCategoryOrder = ['phones', 'laptops', 'watches', 'audio'];
+const homeCategoryIds = () => homeCategoryOrder.filter((id) => categoryIds().includes(id));
+const homeProducts = () => products().filter((product) => homeCategoryOrder.includes(product.category));
 const instagramAllowed = (routeName) => ['maintenance', 'contact'].includes(routeName);
-const specification = (product) => deviceSpecifications[product.id];
+const specification = (product) => product.technical || deviceSpecifications[product.id];
 const categoryName = (id) => L((state.content.categories.find((c) => c.id === id) || {}).name) || id;
 const legacyIds = { 'apple-watch-s11': 'apple-watch-s11', 'airpods-max': 'airpods-max-2', 'macbook-pro': 'macbook-pro-16-m5-pro', 'macbook-air': 'macbook-air-15-m5', 'ipad-a16': 'ipad-a16' };
 const productUrl = (product) => `#/p/${encodeURIComponent(product.id)}`;
 const categoryUrl = (id) => (id === 'all' ? '#/shop' : `#/shop/${encodeURIComponent(id)}`);
-const phoneHref = () => `tel:+962${String(S().phone || '').replace(/\D/g, '').replace(/^0/, '')}`;
-const phoneText = () => String(S().phone || '').replace(/\D/g, '').replace(/^(\d{4})(\d{3})(\d+)$/, '$1 $2 $3');
+const phoneHref = () => { const phone = normaliseMobile(S().phone); return phone ? `tel:+962${phone.slice(1)}` : '#/contact'; };
+const phoneText = () => (normaliseMobile(S().phone) || String(S().phone || '')).replace(/^(\d{4})(\d{3})(\d+)$/, '$1 $2 $3');
 const waHref = (text) => S().whatsapp ? `https://wa.me/${String(S().whatsapp).replace(/\D/g, '')}${text ? `?text=${encodeURIComponent(text)}` : ''}` : '#/contact';
 
 function availableVariants(product) { return (product.variants || []).filter((v) => !v.soldOut && validPrice(v.price)); }
@@ -166,7 +171,7 @@ function contactActions({ instagram = false } = {}) {
 
 // ---------- home ----------
 function heroProduct() {
-  const list = products();
+  const list = homeProducts();
   return list.find((p) => p.category === state.heroCategory && p.featured && imageSrc(p)) || list.find((p) => p.category === state.heroCategory && imageSrc(p)) || list[0];
 }
 function categoryArtwork(id, { eager = false } = {}) {
@@ -186,17 +191,17 @@ function heroShowcase() {
   const artwork = categoryArtwork(state.heroCategory, { eager: true });
   const title = artwork ? categoryName(state.heroCategory) : L(product.name);
   const caption = artwork ? `<span class="hero-price">${arrow}</span>` : low !== null ? `<span class="hero-price"><small>${esc(t('from'))}</small> <bdi>${esc(money(low))}</bdi></span>` : '';
-  return `<a class="hero-product" href="${artwork ? categoryUrl(state.heroCategory) : productUrl(product)}" aria-label="${esc(`${artwork ? t('browse') : t('view')}: ${title}`)}"><div class="device-media hero-device">${artwork || media(product, { eager: true })}</div><div class="hero-product-caption"><div><p class="product-brand" dir="ltr">${esc(artwork ? 'TRIO COLLECTION' : product.brand)}</p><p class="hero-product-name" dir="auto">${esc(title)}</p></div>${caption}</div></a><div class="hero-tabs" role="group" aria-label="${esc(t('heroChoose'))}">${categoryIds().map((id) => `<button type="button" data-hero-category="${esc(id)}" aria-pressed="${id === state.heroCategory}">${esc(categoryName(id))}</button>`).join('')}</div>`;
+  return `<a class="hero-product" href="${artwork ? categoryUrl(state.heroCategory) : productUrl(product)}" aria-label="${esc(`${artwork ? t('browse') : t('view')}: ${title}`)}"><div class="device-media hero-device">${artwork || media(product, { eager: true })}</div><div class="hero-product-caption"><div><p class="product-brand" dir="ltr">${esc(artwork ? 'TRIO COLLECTION' : product.brand)}</p><p class="hero-product-name" dir="auto">${esc(title)}</p></div>${caption}</div></a><div class="hero-tabs" role="group" aria-label="${esc(t('heroChoose'))}">${homeCategoryIds().map((id) => `<button type="button" data-hero-category="${esc(id)}" aria-pressed="${id === state.heroCategory}">${esc(categoryName(id))}</button>`).join('')}</div>`;
 }
 function offersRow(list) {
   return `<div class="offer-row" data-scroller><div class="offer-track">${list.map((product) => `<div class="offer-slide">${productCard(product)}</div>`).join('')}</div><div class="row-controls" aria-hidden="true"><button type="button" class="row-button" data-scroll="-1" tabindex="-1">${icon('chevron')}</button><button type="button" class="row-button is-next" data-scroll="1" tabindex="-1">${icon('chevron')}</button></div></div>`;
 }
 function renderHome() {
-  const list = products();
+  const list = homeProducts();
   const offers = list.filter((p) => p.offer && availableVariants(p).length);
   const rest = list.filter((p) => !p.offer && availableVariants(p).length);
   const featured = [...rest.filter((p) => p.featured), ...rest.filter((p) => !p.featured)].slice(0, rest.length >= 8 ? 8 : rest.length >= 4 ? 4 : rest.length);
-  const cats = categoryIds().map((id) => {
+  const cats = homeCategoryIds().map((id) => {
     const inCat = list.filter((p) => p.category === id);
     const rep = inCat.find((p) => p.featured && imageSrc(p)) || inCat.find((p) => imageSrc(p)) || inCat[0];
     const lows = inCat.map(fromPrice).filter((n) => n !== null);
@@ -205,7 +210,7 @@ function renderHome() {
   const trust = t('trust').map(([title, text], i) => `<li class="trust-item"><span class="trust-icon" aria-hidden="true">${icon(['search', 'box', 'heart', 'swap'][i])}</span><span><strong>${esc(title)}</strong><small>${esc(text)}</small></span></li>`).join('');
   return `<section class="hero"><div class="container hero-grid"><div class="hero-copy"><h1><span>${esc(t('heroLine1'))}</span> <span>${esc(t('heroLine2'))}</span></h1><form id="home-search-form" class="home-search" role="search">${icon('search')}<label class="sr-only" for="home-search">${esc(t('search'))}</label><input id="home-search" name="q" type="search" placeholder="${esc(t('searchPlaceholder'))}" autocomplete="off" enterkeyhint="search"></form><div class="hero-buttons"><a class="button button-dark" href="#/offers">${esc(t('heroOffers'))}${arrow}</a><a class="button button-outline" href="#/shop">${esc(t('browse'))}</a></div></div><div id="hero-showcase" class="hero-showcase">${heroShowcase()}</div></div></section>
   <div class="home-content">
-    ${offers.length ? `<section class="container offers-section">${sectionHeading(t('offersTitle'), '#/offers', t('offersAll'))}${offersRow(offers)}</section>` : ''}
+    ${offers.length ? `<section class="container offers-section">${sectionHeading(offersHeading(), '#/offers', t('offersAll'))}${offersRow(offers)}</section>` : ''}
     <section class="container"><ul class="trust-strip">${trust}</ul></section>
     <section class="container categories-section">${sectionHeading(t('categories'), '#/shop')}<div class="category-grid">${cats}</div></section>
     ${featured.length ? `<section class="container featured-section">${sectionHeading(t('featuredTitle'), '#/shop')}<div class="product-grid">${featured.map(productCard).join('')}</div></section>` : ''}
@@ -257,7 +262,7 @@ function renderCatalog() {
   const r = state.route.name;
   const brands = [...new Set(baseProducts().map((p) => p.brand))].sort();
   if (!brands.includes(state.brand)) state.brand = 'all';
-  const heading = r === 'saved' ? t('saved') : r === 'offers' ? t('offersTitle') : state.category === 'all' ? t('shop') : categoryName(state.category);
+  const heading = r === 'saved' ? t('saved') : r === 'offers' ? offersHeading() : state.category === 'all' ? t('shop') : categoryName(state.category);
   const intro = r === 'saved' ? t('savedIntro') : r === 'offers' ? t('offersIntro') : t('shopIntro');
   const opt = (value, label, current) => `<option value="${value}"${current === value ? ' selected' : ''}>${esc(label)}</option>`;
   return `<div class="container page-shell catalog-page"><div class="page-heading"><p class="eyebrow">${esc(t('collection'))}</p><h1>${esc(heading)}</h1><p class="page-intro">${esc(intro)}</p></div>${categoryTabs()}
@@ -328,11 +333,11 @@ function renderDetail(id) {
 
 // ---------- bag ----------
 function loadBag() {
-  const raw = local.read('trio-bag', []);
+  const raw = local.read(visitorKey('bag'), []);
   const lines = Array.isArray(raw) ? raw.filter((l) => l && typeof l.id === 'string' && Number.isInteger(l.qty)) : [];
   return lines.map((l) => ({ id: l.id, qty: Math.min(MAX_QTY, Math.max(1, l.qty)) }));
 }
-function saveBag() { local.write('trio-bag', state.bag); updateCounts(); }
+function saveBag() { local.write(visitorKey('bag'), state.bag); updateCounts(); }
 function cleanBag() {
   const before = state.bag.length;
   state.bag = state.bag.filter((l) => { const [pid, key] = splitVariantId(l.id); const p = products().find((x) => x.id === pid); const v = p && p.variants.find((x) => x.key === key); return v && !v.soldOut && validPrice(v.price); });
@@ -506,7 +511,7 @@ function toggleSaved(id) {
   if (!products().some((p) => p.id === id)) return;
   const saved = !state.saved.has(id);
   if (saved) state.saved.add(id); else state.saved.delete(id);
-  local.write('trio-saved', [...state.saved]);
+  local.write(visitorKey('saved'), [...state.saved]);
   updateCounts(); updateSavedButtons();
   if (state.route.name === 'saved') { const tabs = $('.catalog-tabs'); if (tabs) tabs.outerHTML = categoryTabs(); updateResults(); }
   announce(t(saved ? 'savedNow' : 'unsavedNow'));
@@ -623,8 +628,8 @@ document.addEventListener('error', (event) => {
 window.addEventListener('hashchange', () => renderRoute({ focus: true }));
 window.matchMedia?.('(min-width: 641px)').addEventListener('change', (event) => { $('.catalog-filter-panel')?.toggleAttribute('open', event.matches); });
 window.addEventListener('storage', (event) => {
-  if (event.key === 'trio-bag') { state.bag = loadBag(); updateCounts(); if (['bag', 'checkout'].includes(state.route.name)) renderRoute(); }
-  if (event.key === 'trio-saved') { state.saved = new Set(local.read('trio-saved', [])); updateCounts(); updateSavedButtons(); }
+  if (event.key === visitorKey('bag')) { state.bag = loadBag(); updateCounts(); if (['bag', 'checkout'].includes(state.route.name)) renderRoute(); }
+  if (event.key === visitorKey('saved')) { state.saved = new Set(local.read(visitorKey('saved'), [])); updateCounts(); updateSavedButtons(); }
 });
 
 async function start() {
@@ -634,11 +639,12 @@ async function start() {
     document.body.insertAdjacentHTML('beforeend', `<a class="demo-corner" href="admin/index.html" lang="${state.language}">${state.language === 'ar' ? 'نسخة عرض · لوحة التحكم' : 'Demo · Admin panel'}</a>`);
   }
   await refreshContent();
+  if (state.source === 'preview') document.querySelector('#preview-notice').hidden = false;
   const ids = new Set(products().map((p) => p.id));
-  const saved = local.read('trio-saved', []);
+  const saved = local.read(visitorKey('saved'), []);
   state.saved = new Set(Array.isArray(saved) ? saved.map((id) => legacyIds[id] || id).filter((id) => ids.has(id)) : []);
   state.bag = loadBag();
-  const firstCat = categoryIds()[0]; if (firstCat && !categoryIds().includes(state.heroCategory)) state.heroCategory = firstCat;
+  const firstCat = homeCategoryIds()[0]; if (firstCat && !homeCategoryIds().includes(state.heroCategory)) state.heroCategory = firstCat;
   translateShell();
   renderRoute();
   document.documentElement.classList.add('is-ready');
