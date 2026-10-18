@@ -218,10 +218,9 @@ export const seed = {
       id: 'macbook-pro-16-m5-pro', category: 'computers', brand: 'Apple', name: { ar: 'MacBook Pro 16" M5 Pro', en: 'MacBook Pro 16" M5 Pro' },
       image: 'assets/devices/macbook-pro.webp', featured: true,
       tagline: { ar: 'قوة أكبر.. لطموحات أكبر', en: 'More power for bigger plans' },
-      about: { ar: 'MacBook Pro بقياس 16 إنش مع شريحة M5 Pro، جديد ومسكّر بالكرتونة، بثلاث سعات. وفي نسخة MDM (جهاز مُدار) بسعر أقل.', en: '16-inch MacBook Pro with M5 Pro, brand new and sealed, in three configurations, plus a lower-priced MDM (managed device) unit.' },
+      about: { ar: 'MacBook Pro بقياس 16 إنش مع شريحة M5 Pro، جديد ومسكّر بالكرتونة، بثلاث سعات.', en: '16-inch MacBook Pro with M5 Pro, brand new and sealed, in three configurations.' },
       specs: [{ ar: 'شاشة Liquid Retina XDR بقياس 16 إنش', en: '16-inch Liquid Retina XDR display' }], source: P.oct1,
       variants: [
-        v('48-1tb-mdm', '48GB · 1TB', 'new-sealed', 1949, { notes: ['mdm'], posted: '2026-10-01' }),
         v('24-1tb', '24GB · 1TB', 'new-sealed', 2249, { posted: '2026-10-01' }),
         v('48-1tb', '48GB · 1TB', 'new-sealed', 2549, { posted: '2026-10-01' }),
         v('48-2tb', '48GB · 2TB', 'new-sealed', 2749, { posted: '2026-10-01' }),
