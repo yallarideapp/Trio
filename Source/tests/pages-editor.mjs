@@ -424,12 +424,15 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
     ui.state.view = 'devices';
     ui.state.editing = { index: 0 };
     ui.render();
-    const conditionSelects = [...root.innerHTML.matchAll(/<select name="v\.\d+\.condition">([\s\S]*?)<\/select>/g)];
-    assert(conditionSelects.length, language + ': editable condition controls exist');
-    for (const [index, [, options]] of conditionSelects.entries()) {
-      assert.equal((options.match(/<option /g) || []).length, 3, language + ': condition selector offers two labels plus unspecified');
-      assert(options.includes('value="' + conditionGroup(content.products[0].variants[index].condition) + '" selected'), language + ': legacy saved condition selects the matching group');
+    const conditionChoices = [...root.innerHTML.matchAll(/<fieldset class="condition-choice">([\s\S]*?)<\/fieldset>/g)];
+    assert.equal(conditionChoices.length, content.products[0].variants.length, language + ': each option has its own visible condition choice');
+    assert(root.innerHTML.indexOf('class="card device-options"') < root.innerHTML.indexOf('name="name.ar"'), language + ': condition choices appear before device details and specifications');
+    for (const [index, [, options]] of conditionChoices.entries()) {
+      assert.equal((options.match(/type="radio"/g) || []).length, 2, language + ': condition offers exactly two visible choices');
+      assert(options.includes('value="' + conditionGroup(content.products[0].variants[index].condition) + '" checked'), language + ': legacy saved condition checks the matching group');
+      assert(options.includes(`name="v.${index}.condition"`), language + ': each option uses an independent radio group');
       assert(!options.includes('value="new-sealed"') && !options.includes('value="used-agency"') && !options.includes('value="used"'), language + ': legacy labels are not selectable');
+      for (const label of Object.values(conditionOptions)) assert(options.includes(label[language]), language + ': both condition labels are visible without opening a dropdown');
     }
     assert(root.innerHTML.includes('name="technical.summary.en"') && root.innerHTML.includes('name="technical.summary.ar"'), `${language}: device summaries are editable in both languages`);
     assert(root.innerHTML.includes('name="technical.0.label.en"') && root.innerHTML.includes('name="technical.0.value.ar"'), `${language}: specification labels and values are editable`);

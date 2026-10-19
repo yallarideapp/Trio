@@ -1,5 +1,12 @@
 # Replacement storefront verification — 18 October 2026
 
+## Visible condition controls and home heading — 19 October 2026
+
+- Moved Options and prices above the device details, photos and specifications. Each option has exactly two visible native radio choices, New and Used like new, with an independent group. Legacy condition keys map to the matching choice; unspecified conditions stay unselected until chosen. New options use canonical condition keys.
+- Browser QA changed the first iPhone 17 Pro Max option to New and the second to Used like new, saved the preview, reloaded and reopened the editor. Both selections persisted independently, while other options retained their selections. Arabic and English controls render correctly and the checked desktop page has no document overflow or console warnings/errors. Test edits used a separate localhost origin, preserving the owner's public-site browser drafts.
+- The home product heading is What are you looking for? / شو عم تدوّر عليه؟, including previews with an older Offers title setting. The category section is Shop by category / تسوّق حسب القسم. The separate Offers page retains its editable heading. Bilingual automated checks and browser inspection confirm both headings.
+- Live and Pages builds, the full existing regression suite, and updated editor/storefront checks pass.
+
 ## Home selections, arrows and condition labels — 19 October 2026
 
 - Every visible, selected device in the four supported home categories now appears in Picks, including selected offers. Removed the eight-item cap and offer exclusion. A persisted selection priority makes the latest selection lead its category and initial hero. Selecting a hidden device unhides it without clearing earlier selections; explicitly hiding it later still works.

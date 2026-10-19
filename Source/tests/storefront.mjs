@@ -93,7 +93,10 @@ export function verifyStorefront() {
     const originalOffersTitle = ui.state.content.settings.offersTitle;
     ui.state.content.settings.offersTitle = { ar: 'تشكيلة خاصة', en: 'Editor offer selection' };
     ui.state.route = { name: 'home' };
-    assert(ui.renderHome().includes(language === 'ar' ? 'تشكيلة خاصة' : 'Editor offer selection'), `${language}: home uses the edited offers heading`);
+    const lookingFor = language === 'ar' ? 'شو عم تدوّر عليه؟' : 'What are you looking for?';
+    const homeOffers = ui.renderHome().match(/<section class="container offers-section">([\s\S]*?)<\/section>/)?.[1] || '';
+    assert(homeOffers.includes(`<h2>${lookingFor}</h2>`), `${language}: home uses the requested shopping heading even with an older editor offer title`);
+    assert(!homeOffers.includes(ui.state.content.settings.offersTitle[language]), `${language}: the separate offers page heading does not replace the home shopping heading`);
     ui.state.route = { name: 'offers' };
     assert(ui.renderCatalog().includes(`<h1>${ui.state.content.settings.offersTitle[language]}</h1>`), `${language}: offers page uses the edited heading`);
     ui.state.content.settings.offersTitle = { ar: '', en: '' };

@@ -22,7 +22,7 @@ const words = {
     heroLine1: 'إحنا اللعبة', heroLine2: 'الجديدة.', heroOffers: 'شوف عروض تريو', browse: 'تصفّح الأجهزة', heroChoose: 'اختار نوع الجهاز',
     from: 'من', view: 'شوف الجهاز', choose: 'اختار السعة', add: 'أضف للسلة', added: 'انضاف للسلة', soldOut: 'نفد', unavailable: 'غير متوفر حالياً',
     save: 'حفظ الجهاز', unsave: 'إلغاء الحفظ', savedNow: 'انحفظ بالمفضلة.', unsavedNow: 'انشال من المفضلة.',
-    categories: 'شو عم تدوّر عليه؟', allDevices: 'شوف كل الأجهزة', featuredTitle: 'مختارات من تريو', offersAll: 'كل العروض',
+    lookingFor: 'شو عم تدوّر عليه؟', categories: 'تسوّق حسب القسم', allDevices: 'شوف كل الأجهزة', featuredTitle: 'مختارات من تريو', offersAll: 'كل العروض',
     count: (n) => n === 2 ? 'جهازين' : `${n} ${n === 1 ? 'جهاز' : n <= 10 ? 'أجهزة' : 'جهاز'}`,
     trust: [['اعثر على جهازك', 'ابحث حسب الماركة ونوع الجهاز'], ['قارن الخيارات', 'السعة والحالة في مكان واحد'], ['احفظ مفضلتك', 'ارجع للأجهزة اللي عجبتك'], ['بيع · شراء · تبديل', 'وصيانة احترافية بالمحل']],
     servicesTitle: 'بيع، شراء، تبديل وصيانة', servicesText: 'جهازك القديم ممكن يكون بداية جهازك الجديد. احكيلنا عنه، أو جيبه للصيانة.', repairCta: 'احكي معنا عن الصيانة', tradeCta: 'اسأل عن التبديل',
@@ -59,7 +59,7 @@ const words = {
     heroLine1: 'A whole', heroLine2: 'new game.', heroOffers: 'Explore Trio offers', browse: 'Browse devices', heroChoose: 'Choose a device type',
     from: 'from', view: 'View device', choose: 'Choose option', add: 'Add to bag', added: 'Added to bag', soldOut: 'Sold out', unavailable: 'Not available right now',
     save: 'Save device', unsave: 'Remove from saved', savedNow: 'Saved.', unsavedNow: 'Removed from saved.',
-    categories: 'What are you looking for?', allDevices: 'View all devices', featuredTitle: 'Picks from Trio', offersAll: 'All offers',
+    lookingFor: 'What are you looking for?', categories: 'Shop by category', allDevices: 'View all devices', featuredTitle: 'Picks from Trio', offersAll: 'All offers',
     count: (n) => `${n} ${n === 1 ? 'device' : 'devices'}`,
     trust: [['Find your device', 'Search by brand and category'], ['Compare options', 'Storage and condition together'], ['Save your favorites', 'Keep the devices you like'], ['Buy · Sell · Trade in', 'And professional repair in store']],
     servicesTitle: 'Buy, sell, trade in and repair', servicesText: 'Your old device can be the start of your new one. Tell us about it, or bring it in for repair.', repairCta: 'Ask about a repair', tradeCta: 'Ask about trade-in',
@@ -219,7 +219,7 @@ function renderHome() {
   const trust = t('trust').map(([title, text], i) => `<li class="trust-item"><span class="trust-icon" aria-hidden="true">${icon(['search', 'box', 'heart', 'swap'][i])}</span><span><strong>${esc(title)}</strong><small>${esc(text)}</small></span></li>`).join('');
   return `<section class="hero"><div class="container hero-grid"><div class="hero-copy"><h1><span>${esc(t('heroLine1'))}</span> <span>${esc(t('heroLine2'))}</span></h1><form id="home-search-form" class="home-search" role="search">${icon('search')}<label class="sr-only" for="home-search">${esc(t('search'))}</label><input id="home-search" name="q" type="search" placeholder="${esc(t('searchPlaceholder'))}" autocomplete="off" enterkeyhint="search"></form><div class="hero-buttons"><a class="button button-dark" href="#/offers">${esc(t('heroOffers'))}${arrow}</a><a class="button button-outline" href="#/shop">${esc(t('browse'))}</a></div></div><div id="hero-showcase" class="hero-showcase">${heroShowcase()}</div></div></section>
   <div class="home-content">
-    ${offers.length ? `<section class="container offers-section">${sectionHeading(offersHeading(), '#/offers', t('offersAll'))}${offersRow(offers)}</section>` : ''}
+    ${offers.length ? `<section class="container offers-section">${sectionHeading(t('lookingFor'), '#/offers', t('offersAll'))}${offersRow(offers)}</section>` : ''}
     <section class="container"><ul class="trust-strip">${trust}</ul></section>
     <section class="container categories-section">${sectionHeading(t('categories'), '#/shop')}<div class="category-grid">${cats}</div></section>
     ${featured.length ? `<section class="container featured-section">${sectionHeading(t('featuredTitle'), '#/shop')}<div class="product-grid">${featured.map(productCard).join('')}</div></section>` : ''}

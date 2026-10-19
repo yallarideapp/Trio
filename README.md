@@ -23,6 +23,8 @@ The [browser-only admin editor](https://yallarideapp.github.io/Trio/admin/) is a
 
 Home features Phones, Laptops, Watches and Audio. All Devices retains the six independent categories, including Tablets and Accessories. Every visible device marked **Show on home page** appears in Picks; the latest selection leads its category's showcase without clearing earlier selections. Selecting a hidden device also makes it visible. Save preview, then View preview to see these choices. Device condition labels and editor choices are **New** or **Used like new**, with older catalog keys retained for compatibility.
 
+In **Devices → Edit**, **Options and prices** is at the top. Each storage/size option has visible **New / Used like new** radio choices, saved independently. The home product section is headed **What are you looking for?**; the separate Offers page retains its editable heading.
+
 The fixed corner **Admin panel** shortcut opens the editor from any storefront page. Its **Orders** tab automatically shows checkout orders from the same browser, with status updates, notes, search and export. Manual order creation is removed; any older manual records remain a separate archive.
 
 **Sign in** is visible in the desktop and mobile headers. The customer page includes Create account, profile/mobile editing, password changes and private order history. These work now for the owner demo, including registration, sign-in/out and the one-click **Try a sample account** option. Demo accounts use salted password hashes and persist only in this browser. Use sample credentials and contact details; this is not shared production authentication. Clearing browser storage removes the demo data.
