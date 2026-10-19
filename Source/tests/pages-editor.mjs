@@ -436,7 +436,7 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
     }
     assert(root.innerHTML.includes('name="technical.summary.en"') && root.innerHTML.includes('name="technical.summary.ar"'), `${language}: device summaries are editable in both languages`);
     assert(root.innerHTML.includes('name="technical.0.label.en"') && root.innerHTML.includes('name="technical.0.value.ar"'), `${language}: specification labels and values are editable`);
-    assert(root.innerHTML.includes(language === 'ar' ? 'كل الأجهزة المحددة تظهر ضمن مختارات الرئيسية' : 'All selected devices appear in Picks on the home page'), `${language}: home selection help explains multiple selected devices`);
+    assert(root.innerHTML.includes(language === 'ar' ? 'آخر جهاز تختاره يتصدر قسمه في واجهة الرئيسية' : 'The latest selected device leads its category in the home showcase'), `${language}: home selection help explains the category showcase`);
     assert(root.innerHTML.includes(language === 'ar' ? 'احفظ المعاينة لتظهر اختياراتك في الرئيسية.' : 'Save preview to see your home selections.'), `${language}: home selections require an explicit preview save`);
   }
 }

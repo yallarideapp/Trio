@@ -1,5 +1,13 @@
 # Replacement storefront verification — 18 October 2026
 
+## Home layout and single-condition devices — 19 October 2026
+
+- Removed Picks from Trio from home. The four category tiles sit under What are you looking for? / شو عم تدوّر عليه؟, immediately followed by Offers / العروض. Removed the obsolete phone layout ordering rules. The admin's home-selection help now describes the category showcase.
+- Each card has one condition badge matching its cheapest available option. Its price and Add/Choose action use only that condition's options. New/Used filters scope variants before pricing and sorting; unknown conditions do not count as New. Card, hero and bag links preserve the condition in the device route. Direct device URLs also scope the option picker to one condition, including saved selections. No catalog prices, option keys, product IDs or order records changed.
+- Bilingual regression checks cover the home section order, removal of Picks, one badge, stale opposite-condition selections, exact filter prices, matching detail/bag links and unchanged catalog data. The original 24 models still appear once each in the catalog and favorites continue to use their original IDs.
+- Browser QA verified English home headings and one badge on every offer. New iPhone 17 displayed JD655 in its card, device view and added bag line. Arabic Used like new displayed JD555. No checked document overflow or browser warnings/errors. Test shopping used a separate localhost origin.
+- Live/Pages builds and the full catalog, image, preview, account, checkout, order and Worker regression suites pass. Earlier verification sections below describe historical releases superseded by this layout.
+
 ## Visible condition controls and home heading — 19 October 2026
 
 - Moved Options and prices above the device details, photos and specifications. Each option has exactly two visible native radio choices, New and Used like new, with an independent group. Legacy condition keys map to the matching choice; unspecified conditions stay unselected until chosen. New options use canonical condition keys.

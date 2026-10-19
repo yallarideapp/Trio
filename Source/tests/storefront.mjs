@@ -85,24 +85,62 @@ export function verifyStorefront() {
   for (const language of ['ar', 'en']) {
     ui.state.language = language;
     const conditionFixture = structuredClone(seed.products[0]);
-    conditionFixture.variants = ['new-sealed', 'new', 'like-new', 'used-agency', 'used'].map((condition, index) => ({ ...conditionFixture.variants[0], key: 'condition-' + index, condition, soldOut: false }));
+    conditionFixture.variants = ['new-sealed', 'new', 'like-new', 'used-agency', 'used'].map((condition, index) => ({ ...conditionFixture.variants[0], key: 'condition-' + index, price: [100, 200, 90, 95, 110][index], condition, soldOut: false }));
+    ui.state.selected[conditionFixture.id] = 'condition-1';
     const chips = ui.conditionChips(conditionFixture);
-    assert.equal((chips.match(/class="cond-chip /g) || []).length, 2, language + ': legacy variants deduplicate into exactly two condition badges');
-    assert(chips.includes(language === 'ar' ? 'مستعمل بحالة الجديد' : 'Used like new'), language + ': used condition uses requested wording');
+    assert.equal((chips.match(/class="cond-chip /g) || []).length, 1, language + ': a device card shows exactly one condition badge');
+    assert(chips.includes(language === 'ar' ? 'مستعمل بحالة الجديد' : 'Used like new'), language + ': the badge matches the starting price rather than an earlier selected variant');
     assert(!/Agency cond\.|Sealed|Used but unused|بحالة الوكالة|جديد مسكّر/.test(chips), language + ': old condition labels are absent');
     const originalOffersTitle = ui.state.content.settings.offersTitle;
     ui.state.content.settings.offersTitle = { ar: 'تشكيلة خاصة', en: 'Editor offer selection' };
     ui.state.route = { name: 'home' };
     const lookingFor = language === 'ar' ? 'شو عم تدوّر عليه؟' : 'What are you looking for?';
-    const homeOffers = ui.renderHome().match(/<section class="container offers-section">([\s\S]*?)<\/section>/)?.[1] || '';
-    assert(homeOffers.includes(`<h2>${lookingFor}</h2>`), `${language}: home uses the requested shopping heading even with an older editor offer title`);
+    const updatedHome = ui.renderHome();
+    const homeOffers = updatedHome.match(/<section class="container offers-section">([\s\S]*?)<\/section>/)?.[1] || '';
+    const homeCategoriesSection = updatedHome.match(/<section class="container categories-section">([\s\S]*?)<\/section>/)?.[1] || '';
+    assert(homeCategoriesSection.includes(`<h2>${lookingFor}</h2>`), `${language}: categories use the requested shopping heading`);
+    assert(homeOffers.includes(`<h2>${language === 'ar' ? 'العروض' : 'Offers'}</h2>`), `${language}: offers have their own heading`);
+    assert(updatedHome.indexOf('categories-section') < updatedHome.indexOf('offers-section'), `${language}: offers appear immediately below categories`);
+    assert(!/featured-section|Picks from Trio|مختارات من تريو/.test(updatedHome), `${language}: Picks section is removed`);
     assert(!homeOffers.includes(ui.state.content.settings.offersTitle[language]), `${language}: the separate offers page heading does not replace the home shopping heading`);
     ui.state.route = { name: 'offers' };
     assert(ui.renderCatalog().includes(`<h1>${ui.state.content.settings.offersTitle[language]}</h1>`), `${language}: offers page uses the edited heading`);
     ui.state.content.settings.offersTitle = { ar: '', en: '' };
     assert(ui.renderCatalog().includes(`<h1>${language === 'ar' ? 'عروض تريو' : 'Trio offers'}</h1>`), `${language}: empty offers headings use the translated fallback`);
     ui.state.content.settings.offersTitle = originalOffersTitle;
+    const catalogBeforeConditionFilter = JSON.stringify(ui.state.content);
+    for (const [condition, price, key, label, opposite] of [
+      ['new', 655000, '256-new', language === 'ar' ? 'جديد' : 'New', language === 'ar' ? 'مستعمل بحالة الجديد' : 'Used like new'],
+      ['used', 555000, '256-used', language === 'ar' ? 'مستعمل بحالة الجديد' : 'Used like new', language === 'ar' ? 'جديد' : 'New'],
+    ]) {
+      resetCatalog();
+      ui.state.cond = condition;
+      const rows = ui.filteredProducts();
+      const product = rows.find((row) => row.id === 'iphone-17');
+      assert(product, `${language}/${condition}: mixed-condition device remains searchable`);
+      assert.equal(pricing.fromPrice(product), price, `${language}/${condition}: filter uses the price of the matching condition`);
+      assert(rows.every((row) => row.variants.every((variant) => conditionGroup(variant.condition) === (condition === 'new' ? 'new' : 'like-new'))), `${language}/${condition}: filter never includes the opposite or an unspecified condition`);
+      const card = ui.renderProductResults([product]);
+      assert.equal((card.match(/class="cond-chip /g) || []).length, 1, `${language}/${condition}: filtered card has one condition`);
+      assert(card.includes(`href="#/p/iphone-17?cond=${condition}"`), `${language}/${condition}: device links carry the selected condition`);
+      assert(card.includes(`data-add="iphone-17:${key}"`), `${language}/${condition}: direct add keeps the original option identity`);
+      ui.state.selected['iphone-17'] = condition === 'new' ? '256-used' : '256-new';
+      ui.state.route = { name: 'p', id: product.id, params: new URLSearchParams(`cond=${condition}`) };
+      const detail = ui.renderDetail(product.id);
+      const buy = detail.match(/id="detail-buy">([\s\S]*?)<div class="detail-actions">/)?.[1] || '';
+      assert(detail.includes(`data-add="iphone-17:${key}"`) && buy.includes(pricing.formatJD(price, language)), `${language}/${condition}: detail rejects a stale opposite-condition selection`);
+      assert(buy.includes(`<strong dir="auto">${label}</strong>`) && !buy.includes(`<strong dir="auto">${opposite}</strong>`), `${language}/${condition}: detail displays only the selected condition`);
+      ui.state.bag = [{ id: `iphone-17:${key}`, qty: 1 }];
+      assert(ui.renderBag().includes(`href="#/p/iphone-17?cond=${condition}"`), `${language}/${condition}: bag links retain the ordered condition`);
+    }
+    assert.equal(JSON.stringify(ui.state.content), catalogBeforeConditionFilter, `${language}: condition filtering never changes catalog data`);
+    ui.state.bag = [];
     resetCatalog();
+    const unfilteredPhone = ui.filteredProducts().find((product) => product.id === 'iphone-17');
+    const unfilteredCard = ui.renderProductResults([unfilteredPhone]);
+    assert(unfilteredCard.includes('href="#/p/iphone-17?cond=used"'), `${language}: ordinary card links preserve the condition shown with its starting price`);
+    assert(unfilteredCard.includes('data-add="iphone-17:256-used"'), `${language}: ordinary card actions use the displayed condition`);
+    assert.equal((unfilteredCard.match(/class="cond-chip /g) || []).length, 1, `${language}: ordinary mixed-option card has only one badge`);
     const grouped = ui.renderProductResults(ui.filteredProducts());
     const groups = [...grouped.matchAll(/<section\b[^>]*\bdata-category-group="([^"]+)"[^>]*>([\s\S]*?)<\/section>/g)];
     assert.deepEqual(groups.map((match) => match[1]), Object.keys(categoryCounts), `${language}: all devices have six ordered sections`);
@@ -151,7 +189,7 @@ export function verifyStorefront() {
       assert.deepEqual([...html.matchAll(/data-hero-category="([^"]+)"/g)].map((match) => match[1]), homeCategories, `${language}: home hero offers the same four category choices`);
       assert(!/#\/shop\/(?:tablets|accessories)(?:["?]|$)/.test(html), `${language}: home has no tablet or accessory category links`);
       for (const id of cardIds(html)) assert(homeCategories.includes(seed.products.find((product) => product.id === id)?.category), `${language}/${id}: home product sections use only the four home categories`);
-      const productLinks = [...html.matchAll(/href="#\/p\/([^"]+)"/g)].map((match) => match[1]);
+      const productLinks = [...html.matchAll(/href="#\/p\/([^"?]+)(?:\?[^"]*)?"/g)].map((match) => match[1]);
       assert(productLinks.length, `${language}: home retains working device links`);
       for (const id of productLinks) assert(homeCategories.includes(seed.products.find((product) => product.id === id)?.category), `${language}/${id}: home device links exclude tablets and accessories`);
       assert(!instagram.test(html), `${language}: home has no Instagram copy or links`);
@@ -162,8 +200,8 @@ export function verifyStorefront() {
       checkHome(home);
       assert(home.includes(`data-hero-category="${category}" aria-pressed="true"`), `${language}/${category}: selected home hero choice remains active`);
     }
-    // Home selections include offers and all selected cards, without an eight-
-    // device cap. A later selection leads without clearing previous choices.
+    // Home selections continue to control the category showcase after removal
+    // of the separate Picks grid.
     const beforeSelections = ui.state.content;
     try {
       ui.state.content = structuredClone(seed);
@@ -173,17 +211,14 @@ export function verifyStorefront() {
       newest.featured = true; newest.offer = true; newest.homePriority = 99999;
       ui.state.heroCategory = 'phones';
       const html = ui.renderHome();
-      const picks = html.match(/<section class="container featured-section">([\s\S]*?)<\/section>/)?.[1] || '';
-      const selected = candidates.filter((product) => product.featured);
-      assert.deepEqual(cardIds(picks).sort(), selected.map((product) => product.id).sort(), `${language}: every selected device appears in Picks, including offers`);
-      assert.equal(cardIds(picks)[0], newest.id, `${language}: newest selection leads Picks`);
-      assert(html.includes(`class="hero-product" href="#/p/${newest.id}"`), `${language}: newly selected phone leads showcase while other devices remain selected`);
+      assert(!html.includes('featured-section'), `${language}: selecting home devices does not restore Picks`);
+      assert(html.includes(`class="hero-product" href="#/p/${newest.id}?cond=new"`), `${language}: newly selected phone leads showcase while other devices remain selected`);
       newest.hidden = true;
       assert(!cardIds(ui.renderHome()).includes(newest.id), `${language}: an explicitly hidden selection stays hidden`);
       const watch = candidates.find((product) => product.category === 'watches');
       watch.featured = true; watch.homePriority = 100000;
       ui.state.heroCategory = 'watches';
-      assert(ui.renderHome().includes(`class="hero-product" href="#/p/${watch.id}"`), `${language}: selected watch displays the chosen device instead of static category artwork`);
+      assert(ui.renderHome().includes(`class="hero-product" href="#/p/${watch.id}?cond=new"`), `${language}: selected watch displays the chosen device instead of static category artwork`);
     } finally { ui.state.content = beforeSelections; ui.state.heroCategory = 'phones'; }
     // Category restrictions must hold even when excluded devices lead the
     // catalog and are promoted into both offers and featured products.
@@ -227,6 +262,10 @@ export function verifyStorefront() {
       const html = ui.renderDetail(product.id);
       assert(html.includes(`${pricing.formatJD(pricing.toFils(variant.price), language)}`), `${product.id}/${variant.key}: selected price`);
       if (variant.storage) assert(html.includes(variant.storage.replaceAll('&', '&amp;').replaceAll('"', '&quot;')), `${product.id}/${variant.key}: selected configuration`);
+      const options = html.match(/<fieldset class="variant-picker">([\s\S]*?)<\/fieldset>/)?.[1] || '';
+      for (const other of product.variants.filter((option) => conditionGroup(option.condition) !== conditionGroup(variant.condition))) {
+        assert(!options.includes(`data-variant="${other.key}"`), `${product.id}/${variant.key}: direct device pages keep opposite conditions separate`);
+      }
     }
     ui.state.route = { name: 'trade-in' };
     assert(!instagram.test(ui.renderService(true)), `${language}: trade-in has no Instagram links`);

@@ -510,12 +510,7 @@ html[lang=en] .device-specs h2{font-size:18px;font-weight:600;letter-spacing:0}
   .hero a:focus-visible,.hero button:focus-visible{outline-color:var(--ink)}
   .home-content{display:block}
   .home-content>section{margin-top:32px}
-  .home-content .offers-section{order:0;margin-top:8px!important}
-  .home-content .categories-section{order:1}
-  .home-content .featured-section{order:2}
-  .home-content>section:has(.trust-strip){order:3}
-  .home-content .services-section{order:4}
-  .home-content .story-section{order:5}
+  .home-content .offers-section{margin-top:32px!important}
   .offer-track{grid-auto-columns:69%;gap:14px}
   .offer-track .product-image{aspect-ratio:1.05}
   .product-grid{gap:24px 12px}

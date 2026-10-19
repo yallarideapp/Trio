@@ -22,7 +22,7 @@ const words = {
     heroLine1: 'إحنا اللعبة', heroLine2: 'الجديدة.', heroOffers: 'شوف عروض تريو', browse: 'تصفّح الأجهزة', heroChoose: 'اختار نوع الجهاز',
     from: 'من', view: 'شوف الجهاز', choose: 'اختار السعة', add: 'أضف للسلة', added: 'انضاف للسلة', soldOut: 'نفد', unavailable: 'غير متوفر حالياً',
     save: 'حفظ الجهاز', unsave: 'إلغاء الحفظ', savedNow: 'انحفظ بالمفضلة.', unsavedNow: 'انشال من المفضلة.',
-    lookingFor: 'شو عم تدوّر عليه؟', categories: 'تسوّق حسب القسم', allDevices: 'شوف كل الأجهزة', featuredTitle: 'مختارات من تريو', offersAll: 'كل العروض',
+    lookingFor: 'شو عم تدوّر عليه؟', categories: 'تسوّق حسب القسم', allDevices: 'شوف كل الأجهزة', offersAll: 'كل العروض',
     count: (n) => n === 2 ? 'جهازين' : `${n} ${n === 1 ? 'جهاز' : n <= 10 ? 'أجهزة' : 'جهاز'}`,
     trust: [['اعثر على جهازك', 'ابحث حسب الماركة ونوع الجهاز'], ['قارن الخيارات', 'السعة والحالة في مكان واحد'], ['احفظ مفضلتك', 'ارجع للأجهزة اللي عجبتك'], ['بيع · شراء · تبديل', 'وصيانة احترافية بالمحل']],
     servicesTitle: 'بيع، شراء، تبديل وصيانة', servicesText: 'جهازك القديم ممكن يكون بداية جهازك الجديد. احكيلنا عنه، أو جيبه للصيانة.', repairCta: 'احكي معنا عن الصيانة', tradeCta: 'اسأل عن التبديل',
@@ -59,7 +59,7 @@ const words = {
     heroLine1: 'A whole', heroLine2: 'new game.', heroOffers: 'Explore Trio offers', browse: 'Browse devices', heroChoose: 'Choose a device type',
     from: 'from', view: 'View device', choose: 'Choose option', add: 'Add to bag', added: 'Added to bag', soldOut: 'Sold out', unavailable: 'Not available right now',
     save: 'Save device', unsave: 'Remove from saved', savedNow: 'Saved.', unsavedNow: 'Removed from saved.',
-    lookingFor: 'What are you looking for?', categories: 'Shop by category', allDevices: 'View all devices', featuredTitle: 'Picks from Trio', offersAll: 'All offers',
+    lookingFor: 'What are you looking for?', categories: 'Shop by category', allDevices: 'View all devices', offersAll: 'All offers',
     count: (n) => `${n} ${n === 1 ? 'device' : 'devices'}`,
     trust: [['Find your device', 'Search by brand and category'], ['Compare options', 'Storage and condition together'], ['Save your favorites', 'Keep the devices you like'], ['Buy · Sell · Trade in', 'And professional repair in store']],
     servicesTitle: 'Buy, sell, trade in and repair', servicesText: 'Your old device can be the start of your new one. Tell us about it, or bring it in for repair.', repairCta: 'Ask about a repair', tradeCta: 'Ask about trade-in',
@@ -115,13 +115,25 @@ const instagramAllowed = (routeName) => ['maintenance', 'contact'].includes(rout
 const specification = (product) => product.technical || deviceSpecifications[product.id];
 const categoryName = (id) => L((state.content.categories.find((c) => c.id === id) || {}).name) || id;
 const legacyIds = { 'apple-watch-s11': 'apple-watch-s11', 'airpods-max': 'airpods-max-2', 'macbook-pro': 'macbook-pro-16-m5-pro', 'macbook-air': 'macbook-air-15-m5', 'ipad-a16': 'ipad-a16' };
-const productUrl = (product) => `#/p/${encodeURIComponent(product.id)}`;
+const productUrl = (product, variant) => {
+  const group = variant && conditionGroup(variant.condition);
+  const condition = group ? group === 'new' ? 'new' : 'used' : product.conditionFilter;
+  return `#/p/${encodeURIComponent(product.id)}${['new', 'used'].includes(condition) ? `?cond=${condition}` : ''}`;
+};
 const categoryUrl = (id) => (id === 'all' ? '#/shop' : `#/shop/${encodeURIComponent(id)}`);
 const phoneHref = () => { const phone = normaliseMobile(S().phone); return phone ? `tel:+962${phone.slice(1)}` : '#/contact'; };
 const phoneText = () => (normaliseMobile(S().phone) || String(S().phone || '')).replace(/^(\d{4})(\d{3})(\d+)$/, '$1 $2 $3');
 const waHref = (text) => S().whatsapp ? `https://wa.me/${String(S().whatsapp).replace(/\D/g, '')}${text ? `?text=${encodeURIComponent(text)}` : ''}` : '#/contact';
 
 function availableVariants(product) { return (product.variants || []).filter((v) => !v.soldOut && validPrice(v.price)); }
+function conditionProduct(product, condition) {
+  if (!['new', 'used'].includes(condition)) return product;
+  const group = condition === 'new' ? 'new' : 'like-new';
+  return { ...product, conditionFilter: condition, variants: product.variants.filter((variant) => conditionGroup(variant.condition) === group) };
+}
+function startingVariant(product) {
+  return availableVariants(product).slice().sort((a, b) => toFils(a.price) - toFils(b.price))[0] || product.variants[0];
+}
 function defaultVariant(product) {
   const chosen = state.selected[product.id] && product.variants.find((v) => v.key === state.selected[product.id]);
   if (chosen) return chosen;
@@ -154,18 +166,21 @@ function priceTag(product) {
   return `<span class="price-tag">${several ? `<small>${esc(t('from'))}</small> ` : ''}<bdi>${esc(money(low))}</bdi></span>`;
 }
 function conditionChips(product) {
-  const set = [...new Set(availableVariants(product).map((v) => conditionGroup(v.condition)).filter(Boolean))];
-  return set.length ? `<span class="cond-chips">${set.map((c) => `<span class="cond-chip cond-${esc(c)}">${esc(L(conditionShort[c]))}</span>`).join('')}</span>` : '';
+  const condition = conditionGroup(startingVariant(product)?.condition);
+  return condition ? `<span class="cond-chips"><span class="cond-chip cond-${esc(condition)}">${esc(L(conditionShort[condition]))}</span></span>` : '';
 }
 function cardAction(product) {
   const avail = availableVariants(product);
   if (!avail.length) return `<span class="card-button is-disabled" aria-disabled="true">${esc(t('soldOut'))}</span>`;
   if (product.variants.length === 1) return `<button class="card-button" type="button" data-add="${esc(variantId(product.id, avail[0].key))}">${icon('bag')}<span>${esc(t('add'))}</span></button>`;
-  return `<a class="card-button is-outline" href="${productUrl(product)}">${esc(t('choose'))}</a>`;
+  return `<a class="card-button is-outline" href="${productUrl(product, startingVariant(product))}">${esc(t('choose'))}</a>`;
 }
 function productCard(product) {
+  const group = conditionGroup(startingVariant(product)?.condition);
+  if (group) product = conditionProduct(product, group === 'new' ? 'new' : 'used');
   const name = esc(L(product.name));
-  return `<article class="product-card" data-product="${esc(product.id)}"><div class="product-visual"><a class="product-image device-media" href="${productUrl(product)}" aria-label="${esc(`${t('view')}: ${L(product.name)}`)}">${media(product)}</a>${saveButton(product)}${product.offer ? `<span class="offer-badge">${esc(t('offers'))}</span>` : ''}</div><div class="product-body"><p class="product-brand" dir="ltr">${esc(product.brand)}</p><h3 class="product-name" dir="auto"><a href="${productUrl(product)}">${name}</a></h3><p class="product-caption">${esc(L(specification(product)?.specs[0]?.value))}</p>${conditionChips(product)}<div class="product-buy">${priceTag(product)}${cardAction(product)}</div></div></article>`;
+  const href = productUrl(product, startingVariant(product));
+  return `<article class="product-card" data-product="${esc(product.id)}"><div class="product-visual"><a class="product-image device-media" href="${href}" aria-label="${esc(`${t('view')}: ${L(product.name)}`)}">${media(product)}</a>${saveButton(product)}${product.offer ? `<span class="offer-badge">${esc(t('offers'))}</span>` : ''}</div><div class="product-body"><p class="product-brand" dir="ltr">${esc(product.brand)}</p><h3 class="product-name" dir="auto"><a href="${href}">${name}</a></h3><p class="product-caption">${esc(L(specification(product)?.specs[0]?.value))}</p>${conditionChips(product)}<div class="product-buy">${priceTag(product)}${cardAction(product)}</div></div></article>`;
 }
 function sectionHeading(title, href, label = t('allDevices'), eyebrow = '') {
   return `<div class="section-heading"><div>${eyebrow ? `<p class="eyebrow">${esc(eyebrow)}</p>` : ''}<h2>${esc(title)}</h2></div>${href ? `<a class="text-link" href="${esc(href)}">${esc(label)}${arrow}</a>` : ''}</div>`;
@@ -201,7 +216,7 @@ function heroShowcase() {
   const artwork = homePriority(product) ? '' : categoryArtwork(state.heroCategory, { eager: true });
   const title = artwork ? categoryName(state.heroCategory) : L(product.name);
   const caption = artwork ? `<span class="hero-price">${arrow}</span>` : low !== null ? `<span class="hero-price"><small>${esc(t('from'))}</small> <bdi>${esc(money(low))}</bdi></span>` : '';
-  return `<a class="hero-product" href="${artwork ? categoryUrl(state.heroCategory) : productUrl(product)}" aria-label="${esc(`${artwork ? t('browse') : t('view')}: ${title}`)}"><div class="device-media hero-device">${artwork || media(product, { eager: true })}</div><div class="hero-product-caption"><div><p class="product-brand" dir="ltr">${esc(artwork ? 'TRIO COLLECTION' : product.brand)}</p><p class="hero-product-name" dir="auto">${esc(title)}</p></div>${caption}</div></a><div class="hero-tabs" role="group" aria-label="${esc(t('heroChoose'))}">${homeCategoryIds().map((id) => `<button type="button" data-hero-category="${esc(id)}" aria-pressed="${id === state.heroCategory}">${esc(categoryName(id))}</button>`).join('')}</div>`;
+  return `<a class="hero-product" href="${artwork ? categoryUrl(state.heroCategory) : productUrl(product, startingVariant(product))}" aria-label="${esc(`${artwork ? t('browse') : t('view')}: ${title}`)}"><div class="device-media hero-device">${artwork || media(product, { eager: true })}</div><div class="hero-product-caption"><div><p class="product-brand" dir="ltr">${esc(artwork ? 'TRIO COLLECTION' : product.brand)}</p><p class="hero-product-name" dir="auto">${esc(title)}</p></div>${caption}</div></a><div class="hero-tabs" role="group" aria-label="${esc(t('heroChoose'))}">${homeCategoryIds().map((id) => `<button type="button" data-hero-category="${esc(id)}" aria-pressed="${id === state.heroCategory}">${esc(categoryName(id))}</button>`).join('')}</div>`;
 }
 function offersRow(list) {
   return `<div class="offer-row" data-scroller><div class="offer-track">${list.map((product) => `<div class="offer-slide">${productCard(product)}</div>`).join('')}</div><div class="row-controls" aria-hidden="true"><button type="button" class="row-button" data-scroll="-1" tabindex="-1">${icon('chevron')}</button><button type="button" class="row-button is-next" data-scroll="1" tabindex="-1">${icon('chevron')}</button></div></div>`;
@@ -209,7 +224,6 @@ function offersRow(list) {
 function renderHome() {
   const list = homeProducts();
   const offers = list.filter((p) => p.offer && availableVariants(p).length);
-  const featured = featuredFirst(list.filter((product) => product.featured));
   const cats = homeCategoryIds().map((id) => {
     const inCat = list.filter((p) => p.category === id);
     const rep = homeRepresentative(inCat);
@@ -219,10 +233,9 @@ function renderHome() {
   const trust = t('trust').map(([title, text], i) => `<li class="trust-item"><span class="trust-icon" aria-hidden="true">${icon(['search', 'box', 'heart', 'swap'][i])}</span><span><strong>${esc(title)}</strong><small>${esc(text)}</small></span></li>`).join('');
   return `<section class="hero"><div class="container hero-grid"><div class="hero-copy"><h1><span>${esc(t('heroLine1'))}</span> <span>${esc(t('heroLine2'))}</span></h1><form id="home-search-form" class="home-search" role="search">${icon('search')}<label class="sr-only" for="home-search">${esc(t('search'))}</label><input id="home-search" name="q" type="search" placeholder="${esc(t('searchPlaceholder'))}" autocomplete="off" enterkeyhint="search"></form><div class="hero-buttons"><a class="button button-dark" href="#/offers">${esc(t('heroOffers'))}${arrow}</a><a class="button button-outline" href="#/shop">${esc(t('browse'))}</a></div></div><div id="hero-showcase" class="hero-showcase">${heroShowcase()}</div></div></section>
   <div class="home-content">
-    ${offers.length ? `<section class="container offers-section">${sectionHeading(t('lookingFor'), '#/offers', t('offersAll'))}${offersRow(offers)}</section>` : ''}
+    <section class="container categories-section">${sectionHeading(t('lookingFor'), '#/shop')}<div class="category-grid">${cats}</div></section>
+    ${offers.length ? `<section class="container offers-section">${sectionHeading(t('offers'), '#/offers', t('offersAll'))}${offersRow(offers)}</section>` : ''}
     <section class="container"><ul class="trust-strip">${trust}</ul></section>
-    <section class="container categories-section">${sectionHeading(t('categories'), '#/shop')}<div class="category-grid">${cats}</div></section>
-    ${featured.length ? `<section class="container featured-section">${sectionHeading(t('featuredTitle'), '#/shop')}<div class="product-grid">${featured.map(productCard).join('')}</div></section>` : ''}
     <section class="container services-section"><div class="service-panel"><div><p class="eyebrow" dir="ltr">TRIO MOBILE</p><h2>${esc(t('servicesTitle'))}</h2><p>${esc(t('servicesText'))}</p></div><div class="service-actions"><a class="button button-primary" href="#/maintenance">${esc(t('repairCta'))}${arrow}</a><a class="button button-outline" href="#/trade-in">${esc(t('tradeCta'))}${arrow}</a></div></div></section>
     <section class="container story-section"><div class="story-panel"><a class="story-image" href="#/contact"><img src="assets/instagram/store.jpg" alt="${esc(state.language === 'ar' ? 'داخل محل تريو موبايل' : 'Inside Trio Mobile')}" width="1179" height="1572" loading="lazy"></a><div class="story-copy"><p class="eyebrow" dir="ltr">THIS IS TRIO.</p><h2>${esc(t('aboutTitle'))}</h2><p>${esc(t('aboutText'))}</p><a class="text-link" href="#/contact">${esc(t('contact'))}${arrow}</a></div></div></section>
 
@@ -239,11 +252,10 @@ function baseProducts() {
 }
 function filteredProducts() {
   const query = normalize(state.query);
-  const rows = baseProducts().filter((p) => {
+  const rows = baseProducts().map((product) => conditionProduct(product, state.cond)).filter((p) => {
     if (state.brand !== 'all' && p.brand !== state.brand) return false;
     if (state.cond !== 'all') {
-      const used = (v) => ['like-new', 'used', 'used-agency'].includes(v.condition);
-      if (!availableVariants(p).some((v) => (state.cond === 'used' ? used(v) : !used(v)))) return false;
+      if (!availableVariants(p).length) return false;
     }
     if (!query) return true;
     const hay = normalize([p.name.ar, p.name.en, p.brand, L(p.tagline), p.about?.ar, p.about?.en, categoryName(p.category), (p.variants || []).map((v) => v.storage).join(' '), p.brand === 'Apple' && /iphone/i.test(p.name.en) ? 'ايفون آيفون' : '', p.brand === 'Samsung' ? 'سامسونج جالكسي' : '', p.brand === 'Huawei' ? 'هواوي' : '', /macbook/i.test(p.name.en) ? 'ماك ماكبوك لابتوب' : '', /ipad/i.test(p.name.en) ? 'ايباد تابلت' : '', /watch/i.test(p.name.en) ? 'ساعه ساعة' : '', /airpods/i.test(p.name.en) ? 'ايربودز سماعه' : ''].join(' '));
@@ -323,8 +335,12 @@ function renderSpecifications(product, variant) {
   return `<section class="device-specs" id="device-specs"><h2>${esc(t('details'))}</h2><dl>${rows.map((row) => `<div class="device-spec-row"><dt>${esc(L(row.label))}</dt><dd dir="auto">${esc(L(row.value))}</dd></div>`).join('')}</dl></section>`;
 }
 function renderDetail(id) {
-  const product = products().find((p) => p.id === id);
-  if (!product) return `<div class="container page-shell"><div class="empty-state"><h1>${esc(t('notFound'))}</h1><p>${esc(t('notFoundText'))}</p><a class="button button-primary" href="#/shop">${esc(t('browse'))}</a></div></div>`;
+  const original = products().find((p) => p.id === id);
+  const requestedCondition = state.route.params?.get('cond');
+  const group = original && conditionGroup(defaultVariant(original)?.condition);
+  const condition = ['new', 'used'].includes(requestedCondition) ? requestedCondition : group === 'new' ? 'new' : group === 'like-new' ? 'used' : '';
+  const product = original && conditionProduct(original, condition);
+  if (!product?.variants.length) return `<div class="container page-shell"><div class="empty-state"><h1>${esc(t('notFound'))}</h1><p>${esc(t('notFoundText'))}</p><a class="button button-primary" href="#/shop">${esc(t('browse'))}</a></div></div>`;
   const variant = defaultVariant(product);
   const related = products().filter((p) => p.category === product.category && p.id !== product.id).slice(0, 4);
   const chips = product.variants.length > 1 ? `<fieldset class="variant-picker"><legend>${esc(t('options'))}</legend><div class="variant-list">${product.variants.map((v) => `<button type="button" class="variant-chip" data-variant="${esc(v.key)}" data-product-id="${esc(product.id)}" aria-pressed="${v.key === variant.key}"${v.soldOut ? ' disabled' : ''}><span class="variant-name" dir="auto">${esc(variantLabel(v, { short: true }) || L(product.name))}</span><span class="variant-price"><bdi>${esc(v.soldOut ? t('soldOut') : money(toFils(v.price)))}</bdi></span></button>`).join('')}</div></fieldset>` : '';
@@ -367,7 +383,7 @@ function addToBag(id) {
 }
 function bagLine(line) {
   const p = line.product; const v = line.variant;
-  return `<li class="bag-line"><a class="bag-thumb device-media" href="${productUrl(p)}">${media(p)}</a><div class="bag-info"><a class="bag-name" href="${productUrl(p)}" dir="auto">${esc(L(p.name))}</a><p class="bag-variant" dir="auto">${esc(variantLabel(v))}</p><div class="bag-row"><div class="qty" role="group" aria-label="${esc(t('qty'))}"><button type="button" data-qty="${esc(line.id)}" data-delta="-1" aria-label="−"${line.qty <= 1 ? ' disabled' : ''}>−</button><output>${line.qty}</output><button type="button" data-qty="${esc(line.id)}" data-delta="1" aria-label="+"${line.qty >= MAX_QTY ? ' disabled' : ''}>+</button></div><strong class="bag-price"><bdi>${esc(money(line.totalFils))}</bdi></strong></div><button type="button" class="bag-remove" data-remove="${esc(line.id)}">${esc(t('remove'))}</button></div></li>`;
+  return `<li class="bag-line"><a class="bag-thumb device-media" href="${productUrl(p, v)}">${media(p)}</a><div class="bag-info"><a class="bag-name" href="${productUrl(p, v)}" dir="auto">${esc(L(p.name))}</a><p class="bag-variant" dir="auto">${esc(variantLabel(v))}</p><div class="bag-row"><div class="qty" role="group" aria-label="${esc(t('qty'))}"><button type="button" data-qty="${esc(line.id)}" data-delta="-1" aria-label="−"${line.qty <= 1 ? ' disabled' : ''}>−</button><output>${line.qty}</output><button type="button" data-qty="${esc(line.id)}" data-delta="1" aria-label="+"${line.qty >= MAX_QTY ? ' disabled' : ''}>+</button></div><strong class="bag-price"><bdi>${esc(money(line.totalFils))}</bdi></strong></div><button type="button" class="bag-remove" data-remove="${esc(line.id)}">${esc(t('remove'))}</button></div></li>`;
 }
 function summary(priced, withButton) {
   return `<aside class="bag-summary"><dl><div><dt>${esc(t('subtotal'))}</dt><dd><bdi>${esc(money(priced.totalFils))}</bdi></dd></div><div><dt>${esc(t('delivery'))}</dt><dd>${esc(t(MODE === 'pages' ? 'demoDelivery' : 'deliveryValue'))}</dd></div><div class="is-total"><dt>${esc(t('total'))}</dt><dd><bdi>${esc(money(priced.totalFils))}</bdi></dd></div></dl><p class="summary-note">${esc(t('payCash'))}</p>${withButton ? `<a class="button button-primary button-wide" href="#/checkout">${esc(t('checkoutLive'))}${arrow}</a><a class="text-link" href="#/shop">${esc(t('keepShopping'))}</a>` : ''}</aside>`;
