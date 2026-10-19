@@ -1,6 +1,6 @@
 import { api, local, MODE, ApiError, withDefaults } from '../../src/store.js';
 import { forwardArrow } from '../../../shared/navigation.js';
-import { validPrice, toFils, formatJD, fromPrice, normaliseMobile } from '../../../shared/pricing.js';
+import { validPrice, toFils, formatJD, fromPrice, normaliseMobile, validStockQuantity, MAX_STOCK_QUANTITY } from '../../../shared/pricing.js';
 import { conditions, conditionGroup, conditionOptions, notes as noteLabels, warranties, orderStatuses, governorates } from '../../../shared/labels.js';
 import { pagesAdmin } from './pages-store.js';
 import deviceSpecifications from '../../../shared/device-specs.js';
@@ -33,6 +33,8 @@ const AR = {
   'Photo': 'الصورة', 'Upload photo': 'ارفع صورة', 'Use the shipped photo': 'رجّع الصورة الأصلية', 'Uploading…': 'عم نرفع…', 'Photo uploaded. Publish to show it.': 'انرفعت الصورة. انشر لتظهر.', 'Could not upload the photo.': 'ما قدرنا نرفع الصورة.',
   'A photo with a plain or transparent background looks best.': 'الصورة بخلفية سادة أو شفافة بتطلع أحلى.', 'Show in offers': 'يظهر بالعروض', 'Show on home page': 'يظهر بالرئيسية', 'Hide from the site': 'إخفاء عن الموقع',
   'Choose New or Used like new for each option.': 'اختر جديد أو مستعمل بحالة الجديد لكل خيار.', 'Option': 'الخيار',
+  'Out of stock': 'غير متوفر', 'Stock quantity (optional)': 'الكمية المتوفرة (اختياري)', 'Availability': 'التوفر', 'Not tracked': 'غير محددة',
+  'Leave blank for no stock limit. Enter 0 for out of stock.': 'اتركها فارغة بدون حد للمخزون. أدخل 0 إذا نفدت الكمية.', 'Update this quantity when your stock changes.': 'حدّث هذه الكمية عندما يتغير مخزونك.', 'has an invalid stock quantity': 'فيه كمية مخزون غير صحيحة',
   'Options and prices': 'الخيارات والأسعار', 'Storage / size': 'السعة / المقاس', 'Condition': 'الحالة', 'Warranty': 'الكفالة', 'Price (JD)': 'السعر (د.أ)', 'Sold out': 'نفد', 'Add option': 'أضف خيار', 'Remove': 'شيل',
   'Specs': 'مواصفات', 'Add line': 'أضف سطر', 'Arabic': 'عربي', 'English': 'إنجليزي', 'Instagram post link (optional)': 'رابط المنشور على إنستغرام (اختياري)', 'Done': 'تم', 'not stated': 'غير محددة', 'none': 'بدون',
   'Shop phone': 'رقم المحل', 'WhatsApp number (with 962)': 'رقم الواتساب (مع 962)', 'Instagram link': 'رابط إنستغرام', 'Facebook link': 'رابط فيسبوك', 'Map link': 'رابط الخريطة', 'Address (Arabic)': 'العنوان (عربي)', 'Address (English)': 'العنوان (إنجليزي)',
@@ -227,7 +229,8 @@ function editView() {
   const sel = (name, value, options) => `<select name="${name}">${options.map(([v, l]) => `<option value="${esc(v)}"${v === value ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   const warOpts = Object.keys(warranties).map((k) => [k, k ? L(warranties[k]) : t('none')]);
   const optionsSection = `<section class="card device-options"><h2>${esc(t('Options and prices'))}</h2><p class="muted condition-help">${esc(t('Choose New or Used like new for each option.'))}</p><div class="variants">${p.variants.map((v, i) => `<div class="variant"><fieldset class="condition-choice"><legend>${esc(t('Condition'))} · ${esc(t('Option'))} ${i + 1}</legend><div class="condition-options">${Object.entries(conditionOptions).map(([key, label]) => `<label class="condition-option"><input type="radio" name="v.${i}.condition" value="${key}"${conditionGroup(v.condition) === key ? ' checked' : ''}><span>${esc(L(label))}</span></label>`).join('')}</div></fieldset><label class="f"><span>${esc(t('Storage / size'))}</span><input name="v.${i}.storage" value="${esc(v.storage)}" dir="ltr"></label><label class="f"><span>${esc(t('Warranty'))}</span>${sel(`v.${i}.warranty`, v.warranty || '', warOpts)}</label><label class="f price"><span>${esc(t('Price (JD)'))}</span><input name="v.${i}.price" type="number" inputmode="decimal" min="0.001" step="0.001" value="${esc(v.price ?? '')}" dir="ltr"${validPrice(v.price) ? '' : ' aria-invalid="true"'}></label>
-  <div class="checks small">${Object.keys(noteLabels).map((n) => `<label><input type="checkbox" name="v.${i}.note.${n}"${(v.notes || []).includes(n) ? ' checked' : ''}> ${esc(L(noteLabels[n]))}</label>`).join('')}<label><input type="checkbox" name="v.${i}.soldOut"${v.soldOut ? ' checked' : ''}> ${esc(t('Sold out'))}</label></div><button type="button" class="btn ghost small" data-remove-variant="${i}"${p.variants.length < 2 ? ' disabled' : ''}>${esc(t('Remove'))}</button></div>`).join('')}</div><button type="button" class="btn small" data-add-variant>${esc(t('Add option'))}</button></section>`;
+  <div class="stock-fields"><fieldset class="stock-status"><legend>${esc(t('Availability'))}</legend><label class="stock-toggle"><input type="checkbox" name="v.${i}.soldOut"${v.soldOut ? ' checked' : ''}><span>${esc(t('Out of stock'))}</span></label></fieldset><label class="f stock-quantity"><span>${esc(t('Stock quantity (optional)'))}</span><input name="v.${i}.stockQuantity" type="number" inputmode="numeric" min="0" max="${MAX_STOCK_QUANTITY}" step="1" placeholder="${esc(t('Not tracked'))}" value="${esc(v.stockQuantity ?? '')}" dir="ltr"${validStockQuantity(v.stockQuantity) ? '' : ' aria-invalid="true"'}><small>${esc(t('Leave blank for no stock limit. Enter 0 for out of stock.'))} ${esc(t('Update this quantity when your stock changes.'))}</small></label></div>
+  <div class="checks small">${Object.keys(noteLabels).map((n) => `<label><input type="checkbox" name="v.${i}.note.${n}"${(v.notes || []).includes(n) ? ' checked' : ''}> ${esc(L(noteLabels[n]))}</label>`).join('')}</div><button type="button" class="btn ghost small" data-remove-variant="${i}"${p.variants.length < 2 ? ' disabled' : ''}>${esc(t('Remove'))}</button></div>`).join('')}</div><button type="button" class="btn small" data-add-variant>${esc(t('Add option'))}</button></section>`;
   return `<div class="head"><button type="button" class="btn ghost small" data-close-edit>← ${esc(t('Done'))}</button><h1 dir="auto">${esc(L(p.name) || t('Add device'))}</h1><div class="btns"><button type="button" class="btn ghost small" data-duplicate>${esc(t('Duplicate'))}</button><button type="button" class="btn danger small" data-delete>${esc(t('Delete'))}</button></div></div>
   <form id="device-form" class="edit" autocomplete="off">${optionsSection}<div class="grid2"><section class="card"><div class="grid2 tight">${field('Name (Arabic)', 'name.ar', p.name.ar, { dir: 'auto' })}${field('Name (English)', 'name.en', p.name.en, { dir: 'ltr' })}${field('Brand', 'brand', p.brand, { dir: 'ltr' })}<label class="f"><span>${esc(t('Category'))}</span>${sel('category', p.category, state.draft.categories.map((c) => [c.id, L(c.name)]))}</label></div>
   ${USE_TECHNICAL ? `${field('Summary (Arabic)', 'technical.summary.ar', p.technical?.summary?.ar || '', { type: 'textarea', dir: 'rtl', attrs: 'maxlength="1200"' })}${field('Summary (English)', 'technical.summary.en', p.technical?.summary?.en || '', { type: 'textarea', dir: 'ltr', attrs: 'maxlength="1200"' })}` : `${field('Short line (Arabic)', 'tagline.ar', p.tagline?.ar || '')}${field('Short line (English)', 'tagline.en', p.tagline?.en || '', { dir: 'ltr' })}${field('About (Arabic)', 'about.ar', p.about?.ar || '', { type: 'textarea' })}${field('About (English)', 'about.en', p.about?.en || '', { type: 'textarea', dir: 'ltr' })}`}
@@ -264,7 +267,11 @@ function readDeviceForm(form) {
   if (p._new && p.name.en) { const others = new Set(state.draft.products.filter((x) => x !== p).map((x) => x.id)); let id = slugify(p.name.en); let n = 2; const base = id; while (others.has(id)) id = `${base}-${n++}`; p.id = id; }
   p.variants = p.variants.map((v, i) => {
     const price = get(`v.${i}.price`).value.trim();
-    return { ...v, storage: get(`v.${i}.storage`).value.trim(), condition: get(`v.${i}.condition`).value, warranty: get(`v.${i}.warranty`).value, price: price === '' ? null : Math.round(Number(price) * 1000) / 1000, soldOut: get(`v.${i}.soldOut`).checked, notes: Object.keys(noteLabels).filter((n) => get(`v.${i}.note.${n}`).checked) };
+    const quantity = get(`v.${i}.stockQuantity`).value.trim();
+    const parsedQuantity = quantity === '' ? null : Number(quantity);
+    const stockQuantity = validStockQuantity(parsedQuantity) ? parsedQuantity : quantity;
+    get(`v.${i}.stockQuantity`).setAttribute('aria-invalid', String(!validStockQuantity(stockQuantity)));
+    return { ...v, storage: get(`v.${i}.storage`).value.trim(), condition: get(`v.${i}.condition`).value, warranty: get(`v.${i}.warranty`).value, price: price === '' ? null : Math.round(Number(price) * 1000) / 1000, soldOut: get(`v.${i}.soldOut`).checked, stockQuantity, notes: Object.keys(noteLabels).filter((n) => get(`v.${i}.note.${n}`).checked) };
   });
   saveDraft();
 }
@@ -308,6 +315,7 @@ function validate(c) {
     if (!p.name.ar || !p.name.en) problems.push(`${name}: ${t('needs an Arabic and English name')}`);
     if (!cats.has(p.category)) problems.push(`${name}: ${t('has an unknown category')}`);
     if (!p.variants.length) problems.push(`${name}: ${t('needs at least one option')}`);
+    if (p.variants.some((v) => !validStockQuantity(v.stockQuantity))) problems.push(`${name}: ${t('has an invalid stock quantity')}`);
     if (p.variants.some((v) => !validPrice(v.price))) problems.push(`${name}: ${t('has an option without a valid price')}`);
     if (new Set(p.variants.map((v) => v.key)).size !== p.variants.length) problems.push(`${name}: ${t('has two options with the same code')}`);
   }

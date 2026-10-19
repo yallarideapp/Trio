@@ -8,7 +8,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { build } from 'esbuild';
 import seed from '../shared/catalog.js';
-import { MAX_LINES, MAX_QTY, priceLines } from '../shared/pricing.js';
+import { MAX_LINES, MAX_QTY, MAX_STOCK_QUANTITY, priceLines } from '../shared/pricing.js';
 
 class SQLiteD1 {
   constructor(file) { this.connection = new DatabaseSync(file); }
@@ -104,11 +104,30 @@ export async function verifyWorkerOrders() {
     const secondCookie = login.headers.get('Set-Cookie').split(';')[0];
     const published = structuredClone(seed);
     published.settings.ordersOn = true;
+    published.products.find((product) => product.id === 'airtag').variants[0].stockQuantity = 2;
+    published.products[1].variants[0].stockQuantity = 0;
+    published.products[1].variants[0].soldOut = false;
+    published.products[2].variants[0].stockQuantity = MAX_STOCK_QUANTITY;
+    published.products[2].variants[0].soldOut = true;
+    for (const quantity of [-1, 1.5, '2', MAX_STOCK_QUANTITY + 1]) {
+      const invalidStock = structuredClone(published);
+      invalidStock.products[0].variants[0].stockQuantity = quantity;
+      const invalidPublish = await send('PUT', '/api/admin/content', { baseVersion: 0, content: invalidStock }, { cookie });
+      expectError(invalidPublish, 400, 'bad-content');
+      assert.equal(invalidPublish.data.field, 'stock-quantity');
+      assert.equal(count('content'), 0, 'invalid stock cannot publish or advance the catalog version');
+    }
     const publish = await send('PUT', '/api/admin/content', { baseVersion: 0, content: published }, { cookie });
     assert.deepEqual(publish.data, { ok: true, version: 1 });
     const publicCatalog = await send('GET', '/api/content');
     assert.equal(publicCatalog.status, 200);
     assert.equal(publicCatalog.data.content.settings.ordersOn, true, 'online ordering becomes available only after publishing it');
+    assert.equal(publicCatalog.data.content.products.find((product) => product.id === 'airtag').variants[0].stockQuantity, 2, 'published content retains a numeric stock limit');
+    assert.equal(publicCatalog.data.content.products[0].variants[0].stockQuantity, null, 'legacy options publish with an absent quantity');
+    assert.equal(publicCatalog.data.content.products[1].variants[0].stockQuantity, 0, 'publishing preserves zero quantity');
+    assert.equal(publicCatalog.data.content.products[1].variants[0].soldOut, false, 'zero quantity does not rewrite the manual availability flag');
+    assert.equal(publicCatalog.data.content.products[2].variants[0].stockQuantity, MAX_STOCK_QUANTITY, 'publishing retains the supported maximum quantity');
+    assert.equal(publicCatalog.data.content.products[2].variants[0].soldOut, true, 'positive stock does not clear a manual out-of-stock flag');
 
     const firstBody = orderBody();
     const first = await send('POST', '/api/order', firstBody);
@@ -176,6 +195,8 @@ export async function verifyWorkerOrders() {
       [400, 'duplicate', (body) => { body.lines.push(structuredClone(body.lines[0])); }],
       [400, 'too-many-lines', (body) => { body.lines = Array.from({ length: MAX_LINES + 1 }, () => structuredClone(body.lines[0])); }],
       [409, 'unknown', (body) => { body.lines[0].id = 'unknown:option'; }],
+      [409, 'stock-limit', (body) => { body.lines[0].qty = 3; }],
+      [409, 'sold-out', (body) => { body.lines[0].id = `${published.products[1].id}:${published.products[1].variants[0].key}`; }],
       [409, 'price-changed', (body) => { body.totalFils--; }],
     ];
     for (const [status, error, mutate, options] of invalid) {

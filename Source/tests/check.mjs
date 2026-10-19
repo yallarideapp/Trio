@@ -11,7 +11,7 @@ import { verifyPagesEditor } from './pages-editor.mjs';
 import { verifyWorkerOrders } from './worker-orders.mjs';
 import { verifyCustomerAccountUI } from './customer-account-ui.mjs';
 import { verifyBrowserShop } from './browser-shop.mjs';
-import { priceLines, normaliseMobile, fromPrice, toFils, validPrice, MAX_QTY, MAX_LINES } from '../shared/pricing.js';
+import { priceLines, normaliseMobile, fromPrice, toFils, validPrice, MAX_QTY, MAX_LINES, validStockQuantity, variantQuantityLimit, MAX_STOCK_QUANTITY } from '../shared/pricing.js';
 import { conditions, notes, warranties } from '../shared/labels.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -48,6 +48,19 @@ ok(priceLines(seed, [{ id: 'airtag:nope', qty: 1 }]).error === 'unknown', 'unkno
 ok(priceLines(seed, Array.from({ length: MAX_LINES + 1 }, (_, i) => ({ id: `x:${i}`, qty: 1 }))).error === 'too-many-lines', 'line cap');
 ok(priceLines(seed, []).error === 'empty', 'empty bag');
 ok(fromPrice(seed.products.find((p) => p.id === 'iphone-17-pro-max')) === 789000, 'from-price is the cheapest option');
+for (const quantity of [undefined, null, 0, 1, MAX_STOCK_QUANTITY]) ok(validStockQuantity(quantity), 'valid optional stock quantity');
+for (const quantity of [-1, 0.5, '2', '', false, Infinity, NaN, MAX_STOCK_QUANTITY + 1]) ok(!validStockQuantity(quantity), 'invalid optional stock quantity');
+const stocked = structuredClone(seed);
+const stockVariant = stocked.products.find((p) => p.id === 'airtag').variants[0];
+stockVariant.stockQuantity = 2;
+ok(priceLines(stocked, [{ id: 'airtag:one', qty: 2 }]).ok, 'order can use the configured stock quantity');
+ok(priceLines(stocked, [{ id: 'airtag:one', qty: 3 }]).error === 'stock-limit', 'order cannot exceed stock');
+stockVariant.stockQuantity = 0;
+ok(priceLines(stocked, [{ id: 'airtag:one', qty: 1 }]).error === 'sold-out', 'zero quantity is out of stock');
+stockVariant.stockQuantity = null;
+ok(variantQuantityLimit(stockVariant) === MAX_QTY && priceLines(stocked, [{ id: 'airtag:one', qty: MAX_QTY }]).ok, 'blank quantity retains the standard order limit');
+stockVariant.soldOut = true;
+ok(variantQuantityLimit(stockVariant) === 0 && fromPrice(stocked.products.find((p) => p.id === 'airtag')) === null, 'manual out of stock overrides an untracked quantity');
 ok(toFils(0.1 + 0.2) === 300, 'fils rounding');
 // randomised: total equals the sum of unit × qty
 for (let i = 0; i < 2000; i++) {

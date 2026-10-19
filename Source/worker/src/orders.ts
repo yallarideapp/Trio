@@ -26,7 +26,7 @@ export async function placeOrder(request: Request, env: Env, ctx: ExecutionConte
   if (existing) return json({ number: existing.number, totalFils: existing.total_fils });
 
   const priced = priceLines(content, body.lines);
-  if (!priced.ok) throw new HttpError(priced.error === 'sold-out' || priced.error === 'unknown' ? 409 : 400, priced.error, priced.id ? { id: priced.id } : {});
+  if (!priced.ok) throw new HttpError(['sold-out', 'unknown', 'stock-limit'].includes(priced.error) ? 409 : 400, priced.error, priced.id ? { id: priced.id } : {});
   if (!Number.isInteger(body.totalFils) || body.totalFils !== priced.totalFils) throw new HttpError(409, 'price-changed');
 
   const c = body.customer || {};

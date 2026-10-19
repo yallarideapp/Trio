@@ -1,7 +1,7 @@
 import deviceSpecifications from '../../shared/device-specs.js';
 import { api, local, MODE, ApiError } from './store.js';
 import { renderAccount, loadAccount, bindAccount, accountLabel, customerProfile } from './account.js';
-import { priceLines, fromPrice, formatJD, toFils, variantId, splitVariantId, visibleProducts, normaliseMobile, MAX_QTY, MAX_LINES, validPrice } from '../../shared/pricing.js';
+import { priceLines, fromPrice, formatJD, toFils, variantId, splitVariantId, visibleProducts, normaliseMobile, MAX_QTY, MAX_LINES, validPrice, variantQuantityLimit } from '../../shared/pricing.js';
 import { conditions, conditionShort, conditionGroup, notes as noteLabels, warranties, governorates } from '../../shared/labels.js';
 import { forwardArrow } from '../../shared/navigation.js';
 
@@ -20,7 +20,7 @@ const words = {
     title: 'TRIO Mobile | تريو موبايل', home: 'الرئيسية', shop: 'الأجهزة', offers: 'العروض', saved: 'المفضلة', bag: 'السلة',
     maintenance: 'الصيانة', tradein: 'التبديل', contact: 'زورونا', switchLang: 'Switch to English', menuOpen: 'فتح القائمة', menuClose: 'إغلاق القائمة',
     heroLine1: 'إحنا اللعبة', heroLine2: 'الجديدة.', heroOffers: 'شوف عروض تريو', browse: 'تصفّح الأجهزة', heroChoose: 'اختار نوع الجهاز',
-    from: 'من', view: 'شوف الجهاز', choose: 'اختار السعة', add: 'أضف للسلة', added: 'انضاف للسلة', soldOut: 'نفد', unavailable: 'غير متوفر حالياً',
+    from: 'من', view: 'شوف الجهاز', choose: 'اختار السعة', add: 'أضف للسلة', added: 'انضاف للسلة', soldOut: 'غير متوفر', unavailable: 'غير متوفر حالياً',
     save: 'حفظ الجهاز', unsave: 'إلغاء الحفظ', savedNow: 'انحفظ بالمفضلة.', unsavedNow: 'انشال من المفضلة.',
     lookingFor: 'شو عم تدوّر عليه؟', categories: 'تسوّق حسب القسم', allDevices: 'شوف كل الأجهزة', offersAll: 'كل العروض',
     count: (n) => n === 2 ? 'جهازين' : `${n} ${n === 1 ? 'جهاز' : n <= 10 ? 'أجهزة' : 'جهاز'}`,
@@ -32,11 +32,12 @@ const words = {
     priceLow: 'السعر: من الأقل', priceHigh: 'السعر: من الأعلى', nameSort: 'حسب الاسم', condAll: 'كل الحالات', condNew: 'جديد', condUsed: 'مستعمل بحالة الجديد',
     filters: 'فلترة وترتيب', clear: 'امسح البحث والفلاتر', noResults: 'ما لقينا أجهزة بهالبحث.', noResultsText: 'جرّب كلمة ثانية أو امسح الفلاتر.',
     savedIntro: 'الأجهزة اللي عجبتك، كلها بمكان واحد.', noSaved: 'لسه ما حفظت أجهزة.', noSavedText: 'اضغط القلب على أي جهاز ليرجع يظهر هون.',
+    stockLabel: 'الكمية المتوفرة', quantityLimit: 'وصلت للحد المسموح لهذا الخيار.',
     details: 'المواصفات التقنية', configuration: 'التهيئة', condition: 'الحالة', warranty: 'الكفالة', options: 'الخيارات', related: 'من نفس القسم', backCategory: 'كل أجهزة القسم',
     askWhatsapp: 'اسأل على واتساب', call: 'اتصل بتريو', ask: 'اسألنا على إنستغرام', source: 'شوف المنشور على إنستغرام', imageCard: 'صورة الجهاز قريباً',
     notFound: 'الجهاز مش موجود بهالقائمة.', notFoundText: 'ارجع للأجهزة لتشوف تشكيلة تريو.',
     bagTitle: 'السلة', bagEmpty: 'السلة فاضية.', bagEmptyText: 'اختار جهاز وأضفه للسلة.', remove: 'شيل', qty: 'العدد', subtotal: 'المجموع', delivery: 'التوصيل', deliveryValue: 'نأكده معك بالاتصال',
-    total: 'المجموع', bagFull: 'السلة فيها أكبر عدد أجهزة لطلب واحد.', checkout: 'أكمل الطلب', checkoutLive: 'أكمل الطلب', keepShopping: 'كمّل تسوّق', bagFixed: 'في جهاز بالسلة صار غير متوفر وانشال.',
+    total: 'المجموع', bagFull: 'السلة فيها أكبر عدد أجهزة لطلب واحد.', checkout: 'أكمل الطلب', checkoutLive: 'أكمل الطلب', keepShopping: 'كمّل تسوّق', bagFixed: 'تحدّثت السلة حسب الكميات المتوفرة.',
     checkoutTitle: 'تفاصيل الطلب', checkoutIntro: 'أكمل بيانات التواصل والاستلام.', name: 'الاسم', mobile: 'رقم الموبايل', mobileHint: 'مثال: 0791234567', fulfilment: 'الاستلام', deliveryOpt: 'توصيل', pickupOpt: 'استلام من المحل',
     governorate: 'المحافظة', address: 'العنوان', addressHint: 'المنطقة، الشارع، أقرب معلم', notes: 'ملاحظات (اختياري)', placeOrder: 'تأكيد الطلب', sending: 'عم نرسل…',
     payCash: 'راجع الأجهزة والخيارات اللي اخترتها قبل إكمال الطلب.', privacy: 'نستخدم اسمك ورقمك وعنوانك بس لتأكيد الطلب وتوصيله.', ordersOff: 'لإكمال تفاصيل طلبك، انتقل لصفحة زورونا.',
@@ -57,7 +58,7 @@ const words = {
     title: 'TRIO Mobile | Amman', home: 'Home', shop: 'Devices', offers: 'Offers', saved: 'Saved', bag: 'Bag',
     maintenance: 'Repair', tradein: 'Trade in', contact: 'Visit us', switchLang: 'التبديل إلى العربية', menuOpen: 'Open menu', menuClose: 'Close menu',
     heroLine1: 'A whole', heroLine2: 'new game.', heroOffers: 'Explore Trio offers', browse: 'Browse devices', heroChoose: 'Choose a device type',
-    from: 'from', view: 'View device', choose: 'Choose option', add: 'Add to bag', added: 'Added to bag', soldOut: 'Sold out', unavailable: 'Not available right now',
+    from: 'from', view: 'View device', choose: 'Choose option', add: 'Add to bag', added: 'Added to bag', soldOut: 'Out of stock', unavailable: 'Not available right now',
     save: 'Save device', unsave: 'Remove from saved', savedNow: 'Saved.', unsavedNow: 'Removed from saved.',
     lookingFor: 'What are you looking for?', categories: 'Shop by category', allDevices: 'View all devices', offersAll: 'All offers',
     count: (n) => `${n} ${n === 1 ? 'device' : 'devices'}`,
@@ -69,11 +70,12 @@ const words = {
     priceLow: 'Price: low to high', priceHigh: 'Price: high to low', nameSort: 'Name A–Z', condAll: 'Any condition', condNew: 'New', condUsed: 'Used like new',
     filters: 'Filters', clear: 'Clear search and filters', noResults: 'No devices match this search.', noResultsText: 'Try another word or clear the filters.',
     savedIntro: 'The devices you like, all in one place.', noSaved: 'Nothing saved yet.', noSavedText: 'Tap the heart on a device to save it here.',
+    stockLabel: 'Available quantity', quantityLimit: 'You have reached the quantity limit for this option.',
     details: 'Technical specifications', configuration: 'Configuration', condition: 'Condition', warranty: 'Warranty', options: 'Options', related: 'More in this category', backCategory: 'Back to category',
     askWhatsapp: 'Ask on WhatsApp', call: 'Call Trio', ask: 'Ask us on Instagram', source: 'See the post on Instagram', imageCard: 'Photo coming soon',
     notFound: 'This device is not in the collection.', notFoundText: 'Browse devices to explore Trio’s collection.',
     bagTitle: 'Your bag', bagEmpty: 'Your bag is empty.', bagEmptyText: 'Pick a device and add it to your bag.', remove: 'Remove', qty: 'Qty', subtotal: 'Subtotal', delivery: 'Delivery', deliveryValue: 'Confirmed by phone',
-    total: 'Total', bagFull: 'Your bag holds the most devices one order can take.', checkout: 'Checkout', checkoutLive: 'Checkout', keepShopping: 'Keep shopping', bagFixed: 'A device in your bag is no longer available and was removed.',
+    total: 'Total', bagFull: 'Your bag holds the most devices one order can take.', checkout: 'Checkout', checkoutLive: 'Checkout', keepShopping: 'Keep shopping', bagFixed: 'Your bag was updated to match current stock.',
     checkoutTitle: 'Order details', checkoutIntro: 'Complete your contact and collection details.', name: 'Name', mobile: 'Mobile number', mobileHint: 'e.g. 0791234567', fulfilment: 'Delivery or pickup', deliveryOpt: 'Delivery', pickupOpt: 'Pick up in store',
     governorate: 'Governorate', address: 'Address', addressHint: 'Area, street, nearest landmark', notes: 'Notes (optional)', placeOrder: 'Place order', sending: 'Sending…',
     payCash: 'Review your selected devices and configurations before continuing.', privacy: 'We use your name, number and address only to confirm and deliver your order.', ordersOff: 'Continue to Visit us to complete your request.',
@@ -94,6 +96,8 @@ const words = {
 
 Object.assign(words.ar.errors, { 'storage-full': 'مساحة المتصفح غير كافية لحفظ الطلب.', 'storage-unavailable': 'تخزين المتصفح غير متاح. فعّله وحاول مجدداً.', 'storage-invalid': 'تعذّر قراءة بيانات العرض المحفوظة في هذا المتصفح.', 'orders-full': 'وصل سجل العرض إلى الحد الأقصى من الطلبات.', 'token-conflict': 'تغيّر الحساب أو تفاصيل الطلب. راجع البيانات وحاول مجدداً.', 'signed-out': 'تغيّرت جلسة الحساب. راجع بياناتك وحاول مجدداً.', generic: 'تعذّر حفظ الطلب. حاول مجدداً.' });
 Object.assign(words.en.errors, { 'storage-full': 'Your browser does not have enough space to save the order.', 'storage-unavailable': 'Browser storage is unavailable. Enable it and try again.', 'storage-invalid': 'Could not read the saved demo data in this browser.', 'orders-full': 'The demo order history is full.', 'token-conflict': 'Your account or order details changed. Review checkout and try again.', 'signed-out': 'Your account session changed. Review checkout and try again.', generic: 'Could not save your order. Please try again.' });
+words.ar.errors['stock-limit'] = 'الكمية المطلوبة أكبر من المخزون المتوفر. راجع السلة.';
+words.en.errors['stock-limit'] = 'The quantity exceeds current stock. Review your bag.';
 const t = (key) => words[state.language][key];
 const L = (value) => (value && typeof value === 'object' ? value[state.language] || value.ar || value.en || '' : String(value || ''));
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -125,7 +129,7 @@ const phoneHref = () => { const phone = normaliseMobile(S().phone); return phone
 const phoneText = () => (normaliseMobile(S().phone) || String(S().phone || '')).replace(/^(\d{4})(\d{3})(\d+)$/, '$1 $2 $3');
 const waHref = (text) => S().whatsapp ? `https://wa.me/${String(S().whatsapp).replace(/\D/g, '')}${text ? `?text=${encodeURIComponent(text)}` : ''}` : '#/contact';
 
-function availableVariants(product) { return (product.variants || []).filter((v) => !v.soldOut && validPrice(v.price)); }
+function availableVariants(product) { return (product.variants || []).filter((v) => variantQuantityLimit(v) > 0 && validPrice(v.price)); }
 function conditionProduct(product, condition) {
   if (!['new', 'used'].includes(condition)) return product;
   const group = condition === 'new' ? 'new' : 'like-new';
@@ -215,7 +219,7 @@ function heroShowcase() {
   const low = fromPrice(product);
   const artwork = homePriority(product) ? '' : categoryArtwork(state.heroCategory, { eager: true });
   const title = artwork ? categoryName(state.heroCategory) : L(product.name);
-  const caption = artwork ? `<span class="hero-price">${arrow}</span>` : low !== null ? `<span class="hero-price"><small>${esc(t('from'))}</small> <bdi>${esc(money(low))}</bdi></span>` : '';
+  const caption = artwork ? `<span class="hero-price">${arrow}</span>` : low !== null ? `<span class="hero-price"><small>${esc(t('from'))}</small> <bdi>${esc(money(low))}</bdi></span>` : `<span class="hero-price">${esc(t('soldOut'))}</span>`;
   return `<a class="hero-product" href="${artwork ? categoryUrl(state.heroCategory) : productUrl(product, startingVariant(product))}" aria-label="${esc(`${artwork ? t('browse') : t('view')}: ${title}`)}"><div class="device-media hero-device">${artwork || media(product, { eager: true })}</div><div class="hero-product-caption"><div><p class="product-brand" dir="ltr">${esc(artwork ? 'TRIO COLLECTION' : product.brand)}</p><p class="hero-product-name" dir="auto">${esc(title)}</p></div>${caption}</div></a><div class="hero-tabs" role="group" aria-label="${esc(t('heroChoose'))}">${homeCategoryIds().map((id) => `<button type="button" data-hero-category="${esc(id)}" aria-pressed="${id === state.heroCategory}">${esc(categoryName(id))}</button>`).join('')}</div>`;
 }
 function offersRow(list) {
@@ -223,7 +227,7 @@ function offersRow(list) {
 }
 function renderHome() {
   const list = homeProducts();
-  const offers = list.filter((p) => p.offer && availableVariants(p).length);
+  const offers = list.filter((p) => p.offer);
   const cats = homeCategoryIds().map((id) => {
     const inCat = list.filter((p) => p.category === id);
     const rep = homeRepresentative(inCat);
@@ -255,7 +259,7 @@ function filteredProducts() {
   const rows = baseProducts().map((product) => conditionProduct(product, state.cond)).filter((p) => {
     if (state.brand !== 'all' && p.brand !== state.brand) return false;
     if (state.cond !== 'all') {
-      if (!availableVariants(p).length) return false;
+      if (!p.variants.length) return false;
     }
     if (!query) return true;
     const hay = normalize([p.name.ar, p.name.en, p.brand, L(p.tagline), p.about?.ar, p.about?.en, categoryName(p.category), (p.variants || []).map((v) => v.storage).join(' '), p.brand === 'Apple' && /iphone/i.test(p.name.en) ? 'ايفون آيفون' : '', p.brand === 'Samsung' ? 'سامسونج جالكسي' : '', p.brand === 'Huawei' ? 'هواوي' : '', /macbook/i.test(p.name.en) ? 'ماك ماكبوك لابتوب' : '', /ipad/i.test(p.name.en) ? 'ايباد تابلت' : '', /watch/i.test(p.name.en) ? 'ساعه ساعة' : '', /airpods/i.test(p.name.en) ? 'ايربودز سماعه' : ''].join(' '));
@@ -324,6 +328,7 @@ function updateResults() {
 // ---------- product ----------
 function variantNotes(variant) {
   const rows = [];
+  if (variant.stockQuantity !== null && variant.stockQuantity !== undefined && variantQuantityLimit(variant) > 0) rows.push([t('stockLabel'), num(variant.stockQuantity)]);
   if (variant.condition) rows.push([t('condition'), L(conditions[variant.condition])]);
   for (const n of variant.notes || []) if (noteLabels[n]) rows.push(['', L(noteLabels[n])]);
   if (variant.warranty && warranties[variant.warranty]) rows.push([t('warranty'), L(warranties[variant.warranty])]);
@@ -343,9 +348,9 @@ function renderDetail(id) {
   if (!product?.variants.length) return `<div class="container page-shell"><div class="empty-state"><h1>${esc(t('notFound'))}</h1><p>${esc(t('notFoundText'))}</p><a class="button button-primary" href="#/shop">${esc(t('browse'))}</a></div></div>`;
   const variant = defaultVariant(product);
   const related = products().filter((p) => p.category === product.category && p.id !== product.id).slice(0, 4);
-  const chips = product.variants.length > 1 ? `<fieldset class="variant-picker"><legend>${esc(t('options'))}</legend><div class="variant-list">${product.variants.map((v) => `<button type="button" class="variant-chip" data-variant="${esc(v.key)}" data-product-id="${esc(product.id)}" aria-pressed="${v.key === variant.key}"${v.soldOut ? ' disabled' : ''}><span class="variant-name" dir="auto">${esc(variantLabel(v, { short: true }) || L(product.name))}</span><span class="variant-price"><bdi>${esc(v.soldOut ? t('soldOut') : money(toFils(v.price)))}</bdi></span></button>`).join('')}</div></fieldset>` : '';
+  const chips = product.variants.length > 1 ? `<fieldset class="variant-picker"><legend>${esc(t('options'))}</legend><div class="variant-list">${product.variants.map((v) => `<button type="button" class="variant-chip" data-variant="${esc(v.key)}" data-product-id="${esc(product.id)}" aria-pressed="${v.key === variant.key}"${variantQuantityLimit(v) === 0 ? ' disabled' : ''}><span class="variant-name" dir="auto">${esc(variantLabel(v, { short: true }) || L(product.name))}</span><span class="variant-price"><bdi>${esc(variantQuantityLimit(v) === 0 ? t('soldOut') : money(toFils(v.price)))}</bdi></span></button>`).join('')}</div></fieldset>` : '';
   const rows = variantNotes(variant).map(([label, value]) => `<li>${label ? `<span>${esc(label)}</span>` : ''}<strong dir="auto">${esc(value)}</strong></li>`).join('');
-  const canBuy = !variant.soldOut && validPrice(variant.price);
+  const canBuy = variantQuantityLimit(variant) > 0 && validPrice(variant.price);
   return `<div class="container page-shell product-page"><nav class="breadcrumbs" aria-label="${esc(state.language === 'ar' ? 'مسار التصفح' : 'Breadcrumb')}"><a href="#/">${esc(t('home'))}</a><span aria-hidden="true">/</span><a href="${categoryUrl(product.category)}">${esc(categoryName(product.category))}</a><span aria-hidden="true">/</span><span dir="auto">${esc(L(product.name))}</span></nav>
   <div class="product-detail"><div class="detail-visual"><div class="detail-image device-media">${media(product, { eager: true })}</div>${product.imageNote && !product.photo ? `<p class="detail-photo-note">${esc(L(product.imageNote))}</p>` : ''}</div>
   <div class="detail-copy"><div class="detail-top"><div><p class="product-brand" dir="ltr">${esc(product.brand)}</p><h1 dir="auto">${esc(L(product.name))}</h1></div>${saveButton(product, 'detail-save-button')}</div><p class="detail-tagline">${esc(L(specification(product)?.summary))}</p>
@@ -364,9 +369,15 @@ function loadBag() {
 }
 function saveBag() { local.write(visitorKey('bag'), state.bag); updateCounts(); }
 function cleanBag() {
-  const before = state.bag.length;
-  state.bag = state.bag.filter((l) => { const [pid, key] = splitVariantId(l.id); const p = products().find((x) => x.id === pid); const v = p && p.variants.find((x) => x.key === key); return v && !v.soldOut && validPrice(v.price); });
-  if (state.bag.length !== before) { saveBag(); return true; }
+  const before = JSON.stringify(state.bag);
+  state.bag = state.bag.flatMap((line) => {
+    const [pid, key] = splitVariantId(line.id);
+    const product = products().find((item) => item.id === pid);
+    const variant = product?.variants.find((item) => item.key === key);
+    const limit = variant ? variantQuantityLimit(variant) : 0;
+    return limit && validPrice(variant.price) ? [{ ...line, qty: Math.min(line.qty, limit) }] : [];
+  });
+  if (JSON.stringify(state.bag) !== before) { saveBag(); return true; }
   return false;
 }
 function bagPriced() { return state.bag.length ? priceLines(state.content, state.bag) : { ok: true, lines: [], totalFils: 0 }; }
@@ -374,16 +385,19 @@ function bagCount() { return state.bag.reduce((s, l) => s + l.qty, 0); }
 function addToBag(id) {
   const [pid, key] = splitVariantId(id);
   const p = products().find((x) => x.id === pid); const v = p && p.variants.find((x) => x.key === key);
-  if (!v || v.soldOut) return;
+  if (!v || !validPrice(v.price)) return;
+  const limit = variantQuantityLimit(v);
+  if (!limit) { toast(t('soldOut')); return; }
   const line = state.bag.find((l) => l.id === id);
+  if (line && line.qty >= limit) { toast(t('quantityLimit')); return; }
   if (!line && state.bag.length >= MAX_LINES) { toast(t('bagFull'), '#/bag', t('bag')); return; }
-  if (line) line.qty = Math.min(MAX_QTY, line.qty + 1); else state.bag.push({ id, qty: 1 });
+  if (line) line.qty = Math.min(limit, line.qty + 1); else state.bag.push({ id, qty: 1 });
   saveBag();
   toast(`${t('added')}: ${L(p.name)}${v.storage ? ` · ${v.storage}` : ''}`, '#/bag', t('bag'));
 }
 function bagLine(line) {
   const p = line.product; const v = line.variant;
-  return `<li class="bag-line"><a class="bag-thumb device-media" href="${productUrl(p, v)}">${media(p)}</a><div class="bag-info"><a class="bag-name" href="${productUrl(p, v)}" dir="auto">${esc(L(p.name))}</a><p class="bag-variant" dir="auto">${esc(variantLabel(v))}</p><div class="bag-row"><div class="qty" role="group" aria-label="${esc(t('qty'))}"><button type="button" data-qty="${esc(line.id)}" data-delta="-1" aria-label="−"${line.qty <= 1 ? ' disabled' : ''}>−</button><output>${line.qty}</output><button type="button" data-qty="${esc(line.id)}" data-delta="1" aria-label="+"${line.qty >= MAX_QTY ? ' disabled' : ''}>+</button></div><strong class="bag-price"><bdi>${esc(money(line.totalFils))}</bdi></strong></div><button type="button" class="bag-remove" data-remove="${esc(line.id)}">${esc(t('remove'))}</button></div></li>`;
+  return `<li class="bag-line"><a class="bag-thumb device-media" href="${productUrl(p, v)}">${media(p)}</a><div class="bag-info"><a class="bag-name" href="${productUrl(p, v)}" dir="auto">${esc(L(p.name))}</a><p class="bag-variant" dir="auto">${esc(variantLabel(v))}</p><div class="bag-row"><div class="qty" role="group" aria-label="${esc(t('qty'))}"><button type="button" data-qty="${esc(line.id)}" data-delta="-1" aria-label="−"${line.qty <= 1 ? ' disabled' : ''}>−</button><output>${line.qty}</output><button type="button" data-qty="${esc(line.id)}" data-delta="1" aria-label="+"${line.qty >= variantQuantityLimit(v) ? ' disabled' : ''}>+</button></div><strong class="bag-price"><bdi>${esc(money(line.totalFils))}</bdi></strong></div><button type="button" class="bag-remove" data-remove="${esc(line.id)}">${esc(t('remove'))}</button></div></li>`;
 }
 function summary(priced, withButton) {
   return `<aside class="bag-summary"><dl><div><dt>${esc(t('subtotal'))}</dt><dd><bdi>${esc(money(priced.totalFils))}</bdi></dd></div><div><dt>${esc(t('delivery'))}</dt><dd>${esc(t(MODE === 'pages' ? 'demoDelivery' : 'deliveryValue'))}</dd></div><div class="is-total"><dt>${esc(t('total'))}</dt><dd><bdi>${esc(money(priced.totalFils))}</bdi></dd></div></dl><p class="summary-note">${esc(t('payCash'))}</p>${withButton ? `<a class="button button-primary button-wide" href="#/checkout">${esc(t('checkoutLive'))}${arrow}</a><a class="text-link" href="#/shop">${esc(t('keepShopping'))}</a>` : ''}</aside>`;
@@ -471,7 +485,7 @@ async function submitCheckout(form) {
     loadAccount();
   } catch (error) {
     const code = error instanceof ApiError ? error.code : 'generic';
-    if (code === 'price-changed' || code === 'sold-out' || code === 'unknown') { await refreshContent(); }
+    if (['price-changed', 'sold-out', 'unknown', 'stock-limit'].includes(code)) { await refreshContent(); }
     if (code === 'token-conflict' || code === 'signed-out') await loadAccount();
     showFormError(code);
   } finally {
@@ -624,7 +638,18 @@ document.addEventListener('click', (event) => {
   const variant = target.closest('[data-variant]');
   if (variant && !variant.disabled) { const product = products().find((x) => x.id === variant.dataset.productId); if (product) { state.selected[product.id] = variant.dataset.variant; updateDetailBuy(product); } return; }
   const qty = target.closest('[data-qty]');
-  if (qty) { const line = state.bag.find((l) => l.id === qty.dataset.qty); if (line) { line.qty = Math.min(MAX_QTY, Math.max(1, line.qty + Number(qty.dataset.delta))); saveBag(); renderRoute(); $(`[data-qty="${CSS.escape(line.id)}"][data-delta="${qty.dataset.delta}"]`)?.focus(); } return; }
+  if (qty) {
+    const line = state.bag.find((item) => item.id === qty.dataset.qty);
+    if (line) {
+      const [pid, key] = splitVariantId(line.id);
+      const variant = products().find((product) => product.id === pid)?.variants.find((option) => option.key === key);
+      const limit = variant ? variantQuantityLimit(variant) : 0;
+      if (!limit) { cleanBag(); renderRoute(); return; }
+      line.qty = Math.min(limit, Math.max(1, line.qty + Number(qty.dataset.delta)));
+      saveBag(); renderRoute(); $(`[data-qty="${CSS.escape(line.id)}"][data-delta="${qty.dataset.delta}"]`)?.focus();
+    }
+    return;
+  }
   const rm = target.closest('[data-remove]'); if (rm) { state.bag = state.bag.filter((l) => l.id !== rm.dataset.remove); saveBag(); renderRoute(); return; }
   const hero = target.closest('[data-hero-category]');
   if (hero) { state.heroCategory = hero.dataset.heroCategory; const box = $('#hero-showcase'); box.classList.add('is-switching'); setTimeout(() => { box.innerHTML = heroShowcase(); box.classList.remove('is-switching'); $(`[data-hero-category="${CSS.escape(state.heroCategory)}"]`)?.focus({ preventScroll: true }); }, 160); return; }

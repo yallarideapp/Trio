@@ -1,5 +1,13 @@
 # Replacement storefront verification — 18 October 2026
 
+## Out of stock and optional stock quantity — 20 October 2026
+
+- Added a prominent, bilingual Availability control with Out of stock plus an optional whole-number stock quantity for each option. Blank/null retains the standard order limit; 0 is unavailable, and a manual out-of-stock flag overrides positive quantity. Quantities are manually maintained and cap each order; orders do not decrement inventory. No stock amounts were added to the public seed catalog.
+- Shared pricing and quantity helpers govern cards, hero, product options, bag controls and checkout validation. Repeated adds stop at the stock limit, bag increases disable at the limit, and a stock reduction clamps existing quantities or removes unavailable items. Out-of-stock offers remain visible, and condition filters retain unavailable devices. Supplied quantities appear in the device details.
+- Pages and Worker preserve null/zero/positive quantities through publish/import/export. Negative, fractional, string, nonfinite and oversized values reject before writes. Integration checks cover exact totals, stock-limit/sold-out errors, unchanged legacy options and independent manual availability flags.
+- Browser QA saved quantity2, reloaded and verified persistence, added twice and rejected a third addition, and checked the disabled bag increase. Manual out-of-stock with quantity2 removed purchase actions after the save completed. Quantity0 also disabled purchase; blank quantity with the flag off restored purchasing. A negative quantity was rejected. Arabic/English editor controls were inspected with no browser errors or warnings. Test data used a separate localhost origin and did not alter the owner's public browser draft.
+- Live/Pages builds and the full catalog, image, editor, account, order, stock and Worker suites pass. Shared production deployment remains deferred as previously requested.
+
 ## Home layout and single-condition devices — 19 October 2026
 
 - Removed Picks from Trio from home. The four category tiles sit under What are you looking for? / شو عم تدوّر عليه؟, immediately followed by Offers / العروض. Removed the obsolete phone layout ordering rules. The admin's home-selection help now describes the category showcase.

@@ -22,7 +22,7 @@ export function verifyStorefront() {
   });
   const source = readFileSync(new URL('../site/src/app.js', import.meta.url), 'utf8')
     .replace(/^import[^\n]*\n/gm, '').replace(/^start\(\);\s*$/m, '');
-  vm.runInContext(source + '\n globalThis.ui = { state, conditionChips, renderHome, renderCatalog, renderProductResults, filteredProducts, readRoute, renderDetail, renderService, renderContact, renderBag, renderCheckout, renderDone, instagramAllowed, loadBag, saveBag, cleanBag, toggleSaved, phoneHref, phoneText };', context);
+  vm.runInContext(source + '\n globalThis.ui = { state, conditionChips, renderHome, renderCatalog, renderProductResults, filteredProducts, readRoute, renderDetail, renderService, renderContact, renderBag, renderCheckout, renderDone, instagramAllowed, loadBag, saveBag, cleanBag, addToBag, toggleSaved, phoneHref, phoneText };', context);
   const ui = context.ui;
   ui.state.content = structuredClone(seed);
   // Editing a local preview must not remove a public shopping bag item or
@@ -267,6 +267,39 @@ export function verifyStorefront() {
         assert(!options.includes(`data-variant="${other.key}"`), `${product.id}/${variant.key}: direct device pages keep opposite conditions separate`);
       }
     }
+    const beforeStockTest = ui.state.content;
+    try {
+      ui.state.content = structuredClone(seed);
+      const device = ui.state.content.products.find((product) => product.id === 'iphone-17-pro');
+      const option = device.variants[0];
+      option.stockQuantity = 2;
+      ui.state.bag = [];
+      ui.addToBag('iphone-17-pro:256-new');
+      ui.addToBag('iphone-17-pro:256-new');
+      ui.addToBag('iphone-17-pro:256-new');
+      assert.equal(ui.state.bag[0].qty, 2, `${language}: repeated adds stop at configured stock`);
+      const stockBag = ui.renderBag();
+      assert(stockBag.includes('data-delta="1" aria-label="+" disabled'), `${language}: bag increase is disabled at stock limit`);
+      option.stockQuantity = 1;
+      assert(ui.cleanBag() && ui.state.bag[0].qty === 1, `${language}: reducing stock clamps an existing bag`);
+      option.stockQuantity = 0;
+      ui.state.route = { name: 'p', id: device.id, params: new URLSearchParams('cond=new') };
+      const outDetail = ui.renderDetail(device.id);
+      assert(!outDetail.includes('data-add="iphone-17-pro:256-new"'), `${language}: zero stock removes the detail purchase action`);
+      assert(outDetail.includes(language === 'ar' ? 'غير متوفر' : 'Out of stock'), `${language}: zero stock has a visible availability label`);
+      const outCard = ui.renderProductResults([device]);
+      assert(!outCard.includes('data-add=') && outCard.includes('aria-disabled="true"'), `${language}: out-of-stock card cannot be purchased`);
+      assert(ui.renderHome().includes('data-product="iphone-17-pro"'), `${language}: out-of-stock offers remain visible on home`);
+      resetCatalog(); ui.state.cond = 'new';
+      assert(ui.filteredProducts().some((product) => product.id === device.id), `${language}: condition filters retain out-of-stock devices`);
+      assert(ui.cleanBag() && !ui.state.bag.length, `${language}: zero stock removes the existing bag item`);
+      option.stockQuantity = 2; option.soldOut = true;
+      ui.addToBag('iphone-17-pro:256-new');
+      assert.equal(ui.state.bag.length, 0, `${language}: manual out of stock overrides positive quantity`);
+      option.soldOut = false; option.stockQuantity = null;
+      for (let i = 0; i < pricing.MAX_QTY + 1; i++) ui.addToBag('iphone-17-pro:256-new');
+      assert.equal(ui.state.bag[0].qty, pricing.MAX_QTY, `${language}: blank stock preserves the existing order limit`);
+    } finally { ui.state.content = beforeStockTest; ui.state.bag = []; }
     ui.state.route = { name: 'trade-in' };
     assert(!instagram.test(ui.renderService(true)), `${language}: trade-in has no Instagram links`);
     ui.state.content.settings.ordersOn = true;

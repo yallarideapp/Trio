@@ -213,7 +213,7 @@ export function createBrowserShop({ ApiError, getContent }) {
     const loaded = await getContent(); const content = loaded?.content;
     if (!content || content.settings?.ordersOn === false) error('orders-off', 403);
     const priced = priceLines(content, requestedLines);
-    if (!priced.ok) error(priced.error, ['unknown', 'sold-out'].includes(priced.error) ? 409 : 400);
+    if (!priced.ok) error(priced.error, ['unknown', 'sold-out', 'stock-limit'].includes(priced.error) ? 409 : 400);
     if (priced.totalFils !== body.totalFils) error('price-changed', 409);
     const seq = data.nextOrder + 1;
     const order = { seq, number: `DEMO-${seq}`, token: body.token, signature, customerId: owner, createdAt: stamp(), status: 'new', note: '', lang: body.lang === 'en' ? 'en' : 'ar', fulfilment: body.fulfilment, customer, totalFils: priced.totalFils, lines: priced.lines.map((line) => ({ id: line.id, name: line.product.name.en, nameAr: line.product.name.ar, storage: line.variant.storage || '', condition: line.variant.condition || '', qty: line.qty, unitFils: line.unitFils })) };

@@ -55,6 +55,7 @@ export async function verifyPagesEditor() {
     const initial = await pagesAdmin.content();
     assert.equal(initial.version, 0, 'an untouched editor starts at version zero');
     assert.equal(initial.content.settings.ordersOn, false);
+    assert(initial.content.products.every((product) => product.variants.every((variant) => variant.stockQuantity === null)), 'legacy catalog options have no quantity limit until one is supplied');
     assert(initial.content.products.every((product) => product.technical?.summary.ar && product.technical?.summary.en && product.technical.specs.length >= 6), 'all shipped devices start with editable bilingual technical specifications');
     initial.content.products[0].name.en = 'Unsaved edit';
     assert.equal((await pagesAdmin.content()).content.products[0].name.en, seed.products[0].name.en, 'loading the editor returns independent copies');
@@ -63,6 +64,11 @@ export async function verifyPagesEditor() {
     const product = draft.products[0];
     product.name = { ar: 'جهاز المعاينة', en: 'Preview device' };
     product.variants[0].price = 123;
+    product.variants[0].stockQuantity = 2;
+    draft.products[1].variants[0].stockQuantity = 0;
+    draft.products[1].variants[0].soldOut = false;
+    draft.products[2].variants[0].stockQuantity = pricing.MAX_STOCK_QUANTITY;
+    draft.products[2].variants[0].soldOut = true;
     product.homePriority = 123456;
     product.technical = { summary: { ar: 'ملخص خاص بالمعاينة', en: 'Preview technical summary' }, specs: [{ label: { ar: 'شاشة', en: 'Display' }, value: { ar: 'قيمة المعاينة', en: 'Preview specification' } }] };
     draft.settings.phone = '0791112222';
@@ -103,6 +109,11 @@ export async function verifyPagesEditor() {
     assert.equal(preview.version, 1);
     assert.equal(preview.content.products[0].name.en, product.name.en);
     assert.equal(preview.content.products[0].variants[0].price, 123);
+    assert.equal(preview.content.products[0].variants[0].stockQuantity, 2, 'saving a preview retains an optional quantity');
+    assert.equal(preview.content.products[1].variants[0].stockQuantity, 0, 'zero quantity survives saving without becoming an absent value');
+    assert.equal(preview.content.products[1].variants[0].soldOut, false, 'zero stock does not rewrite the independent out-of-stock toggle');
+    assert.equal(preview.content.products[2].variants[0].stockQuantity, pricing.MAX_STOCK_QUANTITY, 'the maximum quantity is retained');
+    assert.equal(preview.content.products[2].variants[0].soldOut, true, 'a quantity does not clear the manual out-of-stock toggle');
     assert.deepEqual(preview.content.products[0].technical, product.technical, 'explicit previews retain edited technical specifications');
     assert.equal(preview.content.products[0].homePriority, 123456, 'preview saves preserve the selected home showcase priority');
     assert.equal(preview.content.settings.phone, draft.settings.phone);
@@ -120,6 +131,7 @@ export async function verifyPagesEditor() {
     assert.deepEqual(Object.keys(exported.photos), [photo.id], 'export includes only referenced photos');
     assert.equal(exported.content.settings.ordersOn, false);
     assert.equal(exported.content.products[0].homePriority, 123456, 'portable exports preserve home selections and priority');
+    assert.equal(exported.content.products[0].variants[0].stockQuantity, 2, 'portable backups retain the stock quantity');
     assert.deepEqual(snapshot(), savedSnapshot, 'export does not publish or change stored data');
 
     const invalidChanges = [
@@ -128,6 +140,7 @@ export async function verifyPagesEditor() {
       (data) => { delete data.photos[photo.id]; },
       (data) => { data.photos[photo.id] = 'https://example.com/remote.webp'; },
       (data) => { data.content.products[0].variants[0].price = -1; },
+      ...[-1, 1.5, '2', pricing.MAX_STOCK_QUANTITY + 1, NaN, Infinity].map((quantity) => (data) => { data.content.products[0].variants[0].stockQuantity = quantity; }),
       (data) => { data.content.products[0].image = 'assets/../secret.png'; },
       (data) => { data.content.products[0].category = 'unknown'; },
       (data) => { data.content.products[0].technical.summary = { en: 'Missing Arabic' }; },
@@ -140,6 +153,14 @@ export async function verifyPagesEditor() {
       const before = snapshot();
       await assert.rejects(pagesAdmin.importDraft(invalid), errorIs('invalid-draft', 400));
       assert.deepEqual(snapshot(), before, 'invalid imports leave the saved preview and photos intact');
+    }
+
+    for (const quantity of [-1, 1.5, '2', pricing.MAX_STOCK_QUANTITY + 1, NaN, Infinity]) {
+      const invalid = copy(draft);
+      invalid.products[0].variants[0].stockQuantity = quantity;
+      const before = snapshot();
+      await assert.rejects(pagesAdmin.publish(invalid, 1), errorIs('invalid-draft', 400));
+      assert.deepEqual(snapshot(), before, 'invalid quantities cannot replace the saved preview');
     }
 
     const beforeFull = snapshot();
@@ -160,6 +181,9 @@ export async function verifyPagesEditor() {
     assert.equal(imported.products[0].photo, photo.id);
     assert.deepEqual(imported.products[0].technical, product.technical);
     assert.equal(imported.products[0].homePriority, 123456, 'imported selections retain their home showcase priority');
+    assert.equal(imported.products[0].variants[0].stockQuantity, 2, 'imported backups retain numeric quantities');
+    assert.equal(imported.products[1].variants[0].stockQuantity, 0, 'imported backups retain zero quantity');
+    assert.equal(imported.products[3].variants[0].stockQuantity, null, 'imported backups retain optional unlimited stock');
     assert.equal(pagesAdmin.photoUrl(photo.id), photoData, 'an exported photo survives import into a cleared browser');
     assert(!values.has(PREVIEW_KEY), 'import creates an editable draft without saving the storefront preview');
     assert.equal((await api.loadContent()).content.products[0].name.en, seed.products[0].name.en, 'import alone does not alter even the explicit preview');
@@ -435,6 +459,10 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
       for (const label of Object.values(conditionOptions)) assert(options.includes(label[language]), language + ': both condition labels are visible without opening a dropdown');
     }
     assert(root.innerHTML.includes('name="technical.summary.en"') && root.innerHTML.includes('name="technical.summary.ar"'), `${language}: device summaries are editable in both languages`);
+    assert(root.innerHTML.includes('class="stock-fields"') && root.innerHTML.includes('name="v.0.soldOut"'), `${language}: availability is a prominent separate control`);
+    assert(root.innerHTML.includes('name="v.0.stockQuantity"') && root.innerHTML.includes('inputmode="numeric" min="0"'), `${language}: optional stock uses nonnegative whole numbers`);
+    assert(root.innerHTML.includes(language === 'ar' ? 'الكمية المتوفرة (اختياري)' : 'Stock quantity (optional)'), `${language}: optional stock has a translated label`);
+    assert(root.innerHTML.includes(language === 'ar' ? 'غير متوفر' : 'Out of stock'), `${language}: out-of-stock control has a translated label`);
     assert(root.innerHTML.includes('name="technical.0.label.en"') && root.innerHTML.includes('name="technical.0.value.ar"'), `${language}: specification labels and values are editable`);
     assert(root.innerHTML.includes(language === 'ar' ? 'آخر جهاز تختاره يتصدر قسمه في واجهة الرئيسية' : 'The latest selected device leads its category in the home showcase'), `${language}: home selection help explains the category showcase`);
     assert(root.innerHTML.includes(language === 'ar' ? 'احفظ المعاينة لتظهر اختياراتك في الرئيسية.' : 'Save preview to see your home selections.'), `${language}: home selections require an explicit preview save`);

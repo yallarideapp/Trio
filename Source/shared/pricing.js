@@ -3,6 +3,16 @@
 
 export const MAX_QTY = 5;
 export const MAX_LINES = 20; // keeps an order inside D1’s 50 queries per request
+export const MAX_STOCK_QUANTITY = 999999;
+
+export function validStockQuantity(value) {
+  return value === undefined || value === null || (Number.isInteger(value) && value >= 0 && value <= MAX_STOCK_QUANTITY);
+}
+
+export function variantQuantityLimit(variant) {
+  if (variant.soldOut === true || !validStockQuantity(variant.stockQuantity)) return 0;
+  return Math.min(MAX_QTY, variant.stockQuantity ?? MAX_QTY);
+}
 
 export const toFils = (jd) => Math.round(Number(jd) * 1000);
 
@@ -49,7 +59,9 @@ export function priceLines(content, lines) {
     const [productId, key] = splitVariantId(id);
     const found = findVariant(content, productId, key);
     if (!found || !validPrice(found.variant.price)) return { ok: false, error: 'unknown', id };
-    if (found.variant.soldOut) return { ok: false, error: 'sold-out', id };
+    const limit = variantQuantityLimit(found.variant);
+    if (!limit) return { ok: false, error: 'sold-out', id };
+    if (qty > limit) return { ok: false, error: 'stock-limit', id };
     const unit = toFils(found.variant.price);
     total += unit * qty;
     out.push({ id, productId, key, qty, unitFils: unit, totalFils: unit * qty, product: found.product, variant: found.variant });
@@ -58,7 +70,7 @@ export function priceLines(content, lines) {
 }
 
 export function fromPrice(product) {
-  const prices = (product.variants || []).filter((item) => !item.soldOut && validPrice(item.price)).map((item) => toFils(item.price));
+  const prices = (product.variants || []).filter((item) => variantQuantityLimit(item) > 0 && validPrice(item.price)).map((item) => toFils(item.price));
   return prices.length ? Math.min(...prices) : null;
 }
 
