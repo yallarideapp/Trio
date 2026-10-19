@@ -21,7 +21,7 @@ The current GitHub Pages website is an owner demonstration. It supports catalog 
 
 The [browser-only admin editor](https://yallarideapp.github.io/Trio/admin/) is also linked in the footer. It edits devices, options, technical specifications, photos and contact settings. **Save preview** stores changes in this browser; **View preview** opens `?preview=draft`. Normal storefront visits continue to load the committed catalog. Export/import JSON transfers a draft together with its uploaded photos. Reset removes only the editor's local draft and preview, leaving favorites and the bag intact. No password or remote publication is implied. To publish an exported draft for everyone, its content must be integrated into the source and the generated website rebuilt and pushed.
 
-Home features Phones, Laptops, Watches and Audio. All Devices retains the six independent categories, including Tablets and Accessories.
+Home features Phones, Laptops, Watches and Audio. All Devices retains the six independent categories, including Tablets and Accessories. Every visible device marked **Show on home page** appears in Picks; the latest selection leads its category's showcase without clearing earlier selections. Selecting a hidden device also makes it visible. Save preview, then View preview to see these choices. Device condition labels and editor choices are **New** or **Used like new**, with older catalog keys retained for compatibility.
 
 The fixed corner **Admin panel** shortcut opens the editor from any storefront page. Its **Orders** tab automatically shows checkout orders from the same browser, with status updates, notes, search and export. Manual order creation is removed; any older manual records remain a separate archive.
 

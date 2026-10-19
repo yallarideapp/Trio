@@ -7,15 +7,18 @@ import vm from 'node:vm';
 import seed from '../shared/catalog.js';
 import deviceSpecifications from '../shared/device-specs.js';
 import * as pricing from '../shared/pricing.js';
-import { conditions, notes as noteLabels, warranties, orderStatuses, governorates } from '../shared/labels.js';
+import { conditions, conditionGroup, conditionOptions, notes as noteLabels, warranties, orderStatuses, governorates } from '../shared/labels.js';
+import { forwardArrow } from '../shared/navigation.js';
 import { ApiError, local, withDefaults } from '../site/src/store.js';
 import { pagesAdmin } from '../site/admin/src/pages-store.js';
 import { PREVIEW_KEY, PHOTO_KEY, EDITOR_KEY } from '../site/src/pages-preview.js';
+import { applyHomePlacement, nextHomePriority, validHomePriority } from '../shared/home-placement.js';
 
 const copy = (value) => structuredClone(value);
 const errorIs = (code, status) => (error) => error.code === code && error.status === status;
 
 export async function verifyPagesEditor() {
+  verifyHomeSelections();
   const original = Object.fromEntries(['fetch', 'localStorage', 'location', 'FileReader', 'navigator'].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   const values = new Map();
   let reads = 0;
@@ -60,6 +63,7 @@ export async function verifyPagesEditor() {
     const product = draft.products[0];
     product.name = { ar: 'جهاز المعاينة', en: 'Preview device' };
     product.variants[0].price = 123;
+    product.homePriority = 123456;
     product.technical = { summary: { ar: 'ملخص خاص بالمعاينة', en: 'Preview technical summary' }, specs: [{ label: { ar: 'شاشة', en: 'Display' }, value: { ar: 'قيمة المعاينة', en: 'Preview specification' } }] };
     draft.settings.phone = '0791112222';
     draft.settings.ordersOn = true;
@@ -100,6 +104,7 @@ export async function verifyPagesEditor() {
     assert.equal(preview.content.products[0].name.en, product.name.en);
     assert.equal(preview.content.products[0].variants[0].price, 123);
     assert.deepEqual(preview.content.products[0].technical, product.technical, 'explicit previews retain edited technical specifications');
+    assert.equal(preview.content.products[0].homePriority, 123456, 'preview saves preserve the selected home showcase priority');
     assert.equal(preview.content.settings.phone, draft.settings.phone);
     assert.equal(preview.content.settings.ordersOn, true, 'explicit previews also support the owner checkout demonstration');
     assert.equal(api.photoUrl(photo.id), photoData);
@@ -114,6 +119,7 @@ export async function verifyPagesEditor() {
     assert.equal(exported.photos[photo.id], photoData, 'export includes the uploaded image itself');
     assert.deepEqual(Object.keys(exported.photos), [photo.id], 'export includes only referenced photos');
     assert.equal(exported.content.settings.ordersOn, false);
+    assert.equal(exported.content.products[0].homePriority, 123456, 'portable exports preserve home selections and priority');
     assert.deepEqual(snapshot(), savedSnapshot, 'export does not publish or change stored data');
 
     const invalidChanges = [
@@ -153,6 +159,7 @@ export async function verifyPagesEditor() {
     const imported = await pagesAdmin.importDraft(copy(exported));
     assert.equal(imported.products[0].photo, photo.id);
     assert.deepEqual(imported.products[0].technical, product.technical);
+    assert.equal(imported.products[0].homePriority, 123456, 'imported selections retain their home showcase priority');
     assert.equal(pagesAdmin.photoUrl(photo.id), photoData, 'an exported photo survives import into a cleared browser');
     assert(!values.has(PREVIEW_KEY), 'import creates an editable draft without saving the storefront preview');
     assert.equal((await api.loadContent()).content.products[0].name.en, seed.products[0].name.en, 'import alone does not alter even the explicit preview');
@@ -366,7 +373,7 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   const source = readFileSync(new URL('../site/admin/src/admin.js', import.meta.url), 'utf8')
     .replace(/^import[^\n]*\n/gm, '').replace(/\(async function start\(\) \{[\s\S]*$/, '');
   const context = vm.createContext({
-    ...pricing, conditions, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications,
+    ...pricing, conditions, conditionGroup, conditionOptions, forwardArrow, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications, applyHomePlacement,
     api, pagesAdmin, MODE: 'pages', ApiError, local, withDefaults, document,
     window: { addEventListener() {} }, console, setTimeout, clearTimeout, setInterval() {},
   });
@@ -417,7 +424,45 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
     ui.state.view = 'devices';
     ui.state.editing = { index: 0 };
     ui.render();
+    const conditionSelects = [...root.innerHTML.matchAll(/<select name="v\.\d+\.condition">([\s\S]*?)<\/select>/g)];
+    assert(conditionSelects.length, language + ': editable condition controls exist');
+    for (const [index, [, options]] of conditionSelects.entries()) {
+      assert.equal((options.match(/<option /g) || []).length, 3, language + ': condition selector offers two labels plus unspecified');
+      assert(options.includes('value="' + conditionGroup(content.products[0].variants[index].condition) + '" selected'), language + ': legacy saved condition selects the matching group');
+      assert(!options.includes('value="new-sealed"') && !options.includes('value="used-agency"') && !options.includes('value="used"'), language + ': legacy labels are not selectable');
+    }
     assert(root.innerHTML.includes('name="technical.summary.en"') && root.innerHTML.includes('name="technical.summary.ar"'), `${language}: device summaries are editable in both languages`);
     assert(root.innerHTML.includes('name="technical.0.label.en"') && root.innerHTML.includes('name="technical.0.value.ar"'), `${language}: specification labels and values are editable`);
+    assert(root.innerHTML.includes(language === 'ar' ? 'كل الأجهزة المحددة تظهر ضمن مختارات الرئيسية' : 'All selected devices appear in Picks on the home page'), `${language}: home selection help explains multiple selected devices`);
+    assert(root.innerHTML.includes(language === 'ar' ? 'احفظ المعاينة لتظهر اختياراتك في الرئيسية.' : 'Save preview to see your home selections.'), `${language}: home selections require an explicit preview save`);
   }
+}
+
+function verifyHomeSelections() {
+  const first = { id: 'first', category: 'phones', featured: true, hidden: false, homePriority: 100 };
+  const second = { id: 'second', category: 'phones', featured: false, hidden: true };
+  const products = [first, second];
+  assert(applyHomePlacement(second, products, { category: 'phones', featured: true, hidden: true }, 100));
+  assert.equal(first.featured, true, 'selecting another home device never clears an existing selection');
+  assert.equal(second.featured, true);
+  assert.equal(second.hidden, false, 'selecting a hidden device makes it visible on the site');
+  assert(second.homePriority > first.homePriority, 'a newer selection leads a previously selected device even when timestamps match');
+  const priority = second.homePriority;
+  assert.equal(applyHomePlacement(second, products, { category: 'phones', featured: true, hidden: false }, 200), false);
+  assert.equal(second.homePriority, priority, 'editing unrelated fields does not change home priority');
+  applyHomePlacement(second, products, { category: 'phones', featured: true, hidden: true }, 201);
+  assert.equal(second.hidden, true, 'an explicit later Hide action remains available');
+  applyHomePlacement(second, products, { category: 'laptops', featured: true, hidden: true }, 50);
+  assert(second.homePriority > priority, 'moving a selected device to another category promotes it despite a backwards clock');
+  assert.equal(second.hidden, false, 'moving a selected device into a category makes its new home placement visible');
+  applyHomePlacement(second, products, { category: 'laptops', featured: false, hidden: false }, 202);
+  const beforeReselect = second.homePriority;
+  applyHomePlacement(second, products, { category: 'laptops', featured: true, hidden: false }, 50);
+  assert(second.homePriority > beforeReselect, 'reselecting a device gives it a fresh priority');
+  const added = { id: 'new', category: 'audio', featured: true, hidden: true, _new: true };
+  applyHomePlacement(added, [...products, added], { category: 'audio', featured: true, hidden: true }, 10);
+  assert(validHomePriority(added.homePriority) && added.homePriority > second.homePriority, 'a new selected device receives a valid leading priority');
+  assert.equal(added.hidden, false);
+  assert.equal(nextHomePriority([{ homePriority: Infinity }, { homePriority: -2 }, { homePriority: '999' }], 123), 123, 'invalid imported ranks cannot control a new selection');
+  for (const invalid of [-1, 1.5, Infinity, NaN, '123', null]) assert.equal(validHomePriority(invalid), false, 'only safe nonnegative integer ranks are retained');
 }

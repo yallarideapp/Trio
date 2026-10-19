@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { formatJD } from '../shared/pricing.js';
+import { forwardArrow } from '../shared/navigation.js';
 
 const alice = { id: 'a'.repeat(32), name: 'Alice', email: 'alice@example.test', mobile: '0791234567' };
 const bob = { id: 'b'.repeat(32), name: 'Bob', email: 'bob@example.test', mobile: '' };
@@ -30,7 +31,7 @@ function mount(overrides = {}) {
     ...overrides,
   };
   const source = readFileSync(new URL('../site/src/account.js', import.meta.url), 'utf8').replace(/^import[^\n]*\n/gm, '').replace(/^export /gm, '');
-  const context = vm.createContext({ api: { account }, formatJD, Element, HTMLFormElement, document: { addEventListener: (name, handler) => handlers.set(name, handler) }, Intl, console });
+  const context = vm.createContext({ api: { account }, formatJD, forwardArrow, Element, HTMLFormElement, document: { addEventListener: (name, handler) => handlers.set(name, handler) }, Intl, console });
   vm.runInContext(source + '\nglobalThis.ui = { state, renderAccount, loadAccount, bindAccount, customerProfile, accountLabel };', context);
   const ui = context.ui;
   ui.bindAccount(() => {}); ui.renderAccount('en');

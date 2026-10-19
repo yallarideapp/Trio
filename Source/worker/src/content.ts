@@ -7,6 +7,8 @@ import { conditions, notes as noteLabels, warranties } from '../../shared/labels
 import { validPrice } from '../../shared/pricing.js';
 // @ts-ignore verified bilingual device profiles
 import deviceSpecifications from '../../shared/device-specs.js';
+// @ts-ignore shared home showcase ordering
+import { validHomePriority } from '../../shared/home-placement.js';
 
 export interface Published { version: number; content: any; fromSeed: boolean }
 
@@ -84,7 +86,8 @@ export function sanitizeContent(input: any): any {
     const profile = p.technical || deviceSpecifications[id] || { summary: { ar: '', en: '' }, specs: [] };
     if (typeof profile !== 'object' || !Array.isArray(profile.specs) || profile.specs.length > 60) throw new HttpError(400, 'bad-content', { field: 'technical', id });
     const technical = { summary: pair(profile.summary, 2000), specs: profile.specs.map((row: any) => ({ label: pair(row?.label, 200), value: pair(row?.value, 2000) })), sources: Array.isArray(profile.sources) ? profile.sources.slice(0, 12).map((url: unknown) => httpsUrl(url)).filter(Boolean) : [] };
-    return { id, category, brand: str(p.brand, 30), name, image, photo, imageNote: imageNote && (imageNote.ar || imageNote.en) ? imageNote : undefined, hidden: p.hidden === true, offer: p.offer === true, featured: p.featured === true, tagline: pair(p.tagline, 140), about: pair(p.about, 1200), specs, technical, source: httpsUrl(p.source, 300), variants };
+    const homePriority = validHomePriority(p.homePriority) ? p.homePriority : 0;
+    return { id, category, brand: str(p.brand, 30), name, image, photo, imageNote: imageNote && (imageNote.ar || imageNote.en) ? imageNote : undefined, hidden: p.hidden === true, offer: p.offer === true, featured: p.featured === true, homePriority, tagline: pair(p.tagline, 140), about: pair(p.about, 1200), specs, technical, source: httpsUrl(p.source, 300), variants };
   });
   return { settings, categories, products };
 }

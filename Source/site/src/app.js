@@ -2,7 +2,8 @@ import deviceSpecifications from '../../shared/device-specs.js';
 import { api, local, MODE, ApiError } from './store.js';
 import { renderAccount, loadAccount, bindAccount, accountLabel, customerProfile } from './account.js';
 import { priceLines, fromPrice, formatJD, toFils, variantId, splitVariantId, visibleProducts, normaliseMobile, MAX_QTY, MAX_LINES, validPrice } from '../../shared/pricing.js';
-import { conditions, conditionShort, notes as noteLabels, warranties, governorates } from '../../shared/labels.js';
+import { conditions, conditionShort, conditionGroup, notes as noteLabels, warranties, governorates } from '../../shared/labels.js';
+import { forwardArrow } from '../../shared/navigation.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -28,7 +29,7 @@ const words = {
     aboutTitle: 'مش بس محل موبايلات.', aboutText: 'بيع وشراء وتبديل الأجهزة، وصيانة احترافية في خلدا، عمّان.', followTitle: 'تابع الجديد من تريو', follow: 'افتح إنستغرام',
     collection: 'تشكيلة تريو', shopIntro: 'تصفّح الأجهزة وقارن المواصفات والسعات والحالات.', offersTitle: 'عروض تريو', offersIntro: 'اكتشف العروض واختر الجهاز اللي بناسبك.',
     search: 'ابحث عن جهاز', searchPlaceholder: 'اسم الجهاز أو الماركة…', brand: 'الماركة', allBrands: 'كل الماركات', sort: 'الترتيب', featured: 'الترتيب المقترح',
-    priceLow: 'السعر: من الأقل', priceHigh: 'السعر: من الأعلى', nameSort: 'حسب الاسم', condAll: 'كل الحالات', condNew: 'جديد', condUsed: 'مستعمل',
+    priceLow: 'السعر: من الأقل', priceHigh: 'السعر: من الأعلى', nameSort: 'حسب الاسم', condAll: 'كل الحالات', condNew: 'جديد', condUsed: 'مستعمل بحالة الجديد',
     filters: 'فلترة وترتيب', clear: 'امسح البحث والفلاتر', noResults: 'ما لقينا أجهزة بهالبحث.', noResultsText: 'جرّب كلمة ثانية أو امسح الفلاتر.',
     savedIntro: 'الأجهزة اللي عجبتك، كلها بمكان واحد.', noSaved: 'لسه ما حفظت أجهزة.', noSavedText: 'اضغط القلب على أي جهاز ليرجع يظهر هون.',
     details: 'المواصفات التقنية', configuration: 'التهيئة', condition: 'الحالة', warranty: 'الكفالة', options: 'الخيارات', related: 'من نفس القسم', backCategory: 'كل أجهزة القسم',
@@ -65,7 +66,7 @@ const words = {
     aboutTitle: 'More than a mobile store.', aboutText: 'Buy, sell and trade in devices, with professional repair in Khalda, Amman.', followTitle: 'Catch the latest from Trio', follow: 'Open Instagram',
     collection: 'THE TRIO COLLECTION', shopIntro: 'Explore devices and compare specifications, storage and condition.', offersTitle: 'Trio offers', offersIntro: 'Explore offers and find your next device.',
     search: 'Search devices', searchPlaceholder: 'Device name or brand…', brand: 'Brand', allBrands: 'All brands', sort: 'Sort', featured: 'Featured',
-    priceLow: 'Price: low to high', priceHigh: 'Price: high to low', nameSort: 'Name A–Z', condAll: 'Any condition', condNew: 'New', condUsed: 'Used',
+    priceLow: 'Price: low to high', priceHigh: 'Price: high to low', nameSort: 'Name A–Z', condAll: 'Any condition', condNew: 'New', condUsed: 'Used like new',
     filters: 'Filters', clear: 'Clear search and filters', noResults: 'No devices match this search.', noResultsText: 'Try another word or clear the filters.',
     savedIntro: 'The devices you like, all in one place.', noSaved: 'Nothing saved yet.', noSavedText: 'Tap the heart on a device to save it here.',
     details: 'Technical specifications', configuration: 'Configuration', condition: 'Condition', warranty: 'Warranty', options: 'Options', related: 'More in this category', backCategory: 'Back to category',
@@ -97,7 +98,7 @@ const t = (key) => words[state.language][key];
 const L = (value) => (value && typeof value === 'object' ? value[state.language] || value.ar || value.en || '' : String(value || ''));
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const external = 'target="_blank" rel="noopener noreferrer"';
-const arrow = '<span class="direction-arrow" aria-hidden="true">↗</span>';
+const arrow = forwardArrow;
 const icon = (name) => `<svg class="icon" aria-hidden="true"><use href="#icon-${name}"/></svg>`;
 const money = (fils) => formatJD(fils, state.language);
 const num = (n) => new Intl.NumberFormat(state.language === 'ar' ? 'ar-JO' : 'en').format(n);
@@ -153,7 +154,7 @@ function priceTag(product) {
   return `<span class="price-tag">${several ? `<small>${esc(t('from'))}</small> ` : ''}<bdi>${esc(money(low))}</bdi></span>`;
 }
 function conditionChips(product) {
-  const set = [...new Set(availableVariants(product).map((v) => v.condition).filter(Boolean))];
+  const set = [...new Set(availableVariants(product).map((v) => conditionGroup(v.condition)).filter(Boolean))];
   return set.length ? `<span class="cond-chips">${set.map((c) => `<span class="cond-chip cond-${esc(c)}">${esc(L(conditionShort[c]))}</span>`).join('')}</span>` : '';
 }
 function cardAction(product) {
@@ -176,9 +177,12 @@ function contactActions({ instagram = false } = {}) {
 }
 
 // ---------- home ----------
+const homePriority = (product) => Number.isSafeInteger(product.homePriority) && product.homePriority > 0 ? product.homePriority : 0;
+const featuredFirst = (list) => list.slice().sort((a, b) => Number(b.featured === true) - Number(a.featured === true) || homePriority(b) - homePriority(a));
+const homeRepresentative = (list) => featuredFirst(list).find((product) => imageSrc(product)) || list[0];
 function heroProduct() {
   const list = homeProducts();
-  return list.find((p) => p.category === state.heroCategory && p.featured && imageSrc(p)) || list.find((p) => p.category === state.heroCategory && imageSrc(p)) || list[0];
+  return homeRepresentative(list.filter((product) => product.category === state.heroCategory)) || list[0];
 }
 function categoryArtwork(id, { eager = false } = {}) {
   const picture = id === 'watches'
@@ -194,7 +198,7 @@ function heroShowcase() {
   const product = heroProduct();
   if (!product) return '';
   const low = fromPrice(product);
-  const artwork = categoryArtwork(state.heroCategory, { eager: true });
+  const artwork = homePriority(product) ? '' : categoryArtwork(state.heroCategory, { eager: true });
   const title = artwork ? categoryName(state.heroCategory) : L(product.name);
   const caption = artwork ? `<span class="hero-price">${arrow}</span>` : low !== null ? `<span class="hero-price"><small>${esc(t('from'))}</small> <bdi>${esc(money(low))}</bdi></span>` : '';
   return `<a class="hero-product" href="${artwork ? categoryUrl(state.heroCategory) : productUrl(product)}" aria-label="${esc(`${artwork ? t('browse') : t('view')}: ${title}`)}"><div class="device-media hero-device">${artwork || media(product, { eager: true })}</div><div class="hero-product-caption"><div><p class="product-brand" dir="ltr">${esc(artwork ? 'TRIO COLLECTION' : product.brand)}</p><p class="hero-product-name" dir="auto">${esc(title)}</p></div>${caption}</div></a><div class="hero-tabs" role="group" aria-label="${esc(t('heroChoose'))}">${homeCategoryIds().map((id) => `<button type="button" data-hero-category="${esc(id)}" aria-pressed="${id === state.heroCategory}">${esc(categoryName(id))}</button>`).join('')}</div>`;
@@ -205,13 +209,12 @@ function offersRow(list) {
 function renderHome() {
   const list = homeProducts();
   const offers = list.filter((p) => p.offer && availableVariants(p).length);
-  const rest = list.filter((p) => !p.offer && availableVariants(p).length);
-  const featured = [...rest.filter((p) => p.featured), ...rest.filter((p) => !p.featured)].slice(0, rest.length >= 8 ? 8 : rest.length >= 4 ? 4 : rest.length);
+  const featured = featuredFirst(list.filter((product) => product.featured));
   const cats = homeCategoryIds().map((id) => {
     const inCat = list.filter((p) => p.category === id);
-    const rep = inCat.find((p) => p.featured && imageSrc(p)) || inCat.find((p) => imageSrc(p)) || inCat[0];
+    const rep = homeRepresentative(inCat);
     const lows = inCat.map(fromPrice).filter((n) => n !== null);
-    return `<a class="category-card" href="${categoryUrl(id)}"><div class="category-picture device-media">${categoryArtwork(id) || media(rep)}</div><h3>${esc(categoryName(id))}</h3><span class="category-count">${esc(t('count')(inCat.length))}${lows.length ? ` · ${esc(t('from'))} <bdi>${esc(money(Math.min(...lows)))}</bdi>` : ''}</span></a>`;
+    return `<a class="category-card" href="${categoryUrl(id)}"><div class="category-picture device-media">${!homePriority(rep) && categoryArtwork(id) || media(rep)}</div><h3>${esc(categoryName(id))}</h3><span class="category-count">${esc(t('count')(inCat.length))}${lows.length ? ` · ${esc(t('from'))} <bdi>${esc(money(Math.min(...lows)))}</bdi>` : ''}</span></a>`;
   }).join('');
   const trust = t('trust').map(([title, text], i) => `<li class="trust-item"><span class="trust-icon" aria-hidden="true">${icon(['search', 'box', 'heart', 'swap'][i])}</span><span><strong>${esc(title)}</strong><small>${esc(text)}</small></span></li>`).join('');
   return `<section class="hero"><div class="container hero-grid"><div class="hero-copy"><h1><span>${esc(t('heroLine1'))}</span> <span>${esc(t('heroLine2'))}</span></h1><form id="home-search-form" class="home-search" role="search">${icon('search')}<label class="sr-only" for="home-search">${esc(t('search'))}</label><input id="home-search" name="q" type="search" placeholder="${esc(t('searchPlaceholder'))}" autocomplete="off" enterkeyhint="search"></form><div class="hero-buttons"><a class="button button-dark" href="#/offers">${esc(t('heroOffers'))}${arrow}</a><a class="button button-outline" href="#/shop">${esc(t('browse'))}</a></div></div><div id="hero-showcase" class="hero-showcase">${heroShowcase()}</div></div></section>
@@ -569,7 +572,7 @@ function renderRoute({ focus = false } = {}) {
   $$('[data-instagram-slot]').forEach((element) => {
     const allowed = instagramAllowed(state.route.name);
     element.hidden = !allowed;
-    element.innerHTML = allowed ? `<a href="${esc(S().instagram)}" ${external}>Instagram ↗</a>` : '';
+    element.innerHTML = allowed ? `<a href="${esc(S().instagram)}" ${external}>Instagram${arrow}</a>` : '';
   });
   $$('[data-contact-block]').forEach((element) => { element.hidden = state.route.name === 'p'; });
   $('.site-footer')?.classList.toggle('is-device-page', state.route.name === 'p');
@@ -663,6 +666,8 @@ async function start() {
   state.saved = new Set(Array.isArray(saved) ? saved.map((id) => legacyIds[id] || id).filter((id) => ids.has(id)) : []);
   state.bag = loadBag();
   const firstCat = homeCategoryIds()[0]; if (firstCat && !homeCategoryIds().includes(state.heroCategory)) state.heroCategory = firstCat;
+  const promoted = featuredFirst(homeProducts().filter((product) => product.featured && homePriority(product)))[0];
+  if (promoted) state.heroCategory = promoted.category;
   translateShell();
   renderRoute();
   loadAccount();

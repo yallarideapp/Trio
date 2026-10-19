@@ -6,7 +6,8 @@ import { webcrypto } from 'node:crypto';
 import seed from '../shared/catalog.js';
 import deviceSpecifications from '../shared/device-specs.js';
 import * as pricing from '../shared/pricing.js';
-import { conditions, conditionShort, notes, warranties, governorates } from '../shared/labels.js';
+import { conditions, conditionShort, conditionGroup, notes, warranties, governorates } from '../shared/labels.js';
+import { forwardArrow } from '../shared/navigation.js';
 
 export function verifyStorefront() {
   const stored = new Map();
@@ -14,14 +15,14 @@ export function verifyStorefront() {
   const document = { querySelector: () => null, querySelectorAll: () => [], addEventListener() {} };
   const location = { hash: '#/', replace(value) { this.hash = value; } };
   const context = vm.createContext({
-    ...pricing, deviceSpecifications, conditions, conditionShort, noteLabels: notes, warranties, governorates,
+    ...pricing, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates,
     renderAccount: () => '<h1>My account</h1>', loadAccount: async () => {}, bindAccount: () => {}, accountLabel: () => 'Sign in', customerProfile: () => null,
     MODE: 'pages', api: { photoUrl: () => '' }, local: { read: (key, fallback = null) => stored.has(key) ? structuredClone(stored.get(key)) : fallback, write: (key, value) => { stored.set(key, structuredClone(value)); return true; } },
     document, location, crypto: webcrypto, window: { crypto: webcrypto, addEventListener: (name, listener) => windowEvents.set(name, listener) }, console, URLSearchParams, Intl, setTimeout, clearTimeout,
   });
   const source = readFileSync(new URL('../site/src/app.js', import.meta.url), 'utf8')
     .replace(/^import[^\n]*\n/gm, '').replace(/^start\(\);\s*$/m, '');
-  vm.runInContext(source + '\n globalThis.ui = { state, renderHome, renderCatalog, renderProductResults, filteredProducts, readRoute, renderDetail, renderService, renderContact, renderBag, renderCheckout, renderDone, instagramAllowed, loadBag, saveBag, cleanBag, toggleSaved, phoneHref, phoneText };', context);
+  vm.runInContext(source + '\n globalThis.ui = { state, conditionChips, renderHome, renderCatalog, renderProductResults, filteredProducts, readRoute, renderDetail, renderService, renderContact, renderBag, renderCheckout, renderDone, instagramAllowed, loadBag, saveBag, cleanBag, toggleSaved, phoneHref, phoneText };', context);
   const ui = context.ui;
   ui.state.content = structuredClone(seed);
   // Editing a local preview must not remove a public shopping bag item or
@@ -83,6 +84,12 @@ export function verifyStorefront() {
   let productViews = 0;
   for (const language of ['ar', 'en']) {
     ui.state.language = language;
+    const conditionFixture = structuredClone(seed.products[0]);
+    conditionFixture.variants = ['new-sealed', 'new', 'like-new', 'used-agency', 'used'].map((condition, index) => ({ ...conditionFixture.variants[0], key: 'condition-' + index, condition, soldOut: false }));
+    const chips = ui.conditionChips(conditionFixture);
+    assert.equal((chips.match(/class="cond-chip /g) || []).length, 2, language + ': legacy variants deduplicate into exactly two condition badges');
+    assert(chips.includes(language === 'ar' ? 'مستعمل بحالة الجديد' : 'Used like new'), language + ': used condition uses requested wording');
+    assert(!/Agency cond\.|Sealed|Used but unused|بحالة الوكالة|جديد مسكّر/.test(chips), language + ': old condition labels are absent');
     const originalOffersTitle = ui.state.content.settings.offersTitle;
     ui.state.content.settings.offersTitle = { ar: 'تشكيلة خاصة', en: 'Editor offer selection' };
     ui.state.route = { name: 'home' };
@@ -152,6 +159,29 @@ export function verifyStorefront() {
       checkHome(home);
       assert(home.includes(`data-hero-category="${category}" aria-pressed="true"`), `${language}/${category}: selected home hero choice remains active`);
     }
+    // Home selections include offers and all selected cards, without an eight-
+    // device cap. A later selection leads without clearing previous choices.
+    const beforeSelections = ui.state.content;
+    try {
+      ui.state.content = structuredClone(seed);
+      const candidates = ui.state.content.products.filter((product) => homeCategories.includes(product.category));
+      candidates.forEach((product, index) => { product.featured = index < 11; product.homePriority = index + 1; });
+      const newest = candidates.find((product) => product.id === 'iphone-17-pro');
+      newest.featured = true; newest.offer = true; newest.homePriority = 99999;
+      ui.state.heroCategory = 'phones';
+      const html = ui.renderHome();
+      const picks = html.match(/<section class="container featured-section">([\s\S]*?)<\/section>/)?.[1] || '';
+      const selected = candidates.filter((product) => product.featured);
+      assert.deepEqual(cardIds(picks).sort(), selected.map((product) => product.id).sort(), `${language}: every selected device appears in Picks, including offers`);
+      assert.equal(cardIds(picks)[0], newest.id, `${language}: newest selection leads Picks`);
+      assert(html.includes(`class="hero-product" href="#/p/${newest.id}"`), `${language}: newly selected phone leads showcase while other devices remain selected`);
+      newest.hidden = true;
+      assert(!cardIds(ui.renderHome()).includes(newest.id), `${language}: an explicitly hidden selection stays hidden`);
+      const watch = candidates.find((product) => product.category === 'watches');
+      watch.featured = true; watch.homePriority = 100000;
+      ui.state.heroCategory = 'watches';
+      assert(ui.renderHome().includes(`class="hero-product" href="#/p/${watch.id}"`), `${language}: selected watch displays the chosen device instead of static category artwork`);
+    } finally { ui.state.content = beforeSelections; ui.state.heroCategory = 'phones'; }
     // Category restrictions must hold even when excluded devices lead the
     // catalog and are promoted into both offers and featured products.
     const contentBeforeHomeCheck = ui.state.content;

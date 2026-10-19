@@ -1,23 +1,25 @@
-// Fixed wording for device condition, notes and warranty, in the shop's own words
-// from its posts. The admin chooses from these lists.
+// Display two condition groups while retaining the keys used by older catalogs.
+export const conditionOptions = {
+  new: { ar: 'جديد', en: 'New' },
+  'like-new': { ar: 'مستعمل بحالة الجديد', en: 'Used like new' },
+};
+
+export function conditionGroup(value) {
+  if (value === 'new' || value === 'new-sealed') return 'new';
+  if (value === 'like-new' || value === 'used-agency' || value === 'used') return 'like-new';
+  return '';
+}
 
 export const conditions = {
-  'new-sealed': { ar: 'جديد مسكّر بالكرتونة', en: 'New, sealed in box' },
-  new: { ar: 'جديد', en: 'New' },
-  'like-new': { ar: 'مستعمل بس مش مستخدم', en: 'Used but unused' },
-  'used-agency': { ar: 'مستخدم بحالة الوكالة', en: 'Used, agency condition' },
-  used: { ar: 'مستعمل', en: 'Used' },
+  'new-sealed': conditionOptions.new,
+  new: conditionOptions.new,
+  'like-new': conditionOptions['like-new'],
+  'used-agency': conditionOptions['like-new'],
+  used: conditionOptions['like-new'],
   '': { ar: '', en: '' },
 };
 
-export const conditionShort = {
-  'new-sealed': { ar: 'جديد مسكّر', en: 'Sealed' },
-  new: { ar: 'جديد', en: 'New' },
-  'like-new': { ar: 'بحالة الجديد', en: 'Like new' },
-  'used-agency': { ar: 'بحالة الوكالة', en: 'Agency cond.' },
-  used: { ar: 'مستعمل', en: 'Used' },
-  '': { ar: '', en: '' },
-};
+export const conditionShort = { ...conditions };
 
 export const notes = {
   noActive: { ar: 'No Active (ما تفعّل)', en: 'Never activated (No Active)' },

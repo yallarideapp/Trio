@@ -1,5 +1,13 @@
 # Replacement storefront verification — 18 October 2026
 
+## Home selections, arrows and condition labels — 19 October 2026
+
+- Every visible, selected device in the four supported home categories now appears in Picks, including selected offers. Removed the eight-item cap and offer exclusion. A persisted selection priority makes the latest selection lead its category and initial hero. Selecting a hidden device unhides it without clearing earlier selections; explicitly hiding it later still works.
+- Regression checks cover more than eight selected items, earlier selections, hidden devices, category changes, repeated selection, backwards clocks, export/import and backend validation. Duplicated products start hidden and unselected. Shared condition labels collapse legacy keys into New and Used like new without changing catalog prices or variant identities; card chips are deduplicated and the editor offers only those two labels plus an unspecified choice.
+- Replaced diagonal navigation glyphs with consistent SVG arrows that follow language direction. Storefront and admin dropdowns use inset chevrons with reserved text space and mirrored RTL positioning. Existing site backgrounds remain unchanged.
+- Browser QA selected iPhone 17 Pro while earlier devices remained selected, saved the draft and verified it leads the home hero and Picks alongside all earlier selections. Arabic/English catalog filters and arrows were checked at 1280px and a 424px narrow viewport with no horizontal document overflow. The narrow admin form also fit at 424px. The requested 320/390px override did not apply to the catalog tab in this environment, so those widths were not reverified in this release.
+- Live and Pages builds and the complete catalog, image, storefront, preview, account, order and Worker checks pass. Browser testing uses Chromium, not physical iOS or Android devices.
+
 ## Working owner demonstration — 19 October 2026
 
 - Pages now has functional browser-only registration, sign-in/out, sample-account entry, profile editing, password changes and private order history. Passwords are stored only as salted PBKDF2 hashes. A bilingual banner identifies the owner demonstration and explains that no payments are collected or orders sent to the store.
