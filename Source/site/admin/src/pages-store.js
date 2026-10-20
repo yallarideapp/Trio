@@ -1,7 +1,7 @@
 // Browser-only catalog editor and manual order records. No remote publication.
 import seed from '../../../shared/catalog.js';
 import specifications from '../../../shared/device-specs.js';
-import { validPrice, validStockQuantity } from '../../../shared/pricing.js';
+import { validPrice, validStockQuantity, validOfferPrice } from '../../../shared/pricing.js';
 import { conditions, notes, warranties } from '../../../shared/labels.js';
 import { ApiError, withDefaults } from '../../src/store.js';
 import { PREVIEW_KEY, PHOTO_KEY, EDITOR_KEY, readLocal, readPreview, validPhoto } from '../../src/pages-preview.js';
@@ -46,7 +46,7 @@ function validate(content, photos) {
     if (!Array.isArray(product.variants) || !product.variants.length || product.variants.length > 40) invalid();
     const keys = new Set();
     for (const variant of product.variants) {
-      if (!variant || !/^[a-z0-9][a-z0-9-]{0,79}$/.test(variant.key) || keys.has(variant.key) || !validPrice(variant.price) || !validStockQuantity(variant.stockQuantity) || !text(variant.storage, 200) || !Object.hasOwn(conditions, variant.condition || '') || !Object.hasOwn(warranties, variant.warranty || '') || !Array.isArray(variant.notes) || variant.notes.some((note) => !Object.hasOwn(notes, note))) invalid();
+      if (!variant || !/^[a-z0-9][a-z0-9-]{0,79}$/.test(variant.key) || keys.has(variant.key) || !validPrice(variant.price) || !validOfferPrice(variant) || !validStockQuantity(variant.stockQuantity) || !text(variant.storage, 200) || !Object.hasOwn(conditions, variant.condition || '') || !Object.hasOwn(warranties, variant.warranty || '') || !Array.isArray(variant.notes) || variant.notes.some((note) => !Object.hasOwn(notes, note))) invalid();
       keys.add(variant.key);
     }
     const technical = product.technical;

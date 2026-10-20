@@ -8,6 +8,8 @@ import deviceSpecifications from '../shared/device-specs.js';
 import * as pricing from '../shared/pricing.js';
 import { conditions, conditionShort, conditionGroup, notes, warranties, governorates } from '../shared/labels.js';
 import { forwardArrow } from '../shared/navigation.js';
+import { heroRigFor, heroMotionAssets } from '../site/src/hero-motion.js';
+import { existsSync, statSync } from 'node:fs';
 
 export function verifyStorefront() {
   const stored = new Map();
@@ -16,6 +18,7 @@ export function verifyStorefront() {
   const location = { hash: '#/', replace(value) { this.hash = value; } };
   const context = vm.createContext({
     ...pricing, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates,
+    playHeroMotion: () => {},
     renderAccount: () => '<h1>My account</h1>', loadAccount: async () => {}, bindAccount: () => {}, accountLabel: () => 'Sign in', customerProfile: () => null,
     MODE: 'pages', api: { photoUrl: () => '' }, local: { read: (key, fallback = null) => stored.has(key) ? structuredClone(stored.get(key)) : fallback, write: (key, value) => { stored.set(key, structuredClone(value)); return true; } },
     document, location, crypto: webcrypto, window: { crypto: webcrypto, addEventListener: (name, listener) => windowEvents.set(name, listener) }, console, URLSearchParams, Intl, setTimeout, clearTimeout,
@@ -329,6 +332,71 @@ export function verifyStorefront() {
     ui.state.bag = [];
     assert(instagram.test(ui.renderService()), `${language}: repair retains Instagram`);
     assert(instagram.test(ui.renderContact()), `${language}: visit-us retains Instagram`);
+  }
+  // Offer prices: an option with an offer price puts its device in the offers, crosses out the
+  // regular price, and the bag and checkout charge the offer price.
+  {
+    const content = structuredClone(seed);
+    content.settings.ordersOn = true; // as the Pages demo loads it
+    const home = ['phones', 'laptops', 'watches', 'audio'];
+    const product = content.products.find((p) => !p.hidden && p.offer !== true && home.includes(p.category) && p.variants.some((v) => pricing.validPrice(v.price) && v.price > 60));
+    assert(product, 'a home device without an offer flag exists');
+    const variant = product.variants.slice().sort((a, b) => a.price - b.price)[0];
+    variant.offerPrice = variant.price - 50;
+    const regular = pricing.toFils(variant.price), offer = pricing.toFils(variant.offerPrice);
+    ui.state.content = content; ui.state.bag = []; ui.state.selected = {}; ui.state.category = 'all'; ui.state.query = ''; ui.state.cond = 'all'; ui.state.brand = 'all';
+    assert(pricing.inOffers(product) && pricing.productHasOfferPrice(product), 'an offer price puts the device in the offers');
+    for (const language of ['ar', 'en']) {
+      ui.state.language = language;
+      ui.state.route = { name: 'home' };
+      const homeHtml = ui.renderHome();
+      const offersSection = homeHtml.slice(homeHtml.indexOf('offers-section'));
+      assert(offersSection.includes(`data-product="${product.id}"`), `${language}: home offers include the device with an offer price`);
+      ui.state.route = { name: 'offers' }; ui.state.sort = 'featured';
+      const offersPage = ui.renderProductResults(ui.filteredProducts());
+      const card = offersPage.slice(offersPage.indexOf(`data-product="${product.id}"`));
+      assert(offersPage.includes(`data-product="${product.id}"`), `${language}: offers page lists the device`);
+      assert(card.includes('offer-badge') && card.includes('price-was') && card.includes(pricing.formatJD(regular, language)) && card.includes(pricing.formatJD(offer, language)), `${language}: card shows the crossed-out price and the offer price`);
+      ui.state.route = { name: 'p', id: product.id, params: new URLSearchParams() };
+      ui.state.selected[product.id] = variant.key;
+      const detail = ui.renderDetail(product.id);
+      const buy = detail.slice(detail.indexOf('id="detail-buy"'));
+      assert(buy.includes('price-was') && buy.includes(pricing.formatJD(offer, language)) && buy.includes(pricing.formatJD(regular - offer, language)), `${language}: device page shows the offer price and the saving`);
+      ui.state.bag = [];
+      ui.addToBag(pricing.variantId(product.id, variant.key));
+      ui.state.route = { name: 'checkout' };
+      assert(ui.renderCheckout().includes(pricing.formatJD(offer, language)), `${language}: checkout charges the offer price`);
+    }
+    const priced = pricing.priceLines(content, [{ id: pricing.variantId(product.id, variant.key), qty: 2 }]);
+    assert(priced.ok && priced.totalFils === offer * 2, 'priced lines use the offer price');
+    assert.equal(pricing.fromPrice(product), Math.min(offer, ...product.variants.filter((v) => pricing.variantQuantityLimit(v) > 0).map(pricing.variantFils)), 'from-price uses the offer price');
+    variant.offerPrice = variant.price;
+    assert(!pricing.variantHasOffer(variant) && !pricing.validOfferPrice(variant), 'an offer price equal to the price is not an offer');
+    assert.equal(pricing.priceLines(content, [{ id: pricing.variantId(product.id, variant.key), qty: 1 }]).error, 'unknown', 'an invalid offer price cannot be ordered');
+    for (const empty of [null, undefined]) { variant.offerPrice = empty; assert(pricing.validOfferPrice(variant) && !pricing.variantHasOffer(variant), `no offer for ${empty}`); }
+    for (const bad of ['', 'x', -1, 0, Infinity, variant.price + 1]) { variant.offerPrice = bad; assert(!pricing.validOfferPrice(variant), `offer ${String(bad)} refused`); }
+    ui.state.bag = []; ui.state.selected = {}; ui.state.content = structuredClone(seed);
+  }
+  // Hero motion: each default hero photo (phones, laptops, watches, audio) has its animation layers.
+  {
+    ui.state.content = structuredClone(seed); ui.state.route = { name: 'home' }; ui.state.language = 'en';
+    const kinds = {};
+    for (const category of ['phones', 'laptops', 'watches', 'audio']) {
+      ui.state.heroCategory = category;
+      const html = ui.renderHome();
+      const hero = html.slice(html.indexOf('id="hero-showcase"'));
+      const src = (hero.match(/<img src="([^"]+)"/) || [])[1];
+      const rig = heroRigFor(src);
+      assert(rig, `${category}: the hero photo ${src} has its motion`);
+      kinds[category] = rig.kind;
+    }
+    assert.deepEqual(kinds, { phones: 'screen', laptops: 'lid', watches: 'wake', audio: 'pods' }, 'hero motion per category');
+    for (const asset of heroMotionAssets()) {
+      const file = new URL(`../site/${asset}`, import.meta.url);
+      assert(existsSync(file) && statSync(file).size > 1000, `hero motion layer ${asset} exists`);
+      assert.equal(readFileSync(file).toString('ascii', 8, 12), 'WEBP', `${asset} is WebP`);
+    }
+    assert.equal(heroRigFor('api/photo/abc'), null, 'an uploaded photo keeps the simple fade');
   }
   for (const name of ['home', 'shop', 'offers', 'saved', 'p', 'bag', 'checkout', 'done', 'trade-in']) assert(!ui.instagramAllowed(name), `${name}: footer social link hidden`);
   for (const name of ['maintenance', 'contact']) assert(ui.instagramAllowed(name), `${name}: footer social link allowed`);

@@ -235,6 +235,28 @@ export async function verifyWorkerOrders() {
     assert.deepEqual(afterRestart.data, { number: 'T-1005', totalFils: afterRestartBody.totalFils });
     assert.equal((await send('GET', '/api/admin/orders', undefined, { cookie: secondCookie })).data.orders.length, 5);
     await verifyCustomerAccounts({ send, env, orderBody, content: changed, adminCookie: cookie, expectError });
+    // Offer prices: published with the content, charged by the Worker, never above the price.
+    {
+      const current = await send('GET', '/api/admin/content', undefined, { cookie: secondCookie });
+      const offered = structuredClone(current.data.content);
+      const option = offered.products.find((product) => product.id === 'airtag').variants[0];
+      const badOffer = structuredClone(offered);
+      badOffer.products.find((product) => product.id === 'airtag').variants[0].offerPrice = option.price;
+      expectError(await send('PUT', '/api/admin/content', { baseVersion: current.data.version, content: badOffer }, { cookie: secondCookie }), 400, 'bad-content');
+      option.offerPrice = option.price - 5;
+      const saved = await send('PUT', '/api/admin/content', { baseVersion: current.data.version, content: offered }, { cookie: secondCookie });
+      assert.equal(saved.status, 200, 'a valid offer price publishes');
+      const publicContent = (await send('GET', '/api/content')).data.content;
+      assert.equal(publicContent.products.find((product) => product.id === 'airtag').variants[0].offerPrice, option.offerPrice, 'the offer price is published');
+      const regularBody = orderBody(); regularBody.totalFils = priceLines(changed, regularBody.lines).totalFils;
+      expectError(await send('POST', '/api/order', regularBody, { ip: '198.51.100.31' }), 409, 'price-changed');
+      const offerBody = orderBody(); offerBody.totalFils = priceLines(offered, offerBody.lines).totalFils;
+      assert(offerBody.totalFils < regularBody.totalFils, 'the offer total is lower');
+      const placed = await send('POST', '/api/order', offerBody, { ip: '198.51.100.32' });
+      assert.equal(placed.status, 201, 'an order at the offer price is accepted');
+      const stored = (await send('GET', '/api/admin/orders', undefined, { cookie: secondCookie })).data.orders.find((order) => order.number === placed.data.number);
+      assert.equal(stored.totalFils, offerBody.totalFils, 'the saved order carries the offer total');
+    }
     assert.deepEqual((await send('POST', '/api/admin/logout', {}, { cookie: secondCookie })).data, { ok: true });
     expectError(await send('GET', '/api/admin/orders', undefined, { cookie: secondCookie }), 401, 'signed-out');
     expectError(await send('GET', '/api/admin/orders'), 401, 'signed-out');

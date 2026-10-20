@@ -16,6 +16,28 @@ export function variantQuantityLimit(variant) {
 
 export const toFils = (jd) => Math.round(Number(jd) * 1000);
 
+// Optional offer price per option: when set, it must be below the option's price and is
+// what the shopper pays. Blank (null) means no offer.
+export function validOfferPrice(variant) {
+  const offer = variant.offerPrice;
+  return offer === undefined || offer === null || (validPrice(offer) && validPrice(variant.price) && toFils(offer) < toFils(variant.price));
+}
+export function variantHasOffer(variant) {
+  return variant.offerPrice !== undefined && variant.offerPrice !== null && validOfferPrice(variant);
+}
+// The price charged, in fils.
+export function variantFils(variant) {
+  return toFils(variantHasOffer(variant) ? variant.offerPrice : variant.price);
+}
+// A device is in the offers when one of its options has an offer price, or when the
+// store ticks "Show in offers" for it.
+export function productHasOfferPrice(product) {
+  return (product.variants || []).some(variantHasOffer);
+}
+export function inOffers(product) {
+  return product.offer === true || productHasOfferPrice(product);
+}
+
 export function variantId(productId, key) {
   return `${productId}:${key}`;
 }
@@ -58,11 +80,11 @@ export function priceLines(content, lines) {
     seen.add(id);
     const [productId, key] = splitVariantId(id);
     const found = findVariant(content, productId, key);
-    if (!found || !validPrice(found.variant.price)) return { ok: false, error: 'unknown', id };
+    if (!found || !validPrice(found.variant.price) || !validOfferPrice(found.variant)) return { ok: false, error: 'unknown', id };
     const limit = variantQuantityLimit(found.variant);
     if (!limit) return { ok: false, error: 'sold-out', id };
     if (qty > limit) return { ok: false, error: 'stock-limit', id };
-    const unit = toFils(found.variant.price);
+    const unit = variantFils(found.variant);
     total += unit * qty;
     out.push({ id, productId, key, qty, unitFils: unit, totalFils: unit * qty, product: found.product, variant: found.variant });
   }
@@ -70,7 +92,7 @@ export function priceLines(content, lines) {
 }
 
 export function fromPrice(product) {
-  const prices = (product.variants || []).filter((item) => variantQuantityLimit(item) > 0 && validPrice(item.price)).map((item) => toFils(item.price));
+  const prices = (product.variants || []).filter((item) => variantQuantityLimit(item) > 0 && validPrice(item.price) && validOfferPrice(item)).map(variantFils);
   return prices.length ? Math.min(...prices) : null;
 }
 

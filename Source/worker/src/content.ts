@@ -4,7 +4,7 @@ import seed from '../../shared/catalog.js';
 // @ts-ignore
 import { conditions, notes as noteLabels, warranties } from '../../shared/labels.js';
 // @ts-ignore
-import { validPrice, validStockQuantity } from '../../shared/pricing.js';
+import { validPrice, validStockQuantity, validOfferPrice } from '../../shared/pricing.js';
 // @ts-ignore verified bilingual device profiles
 import deviceSpecifications from '../../shared/device-specs.js';
 // @ts-ignore shared home showcase ordering
@@ -74,10 +74,13 @@ export function sanitizeContent(input: any): any {
       const price = Number(v.price);
       if (!validPrice(price)) throw new HttpError(400, 'bad-content', { field: 'price', id });
       if (!validStockQuantity(v.stockQuantity)) throw new HttpError(400, 'bad-content', { field: 'stock-quantity', id });
+      // Optional offer price: blank means none; when set it must be below the price.
+      const offerPrice = v.offerPrice === undefined || v.offerPrice === null || v.offerPrice === '' ? null : Number(v.offerPrice);
+      if (offerPrice !== null && !validOfferPrice({ price, offerPrice })) throw new HttpError(400, 'bad-content', { field: 'offer-price', id });
       const condition = isStr(v.condition) && Object.hasOwn(conditions, v.condition) ? v.condition : '';
       const warranty = isStr(v.warranty) && Object.hasOwn(warranties, v.warranty) ? v.warranty : '';
       const notes = Array.isArray(v.notes) ? [...new Set(v.notes.filter((n: any) => isStr(n) && Object.hasOwn(noteLabels, n)))] : [];
-      return { key, storage: str(v.storage, 40), condition, notes, warranty, price: Math.round(price * 1000) / 1000, soldOut: v.soldOut === true, stockQuantity: v.stockQuantity ?? null, posted: isStr(v.posted) && /^\d{4}-\d{2}-\d{2}$/.test(v.posted) ? v.posted : undefined };
+      return { key, storage: str(v.storage, 40), condition, notes, warranty, price: Math.round(price * 1000) / 1000, offerPrice: offerPrice === null ? null : Math.round(offerPrice * 1000) / 1000, soldOut: v.soldOut === true, stockQuantity: v.stockQuantity ?? null, posted: isStr(v.posted) && /^\d{4}-\d{2}-\d{2}$/.test(v.posted) ? v.posted : undefined };
     });
     if (!variants.length) throw new HttpError(400, 'bad-content', { field: 'variants', id });
     const image = isStr(p.image) && IMAGE.test(p.image) ? p.image : '';

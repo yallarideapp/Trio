@@ -1,9 +1,10 @@
 import deviceSpecifications from '../../shared/device-specs.js';
 import { api, local, MODE, ApiError } from './store.js';
 import { renderAccount, loadAccount, bindAccount, accountLabel, customerProfile } from './account.js';
-import { priceLines, fromPrice, formatJD, toFils, variantId, splitVariantId, visibleProducts, normaliseMobile, MAX_QTY, MAX_LINES, validPrice, variantQuantityLimit } from '../../shared/pricing.js';
+import { priceLines, fromPrice, formatJD, toFils, variantId, splitVariantId, visibleProducts, normaliseMobile, MAX_QTY, MAX_LINES, validPrice, variantQuantityLimit, variantFils, variantHasOffer, inOffers } from '../../shared/pricing.js';
 import { conditions, conditionShort, conditionGroup, notes as noteLabels, warranties, governorates } from '../../shared/labels.js';
 import { forwardArrow } from '../../shared/navigation.js';
+import { playHeroMotion } from './hero-motion.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -98,6 +99,8 @@ Object.assign(words.ar.errors, { 'storage-full': 'مساحة المتصفح غي
 Object.assign(words.en.errors, { 'storage-full': 'Your browser does not have enough space to save the order.', 'storage-unavailable': 'Browser storage is unavailable. Enable it and try again.', 'storage-invalid': 'Could not read the saved demo data in this browser.', 'orders-full': 'The demo order history is full.', 'token-conflict': 'Your account or order details changed. Review checkout and try again.', 'signed-out': 'Your account session changed. Review checkout and try again.', generic: 'Could not save your order. Please try again.' });
 words.ar.errors['stock-limit'] = 'الكمية المطلوبة أكبر من المخزون المتوفر. راجع السلة.';
 words.en.errors['stock-limit'] = 'The quantity exceeds current stock. Review your bag.';
+// Offer prices: the old price is crossed out and the saving is shown on the device page.
+words.ar.offerSave = 'بتوفّر'; words.en.offerSave = 'You save';
 const t = (key) => words[state.language][key];
 const L = (value) => (value && typeof value === 'object' ? value[state.language] || value.ar || value.en || '' : String(value || ''));
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -136,13 +139,13 @@ function conditionProduct(product, condition) {
   return { ...product, conditionFilter: condition, variants: product.variants.filter((variant) => conditionGroup(variant.condition) === group) };
 }
 function startingVariant(product) {
-  return availableVariants(product).slice().sort((a, b) => toFils(a.price) - toFils(b.price))[0] || product.variants[0];
+  return availableVariants(product).slice().sort((a, b) => variantFils(a) - variantFils(b))[0] || product.variants[0];
 }
 function defaultVariant(product) {
   const chosen = state.selected[product.id] && product.variants.find((v) => v.key === state.selected[product.id]);
   if (chosen) return chosen;
   const avail = availableVariants(product);
-  return (avail.length ? avail : product.variants).slice().sort((a, b) => toFils(a.price) - toFils(b.price))[0];
+  return (avail.length ? avail : product.variants).slice().sort((a, b) => variantFils(a) - variantFils(b))[0];
 }
 function variantLabel(variant, { short = false } = {}) {
   const cond = L((short ? conditionShort : conditions)[variant.condition || '']);
@@ -166,8 +169,10 @@ function saveButton(product, extra = '') {
 function priceTag(product) {
   const low = fromPrice(product);
   if (low === null) return `<span class="price-tag is-out">${esc(t('soldOut'))}</span>`;
-  const several = new Set(availableVariants(product).map((v) => toFils(v.price))).size > 1;
-  return `<span class="price-tag">${several ? `<small>${esc(t('from'))}</small> ` : ''}<bdi>${esc(money(low))}</bdi></span>`;
+  const several = new Set(availableVariants(product).map(variantFils)).size > 1;
+  const start = startingVariant(product);
+  const was = start && variantHasOffer(start) && variantFils(start) === low ? `<s class="price-was"><bdi>${esc(money(toFils(start.price)))}</bdi></s> ` : '';
+  return `<span class="price-tag${was ? ' is-offer' : ''}">${several ? `<small>${esc(t('from'))}</small> ` : ''}${was}<bdi>${esc(money(low))}</bdi></span>`;
 }
 function conditionChips(product) {
   const condition = conditionGroup(startingVariant(product)?.condition);
@@ -184,7 +189,7 @@ function productCard(product) {
   if (group) product = conditionProduct(product, group === 'new' ? 'new' : 'used');
   const name = esc(L(product.name));
   const href = productUrl(product, startingVariant(product));
-  return `<article class="product-card" data-product="${esc(product.id)}"><div class="product-visual"><a class="product-image device-media" href="${href}" aria-label="${esc(`${t('view')}: ${L(product.name)}`)}">${media(product)}</a>${saveButton(product)}${product.offer ? `<span class="offer-badge">${esc(t('offers'))}</span>` : ''}</div><div class="product-body"><p class="product-brand" dir="ltr">${esc(product.brand)}</p><h3 class="product-name" dir="auto"><a href="${href}">${name}</a></h3><p class="product-caption">${esc(L(specification(product)?.specs[0]?.value))}</p>${conditionChips(product)}<div class="product-buy">${priceTag(product)}${cardAction(product)}</div></div></article>`;
+  return `<article class="product-card" data-product="${esc(product.id)}"><div class="product-visual"><a class="product-image device-media" href="${href}" aria-label="${esc(`${t('view')}: ${L(product.name)}`)}">${media(product)}</a>${saveButton(product)}${inOffers(product) ? `<span class="offer-badge">${esc(t('offers'))}</span>` : ''}</div><div class="product-body"><p class="product-brand" dir="ltr">${esc(product.brand)}</p><h3 class="product-name" dir="auto"><a href="${href}">${name}</a></h3><p class="product-caption">${esc(L(specification(product)?.specs[0]?.value))}</p>${conditionChips(product)}<div class="product-buy">${priceTag(product)}${cardAction(product)}</div></div></article>`;
 }
 function sectionHeading(title, href, label = t('allDevices'), eyebrow = '') {
   return `<div class="section-heading"><div>${eyebrow ? `<p class="eyebrow">${esc(eyebrow)}</p>` : ''}<h2>${esc(title)}</h2></div>${href ? `<a class="text-link" href="${esc(href)}">${esc(label)}${arrow}</a>` : ''}</div>`;
@@ -227,7 +232,7 @@ function offersRow(list) {
 }
 function renderHome() {
   const list = homeProducts();
-  const offers = list.filter((p) => p.offer);
+  const offers = list.filter(inOffers);
   const cats = homeCategoryIds().map((id) => {
     const inCat = list.filter((p) => p.category === id);
     const rep = homeRepresentative(inCat);
@@ -252,7 +257,7 @@ function normalize(value) {
 }
 function baseProducts() {
   const r = state.route.name;
-  return products().filter((p) => (r !== 'saved' || state.saved.has(p.id)) && (r !== 'offers' || p.offer) && (state.category === 'all' || p.category === state.category));
+  return products().filter((p) => (r !== 'saved' || state.saved.has(p.id)) && (r !== 'offers' || inOffers(p)) && (state.category === 'all' || p.category === state.category));
 }
 function filteredProducts() {
   const query = normalize(state.query);
@@ -274,7 +279,7 @@ function filteredProducts() {
 function categoryTabs() {
   const r = state.route.name;
   const base = r === 'saved' ? `saved` : r === 'offers' ? 'offers' : 'shop';
-  const avail = products().filter((p) => (r !== 'saved' || state.saved.has(p.id)) && (r !== 'offers' || p.offer));
+  const avail = products().filter((p) => (r !== 'saved' || state.saved.has(p.id)) && (r !== 'offers' || inOffers(p)));
   return `<nav class="catalog-tabs" aria-label="${esc(t('heroChoose'))}">${['all', ...categoryIds()].map((id) => {
     const count = avail.filter((p) => id === 'all' || p.category === id).length;
     if (id !== 'all' && !count) return '';
@@ -348,15 +353,15 @@ function renderDetail(id) {
   if (!product?.variants.length) return `<div class="container page-shell"><div class="empty-state"><h1>${esc(t('notFound'))}</h1><p>${esc(t('notFoundText'))}</p><a class="button button-primary" href="#/shop">${esc(t('browse'))}</a></div></div>`;
   const variant = defaultVariant(product);
   const related = products().filter((p) => p.category === product.category && p.id !== product.id).slice(0, 4);
-  const chips = product.variants.length > 1 ? `<fieldset class="variant-picker"><legend>${esc(t('options'))}</legend><div class="variant-list">${product.variants.map((v) => `<button type="button" class="variant-chip" data-variant="${esc(v.key)}" data-product-id="${esc(product.id)}" aria-pressed="${v.key === variant.key}"${variantQuantityLimit(v) === 0 ? ' disabled' : ''}><span class="variant-name" dir="auto">${esc(variantLabel(v, { short: true }) || L(product.name))}</span><span class="variant-price"><bdi>${esc(variantQuantityLimit(v) === 0 ? t('soldOut') : money(toFils(v.price)))}</bdi></span></button>`).join('')}</div></fieldset>` : '';
+  const chips = product.variants.length > 1 ? `<fieldset class="variant-picker"><legend>${esc(t('options'))}</legend><div class="variant-list">${product.variants.map((v) => `<button type="button" class="variant-chip" data-variant="${esc(v.key)}" data-product-id="${esc(product.id)}" aria-pressed="${v.key === variant.key}"${variantQuantityLimit(v) === 0 ? ' disabled' : ''}><span class="variant-name" dir="auto">${esc(variantLabel(v, { short: true }) || L(product.name))}</span><span class="variant-price">${variantQuantityLimit(v) !== 0 && variantHasOffer(v) ? `<s class="price-was"><bdi>${esc(money(toFils(v.price)))}</bdi></s> ` : ''}<bdi>${esc(variantQuantityLimit(v) === 0 ? t('soldOut') : money(variantFils(v)))}</bdi></span></button>`).join('')}</div></fieldset>` : '';
   const rows = variantNotes(variant).map(([label, value]) => `<li>${label ? `<span>${esc(label)}</span>` : ''}<strong dir="auto">${esc(value)}</strong></li>`).join('');
   const canBuy = variantQuantityLimit(variant) > 0 && validPrice(variant.price);
   return `<div class="container page-shell product-page"><nav class="breadcrumbs" aria-label="${esc(state.language === 'ar' ? 'مسار التصفح' : 'Breadcrumb')}"><a href="#/">${esc(t('home'))}</a><span aria-hidden="true">/</span><a href="${categoryUrl(product.category)}">${esc(categoryName(product.category))}</a><span aria-hidden="true">/</span><span dir="auto">${esc(L(product.name))}</span></nav>
   <div class="product-detail"><div class="detail-visual"><div class="detail-image device-media">${media(product, { eager: true })}</div>${product.imageNote && !product.photo ? `<p class="detail-photo-note">${esc(L(product.imageNote))}</p>` : ''}</div>
   <div class="detail-copy"><div class="detail-top"><div><p class="product-brand" dir="ltr">${esc(product.brand)}</p><h1 dir="auto">${esc(L(product.name))}</h1></div>${saveButton(product, 'detail-save-button')}</div><p class="detail-tagline">${esc(L(specification(product)?.summary))}</p>
   ${chips}
-  <div class="detail-buy" id="detail-buy"><p class="detail-price"><bdi>${esc(canBuy ? money(toFils(variant.price)) : t('soldOut'))}</bdi></p>${variant.storage ? `<p class="detail-variant" dir="auto">${esc(variant.storage)}</p>` : ''}${rows ? `<ul class="spec-list">${rows}</ul>` : ''}
-  <div class="detail-actions">${canBuy ? `<span class="mobile-buy-price"><bdi>${esc(money(toFils(variant.price)))}</bdi></span><button type="button" class="button button-primary button-wide" data-add="${esc(variantId(product.id, variant.key))}">${icon('bag')}${esc(t('add'))}</button>` : `<span class="button button-wide is-disabled">${esc(t('unavailable'))}</span>`}</div></div>
+  <div class="detail-buy" id="detail-buy"><p class="detail-price${canBuy && variantHasOffer(variant) ? ' is-offer' : ''}">${canBuy && variantHasOffer(variant) ? `<s class="price-was"><bdi>${esc(money(toFils(variant.price)))}</bdi></s> <span class="price-save">${esc(t('offerSave'))} <bdi>${esc(money(toFils(variant.price) - variantFils(variant)))}</bdi></span> ` : ''}<bdi>${esc(canBuy ? money(variantFils(variant)) : t('soldOut'))}</bdi></p>${variant.storage ? `<p class="detail-variant" dir="auto">${esc(variant.storage)}</p>` : ''}${rows ? `<ul class="spec-list">${rows}</ul>` : ''}
+  <div class="detail-actions">${canBuy ? `<span class="mobile-buy-price"><bdi>${esc(money(variantFils(variant)))}</bdi></span><button type="button" class="button button-primary button-wide" data-add="${esc(variantId(product.id, variant.key))}">${icon('bag')}${esc(t('add'))}</button>` : `<span class="button button-wide is-disabled">${esc(t('unavailable'))}</span>`}</div></div>
   ${renderSpecifications(product, variant)}</div></div>
   ${related.length ? `<section class="related-section">${sectionHeading(t('related'), categoryUrl(product.category), t('backCategory'))}<div class="product-grid">${related.map(productCard).join('')}</div></section>` : ''}</div>`;
 }
@@ -576,8 +581,12 @@ function translateShell() {
   $$('[data-maps-link]').forEach((a) => { a.href = S().maps; });
   updateCounts();
 }
+let lastRendered = '';
 function renderRoute({ focus = false } = {}) {
   state.route = readRoute();
+  // The hero motion plays when the home page is entered, not on every redraw of it.
+  const enteringHome = state.route.name === 'home' && lastRendered !== 'home';
+  lastRendered = state.route.name;
   document.body.dataset.route = state.route.name;
   state.category = state.route.category;
   const p = state.route.params;
@@ -599,6 +608,7 @@ function renderRoute({ focus = false } = {}) {
     default: html = renderHome();
   }
   main.innerHTML = html;
+  if (enteringHome) playHeroMotion(main.querySelector('#hero-showcase'));
   $$('[data-instagram-slot]').forEach((element) => {
     const allowed = instagramAllowed(state.route.name);
     element.hidden = !allowed;
@@ -652,7 +662,7 @@ document.addEventListener('click', (event) => {
   }
   const rm = target.closest('[data-remove]'); if (rm) { state.bag = state.bag.filter((l) => l.id !== rm.dataset.remove); saveBag(); renderRoute(); return; }
   const hero = target.closest('[data-hero-category]');
-  if (hero) { state.heroCategory = hero.dataset.heroCategory; const box = $('#hero-showcase'); box.classList.add('is-switching'); setTimeout(() => { box.innerHTML = heroShowcase(); box.classList.remove('is-switching'); $(`[data-hero-category="${CSS.escape(state.heroCategory)}"]`)?.focus({ preventScroll: true }); }, 160); return; }
+  if (hero) { state.heroCategory = hero.dataset.heroCategory; const box = $('#hero-showcase'); box.classList.add('is-switching'); setTimeout(() => { box.innerHTML = heroShowcase(); box.classList.remove('is-switching'); playHeroMotion(box); $(`[data-hero-category="${CSS.escape(state.heroCategory)}"]`)?.focus({ preventScroll: true }); }, 160); return; }
   const scroll = target.closest('[data-scroll]');
   if (scroll) { const track = scroll.closest('[data-scroller]')?.querySelector('.offer-track'); if (track) { const dir = Number(scroll.dataset.scroll) * (document.documentElement.dir === 'rtl' ? -1 : 1); track.scrollBy({ left: dir * track.clientWidth * 0.8, behavior: 'smooth' }); } return; }
   if (target.closest('#reset-filters')) { state.query = ''; state.brand = 'all'; state.sort = 'featured'; state.cond = 'all'; syncFilterUrl(); renderRoute(); $('#product-search')?.focus({ preventScroll: true }); return; }
