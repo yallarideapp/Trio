@@ -2,9 +2,10 @@ import { Env, HttpError, json, readJson, checkOrigin, clientIp, sha256, randomHe
 // @ts-ignore shared plain-JS module
 import { normaliseMobile } from '../../shared/pricing.js';
 
-// Workers permit up to 100,000 PBKDF2 iterations. Verify actual CPU time after
-// deployment before accepting traffic; password changes derive two hashes.
-const ITERATIONS = 100000;
+// Same cost as the admin sign-in: 20,000 rounds keep a sign-in (and a password
+// change, which derives two hashes) inside the free plan's 10 ms of CPU. The
+// 16-character minimum makes up for the lower count. Each row keeps its own count.
+const ITERATIONS = 20000;
 const SESSION_SECONDS = 7 * 86400;
 const COOKIE = 'trio_customer';
 const TOKEN = /^[a-f0-9]{64}$/;

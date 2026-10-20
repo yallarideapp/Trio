@@ -1,7 +1,7 @@
 #!/bin/bash
 # Builds Demo/, the source ZIP and the delivery folder + ZIP for TRIO Mobile.
 # Run from anywhere: bash Source/tools/package-store.sh   (or double-click UPDATE-PACKAGE.command)
-# Needs: Node.js 20+, `npm install` once in Source/, and the `zip` / `unzip` commands (built into macOS).
+# Needs: Node.js 22 or newer (24 recommended; the checks use node:sqlite), `npm install` once in Source/, and the `zip` / `unzip` commands (built into macOS).
 set -euo pipefail
 
 TOOLS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,6 +17,7 @@ inside() { case "$1" in "$ROOT"/*) return 0;; *) echo "Refusing path outside the
 for p in "$DELIVERY_PARENT" "$WORK" "$ROOT/Demo"; do inside "$p"; done
 [ -f "$SOURCE/package.json" ] || { echo "Source/package.json not found" >&2; exit 1; }
 command -v node >/dev/null || { echo "Node.js is not installed (https://nodejs.org)" >&2; exit 1; }
+[ "$(node -p "process.versions.node.split('.')[0]")" -ge 22 ] || { echo "Node.js 22 or newer is needed (24 recommended): https://nodejs.org" >&2; exit 1; }
 command -v zip >/dev/null || { echo "zip is not installed" >&2; exit 1; }
 [ -d "$SOURCE/node_modules/esbuild" ] || (cd "$SOURCE" && npm ci --no-audit --no-fund)
 
@@ -42,6 +43,7 @@ cat > "$ROOT/Demo/README-AR.md" <<'MD'
 1. فك ضغط المجلد كامل (ما تفتحه من جوا الـ ZIP).
 2. دبل كليك على `Open-demo.html` (أو `START-DEMO.command` على الماك). الأفضل Chrome أو Safari أو Edge.
 3. زر «نسخة عرض · لوحة التحكم» تحت بفتح لوحة التحكم بدون كلمة سر.
+4. الطلب من الموقع مسكّر بالبداية: من لوحة التحكم ← الإعدادات فعّل «استقبال الطلبات من الموقع» واضغط «انشر».
 
 - الأسعار والأجهزة من منشورات تريو على إنستغرام.
 - أي تعديل أو طلب تجريبي بضل على هالمتصفح بس. ما بنبعت إشي للمحل، وما في دفع.
@@ -56,11 +58,11 @@ mkdir -p "$S/Source"
 for item in package.json package-lock.json wrangler.jsonc README-AR.md site shared worker migrations tools tests; do
   [ -e "$SOURCE/$item" ] && cp -R "$SOURCE/$item" "$S/Source/"
 done
-for item in README-AR.md README.md Cloudflare-guide.md START-DEMO.command UPDATE-PACKAGE.command .gitignore; do
-  [ -e "$ROOT/$item" ] && cp "$ROOT/$item" "$S/"
+for item in README-AR.md README.md Cloudflare-guide.md START-DEMO.command UPDATE-PACKAGE.command .gitignore .github; do
+  [ -e "$ROOT/$item" ] && cp -R "$ROOT/$item" "$S/"
 done
 mkdir -p "$S/Documents"
-for item in README-AR.md SOURCES.md IMAGE-ASSETS.md Media-originals; do
+for item in README-AR.md SOURCES.md IMAGE-ASSETS.md IMAGE-REPAIRS.json HOME-CATEGORY-ASSETS.json Media-originals; do
   [ -e "$ROOT/Documents/$item" ] && cp -R "$ROOT/Documents/$item" "$S/Documents/"
 done
 find "$S" \( -name '.DS_Store' -o -name 'node_modules' -o -name '.wrangler' -o -name 'dist' -o -name '.dev.vars' -o -name '*.log' \) -prune -exec rm -rf {} + 2>/dev/null || true
@@ -73,7 +75,7 @@ D="$DELIVERY_PARENT.tmp/$NAME"
 cp "$SRC_ZIP" "$D/"
 cp -R "$ROOT/Demo" "$D/Demo"
 mkdir -p "$D/Documents"
-for item in README-AR.md SOURCES.md IMAGE-ASSETS.md Media-originals; do
+for item in README-AR.md SOURCES.md IMAGE-ASSETS.md IMAGE-REPAIRS.json HOME-CATEGORY-ASSETS.json Media-originals; do
   [ -e "$ROOT/Documents/$item" ] && cp -R "$ROOT/Documents/$item" "$D/Documents/"
 done
 cp "$SOURCE/tools/delivery-README-AR.md" "$D/README-AR.md"

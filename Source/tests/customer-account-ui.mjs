@@ -43,10 +43,18 @@ function mount(overrides = {}) {
 }
 
 async function verifyBrowserDemoAdapter() {
-  const originals = Object.fromEntries(['fetch', 'localStorage', 'location'].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  const originals = Object.fromEntries(['fetch', 'localStorage', 'location', 'navigator'].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   const values = new Map();
   let network = 0;
   try {
+    // Browsers (and Node 24) have Web Locks; Node 20/22 do not, so queue calls the same way.
+    if (!globalThis.navigator?.locks) {
+      const queues = new Map();
+      Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { locks: { request(name, options, callback) {
+        const result = (queues.get(name) || Promise.resolve()).then(callback);
+        queues.set(name, result.catch(() => {})); return result;
+      } } } });
+    }
     globalThis.fetch = () => { network++; throw new Error('Pages must not request customer APIs'); };
     globalThis.location = { search: '' };
     globalThis.localStorage = { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)), removeItem: (key) => values.delete(key) };

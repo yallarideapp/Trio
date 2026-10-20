@@ -31,6 +31,15 @@
 - Browser QA selected iPhone 17 Pro while earlier devices remained selected, saved the draft and verified it leads the home hero and Picks alongside all earlier selections. Arabic/English catalog filters and arrows were checked at 1280px and a 424px narrow viewport with no horizontal document overflow. The narrow admin form also fit at 424px. The requested 320/390px override did not apply to the catalog tab in this environment, so those widths were not reverified in this release.
 - Live and Pages builds and the complete catalog, image, storefront, preview, account, order and Worker checks pass. Browser testing uses Chromium, not physical iOS or Android devices.
 
+## Adoption review — 19 October 2026
+
+- Shopper passwords now use 20,000 PBKDF2 rounds, the same as the admin. Measured locally: about 3.7ms per hash at 20,000 and 17.6ms at 100,000, so a password change (two hashes) at 100,000 would take about 35ms, over the free plan's 10ms CPU limit. The 16-character minimum stays. Existing rows keep their own round count.
+- Arabic device pages at 320px overflowed by 33px: the header bag icon plus the Sign in link did not fit. Below 360px the header Sign in link now hides on device pages only; it stays in the menu.
+- The home story text no longer names the area (the owner asked for no location line on the home page). The footer and Visit us keep the address.
+- `tests/customer-account-ui.mjs` supplies a lock queue when the runtime has no Web Locks, so `npm test` also passes on Node 22. Node 20 lacks `node:sqlite`; the package script now asks for Node 22 or newer.
+- Passed: every suite in `Source/tests` on Node 22 and 24 (live and Pages builds); the live Worker under Wrangler 4.140.0 with both migrations: admin setup, ordering switched on in Settings, price edit, photo upload, publish, shopper sign-up, checkout from a second browser, order in the shopper history and the admin, status change, sign-out; 59 API abuse checks (origin, content type, body size, price tampering, quantities, duplicate tokens, concurrent orders, rate limits, parallel logins, forged cookies, hostile content, photos); 38 shopper-account checks (cookie flags, admin/shopper cookie separation, spoofed owner fields, private history, profile and password changes, session revocation, login and sign-up limits); the portable demo from a folder; 15 routes × 10 widths × 2 languages without document overflow, page errors or broken images.
+- Not tested: a real Cloudflare account and its CPU metrics, real email delivery, physical iPhone/Android devices.
+
 ## Working owner demonstration — 19 October 2026
 
 - Pages now has functional browser-only registration, sign-in/out, sample-account entry, profile editing, password changes and private order history. Passwords are stored only as salted PBKDF2 hashes. A bilingual banner identifies the owner demonstration and explains that no payments are collected or orders sent to the store.
