@@ -74,6 +74,7 @@ export function verifyStorefront() {
   const commentary = /منشور|غير موثق|أكّد|أكد|historical|not documented|confirm|\bposted\b/i;
   const categoryCounts = { phones: 12, laptops: 4, tablets: 2, watches: 4, audio: 1, accessories: 1 };
   const homeCategories = ['phones', 'laptops', 'watches', 'audio'];
+  const homeTileCategories = seed.categories.map((category) => category.id);
   const categoryMembers = {
     laptops: ['macbook-pro-16-m5-max', 'macbook-pro-16-m5-pro', 'macbook-pro-14-m5-pro', 'macbook-air-15-m5'],
     tablets: ['ipad-a16', 'ipad-pro-m5'],
@@ -188,9 +189,17 @@ export function verifyStorefront() {
     }
     ui.state.route = { name: 'home' };
     const checkHome = (html) => {
-      assert.deepEqual([...html.matchAll(/<a class="category-card" href="#\/shop\/([^"]+)"/g)].map((match) => match[1]), homeCategories, `${language}: home category tiles contain only phones, laptops, watches and audio in order`);
-      assert.deepEqual([...html.matchAll(/data-hero-category="([^"]+)"/g)].map((match) => match[1]), homeCategories, `${language}: home hero offers the same four category choices`);
-      assert(!/#\/shop\/(?:tablets|accessories)(?:["?]|$)/.test(html), `${language}: home has no tablet or accessory category links`);
+      const tiles = [...html.matchAll(/<a class="category-card" href="#\/shop\/([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)];
+      assert.deepEqual(tiles.map((match) => match[1]), homeTileCategories, `${language}: home category tiles contain all six categories in catalog order`);
+      assert.deepEqual([...html.matchAll(/data-hero-category="([^"]+)"/g)].map((match) => match[1]), homeCategories, `${language}: home hero retains its four category choices`);
+      for (const categoryId of ['tablets', 'accessories']) {
+        const tile = tiles.find((match) => match[1] === categoryId)?.[2] || '';
+        const category = seed.categories.find((item) => item.id === categoryId);
+        const candidates = ui.state.content.products.filter((product) => product.category === categoryId && !product.hidden);
+        assert(tile.includes(`<h3>${category.name[language]}</h3>`), `${language}/${categoryId}: added category tile has a translated heading and working category link`);
+        assert(candidates.some((product) => tile.includes(`src="${product.image}"`)), `${language}/${categoryId}: added category tile shows a real device photo from its category`);
+        assert(!tile.includes('class="name-card"'), `${language}/${categoryId}: added category tile is not a missing-photo placeholder`);
+      }
       for (const id of cardIds(html)) assert(homeCategories.includes(seed.products.find((product) => product.id === id)?.category), `${language}/${id}: home product sections use only the four home categories`);
       const productLinks = [...html.matchAll(/href="#\/p\/([^"?]+)(?:\?[^"]*)?"/g)].map((match) => match[1]);
       assert(productLinks.length, `${language}: home retains working device links`);
@@ -223,14 +232,18 @@ export function verifyStorefront() {
       ui.state.heroCategory = 'watches';
       assert(ui.renderHome().includes(`class="hero-product" href="#/p/${watch.id}?cond=new"`), `${language}: selected watch displays the chosen device instead of static category artwork`);
     } finally { ui.state.content = beforeSelections; ui.state.heroCategory = 'phones'; }
-    // Category restrictions must hold even when excluded devices lead the
-    // catalog and are promoted into both offers and featured products.
+    // The hero and offers keep their four-category scope even when tablets and
+    // accessories lead the catalog and are promoted into offers and home tiles.
     const contentBeforeHomeCheck = ui.state.content;
     try {
       ui.state.content = structuredClone(seed);
       const excluded = ui.state.content.products.filter((product) => !homeCategories.includes(product.category));
       excluded.forEach((product, index) => { product.offer = index % 2 === 0; product.featured = true; });
       ui.state.content.products = [...excluded, ...ui.state.content.products.filter((product) => homeCategories.includes(product.category))];
+      const promotedTablet = ui.state.content.products.find((product) => product.id === 'ipad-pro-m5');
+      promotedTablet.homePriority = 100001;
+      const tabletTile = ui.renderHome().match(/<a class="category-card" href="#\/shop\/tablets"[^>]*>([\s\S]*?)<\/a>/)?.[1] || '';
+      assert(tabletTile.includes(`src="${promotedTablet.image}"`), `${language}: newly selected tablet leads its category tile`);
       for (const category of ['tablets', 'accessories']) {
         ui.state.heroCategory = category;
         checkHome(ui.renderHome());
@@ -400,5 +413,5 @@ export function verifyStorefront() {
   }
   for (const name of ['home', 'shop', 'offers', 'saved', 'p', 'bag', 'checkout', 'done', 'trade-in']) assert(!ui.instagramAllowed(name), `${name}: footer social link hidden`);
   for (const name of ['maintenance', 'contact']) assert(ui.instagramAllowed(name), `${name}: footer social link allowed`);
-  console.log(`storefront checks passed: four home categories, six separate catalog categories, grouped catalog, global search/sort, ${productViews} bilingual device views, selected options, browser checkout/receipts, and route-specific contact rules`);
+  console.log(`storefront checks passed: six home category tiles, four hero choices, six separate catalog categories, grouped catalog, global search/sort, ${productViews} bilingual device views, selected options, browser checkout/receipts, and route-specific contact rules`);
 }

@@ -1,5 +1,11 @@
 # Replacement storefront verification — 18 October 2026
 
+## Compact search and all home categories — 21 October 2026
+
+- Mobile header search is now 38px high and at most 220px wide beside Sign in, retaining 16px input text. The What are you looking for? grid shows Phones, Laptops, Tablets, Watches, Audio and Accessories in catalog order, with three tiles per row at every breakpoint. Cards use real category photos and keep counts and starting prices on separate lines. The existing four hero choices and offer selection remain unchanged.
+- Bilingual storefront checks cover all six category links, real tablet/accessory photos and the selected tablet image, alongside existing hero, offers, conditions and checkout behavior. Live/Pages builds and the full regression suite pass.
+- Chromium QA: English and Arabic labels fit at 320px, with three columns and no horizontal document overflow. Checked 390px phone, 768px tablet and 1280px desktop grids; all six photos load. Tablets opens the two iPads, Accessories opens AirTag, and the smaller header search returns both iPads for iPad. No captured console warnings/errors. Physical iOS/Android devices were not tested.
+
 ## Mobile search in the top header — 20 October 2026
 
 - Moved the mobile search field into the sticky header beside Sign in / تسجيل الدخول, with the logo, language switch and menu on the row above. Removed the duplicate home-hero and mobile-menu search forms. Catalog search/filter tools remain available, and desktop keeps its existing header layout. Existing backgrounds and newer hero animations/buttons are preserved.

@@ -235,11 +235,11 @@ function offersRow(list) {
 function renderHome() {
   const list = homeProducts();
   const offers = list.filter(inOffers);
-  const cats = homeCategoryIds().map((id) => {
-    const inCat = list.filter((p) => p.category === id);
+  const cats = categoryIds().map((id) => {
+    const inCat = products().filter((p) => p.category === id);
     const rep = homeRepresentative(inCat);
     const lows = inCat.map(fromPrice).filter((n) => n !== null);
-    return `<a class="category-card" href="${categoryUrl(id)}"><div class="category-picture device-media">${!homePriority(rep) && categoryArtwork(id) || media(rep)}</div><h3>${esc(categoryName(id))}</h3><span class="category-count">${esc(t('count')(inCat.length))}${lows.length ? ` · ${esc(t('from'))} <bdi>${esc(money(Math.min(...lows)))}</bdi>` : ''}</span></a>`;
+    return `<a class="category-card" href="${categoryUrl(id)}"><div class="category-picture device-media">${!homePriority(rep) && categoryArtwork(id) || media(rep)}</div><h3>${esc(categoryName(id))}</h3><span class="category-count">${esc(t('count')(inCat.length))}${lows.length ? `<span class="category-price">${esc(t('from'))} <bdi>${esc(money(Math.min(...lows)))}</bdi></span>` : ''}</span></a>`;
   }).join('');
   const trust = t('trust').map(([title, text], i) => `<li class="trust-item"><span class="trust-icon" aria-hidden="true">${icon(['search', 'box', 'heart', 'swap'][i])}</span><span><strong>${esc(title)}</strong><small>${esc(text)}</small></span></li>`).join('');
   return `<section class="hero"><div class="container hero-grid"><div class="hero-copy"><h1><span>${esc(t('heroLine1'))}</span> <span>${esc(t('heroLine2'))}</span></h1><div class="hero-buttons"><a class="button button-dark" href="#/shop">${esc(t('heroShop'))}${arrow}</a><a class="button button-outline" href="#/offers">${esc(t('offersTitle'))}</a></div></div><div id="hero-showcase" class="hero-showcase">${heroShowcase()}</div></div></section>
