@@ -1,5 +1,12 @@
 # Replacement storefront verification — 18 October 2026
 
+## Optional used-device battery readings — 21 October 2026
+
+- Added per-option Battery health (%) and Battery cycles controls in the device editor. They appear for Used like new (including legacy used aliases), are optional, and hide/disable/clear when the option changes to New. Health accepts whole percentages from 0 to 100; cycles accepts nonnegative safe whole counts. No measurements were added to the shipped catalog.
+- The selected used option displays only supplied, valid readings on its device page. Missing values remain absent, explicit 0 remains visible, and New options never display stale battery details. Pages preview, JSON import/export and the future Worker publishing path preserve null/zero/numeric values and reject invalid measurements before writes.
+- Regression tests cover validation boundaries, malformed/nonfinite values, unknown legacy fields, save/import/export, backend atomic rejection, bilingual editor controls and selected-option storefront rows. Live/Pages builds and all existing suites pass.
+- Chromium QA on a separate localhost origin: entered two independent readings, changed one option New→Used and confirmed its fields cleared while the other retained its values, rejected 101% health, saved valid values and verified them after reload. Switching between 256GB and 512GB used options changed battery readings correctly, including 0 cycles. Arabic/English labels and the 390px editor/device layouts fit without horizontal overflow; no captured storefront console warnings/errors. The public owner draft and seed catalog were not given test measurements. Physical devices and a production Worker deployment were not tested.
+
 ## Mobile header search icon — 21 October 2026
 
 - Replaced the persistent phone search field with a labeled 44px search-icon button in the compact top header. Tapping reveals and immediately focuses the existing search input below the header. The button exposes expanded state and translated labels. Submit (including the same query), Escape, navigation, language changes and opening the menu close the field; Escape and repeated submissions restore focus to the toggle. Desktop retains its search input.

@@ -7,6 +7,7 @@ import vm from 'node:vm';
 import seed from '../shared/catalog.js';
 import deviceSpecifications from '../shared/device-specs.js';
 import * as pricing from '../shared/pricing.js';
+import { validBatteryHealth, validBatteryCycles } from '../shared/battery.js';
 import { conditions, conditionGroup, conditionOptions, notes as noteLabels, warranties, orderStatuses, governorates } from '../shared/labels.js';
 import { forwardArrow } from '../shared/navigation.js';
 import { ApiError, local, withDefaults } from '../site/src/store.js';
@@ -19,6 +20,10 @@ const errorIs = (code, status) => (error) => error.code === code && error.status
 
 export async function verifyPagesEditor() {
   verifyHomeSelections();
+  for (const value of [null, undefined, 0, 100]) assert(validBatteryHealth(value), 'battery health accepts unknown or a whole percentage');
+  for (const value of [null, undefined, 0, Number.MAX_SAFE_INTEGER]) assert(validBatteryCycles(value), 'battery cycles accepts unknown or a safe nonnegative whole count');
+  for (const value of [-1, 101, 99.5, '95', NaN, Infinity, true]) assert.equal(validBatteryHealth(value), false, 'battery health rejects invalid measurements');
+  for (const value of [-1, 1.5, '12', Number.MAX_SAFE_INTEGER + 1, NaN, Infinity, true]) assert.equal(validBatteryCycles(value), false, 'battery cycles rejects invalid measurements');
   const original = Object.fromEntries(['fetch', 'localStorage', 'location', 'FileReader', 'navigator'].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   const values = new Map();
   let reads = 0;
@@ -56,6 +61,7 @@ export async function verifyPagesEditor() {
     assert.equal(initial.version, 0, 'an untouched editor starts at version zero');
     assert.equal(initial.content.settings.ordersOn, false);
     assert(initial.content.products.every((product) => product.variants.every((variant) => variant.stockQuantity === null)), 'legacy catalog options have no quantity limit until one is supplied');
+    assert(initial.content.products.every((product) => product.variants.every((variant) => variant.batteryHealth === null && variant.batteryCycles === null)), 'legacy device options have unknown battery measurements');
     assert(initial.content.products.every((product) => product.technical?.summary.ar && product.technical?.summary.en && product.technical.specs.length >= 6), 'all shipped devices start with editable bilingual technical specifications');
     initial.content.products[0].name.en = 'Unsaved edit';
     assert.equal((await pagesAdmin.content()).content.products[0].name.en, seed.products[0].name.en, 'loading the editor returns independent copies');
@@ -65,7 +71,11 @@ export async function verifyPagesEditor() {
     product.name = { ar: 'جهاز المعاينة', en: 'Preview device' };
     product.variants[0].price = 123;
     product.variants[0].stockQuantity = 2;
+    product.variants[0].batteryHealth = 0;
+    product.variants[0].batteryCycles = 0;
     draft.products[1].variants[0].stockQuantity = 0;
+    draft.products[1].variants[0].batteryHealth = 100;
+    draft.products[1].variants[0].batteryCycles = Number.MAX_SAFE_INTEGER;
     draft.products[1].variants[0].soldOut = false;
     draft.products[2].variants[0].stockQuantity = pricing.MAX_STOCK_QUANTITY;
     draft.products[2].variants[0].soldOut = true;
@@ -110,6 +120,12 @@ export async function verifyPagesEditor() {
     assert.equal(preview.content.products[0].name.en, product.name.en);
     assert.equal(preview.content.products[0].variants[0].price, 123);
     assert.equal(preview.content.products[0].variants[0].stockQuantity, 2, 'saving a preview retains an optional quantity');
+    assert.equal(preview.content.products[0].variants[0].batteryHealth, 0, 'saving retains zero battery health as a supplied measurement');
+    assert.equal(preview.content.products[0].variants[0].batteryCycles, 0, 'saving retains a zero cycle count');
+    assert.equal(preview.content.products[1].variants[0].batteryHealth, 100, 'saving retains the maximum battery health');
+    assert.equal(preview.content.products[1].variants[0].batteryCycles, Number.MAX_SAFE_INTEGER, 'saving retains an exact safe cycle count');
+    assert.equal(preview.content.products[2].variants[0].batteryHealth, null, 'unknown battery health remains unknown');
+    assert.equal(preview.content.products[2].variants[0].batteryCycles, null, 'unknown cycle count remains unknown');
     assert.equal(preview.content.products[1].variants[0].stockQuantity, 0, 'zero quantity survives saving without becoming an absent value');
     assert.equal(preview.content.products[1].variants[0].soldOut, false, 'zero stock does not rewrite the independent out-of-stock toggle');
     assert.equal(preview.content.products[2].variants[0].stockQuantity, pricing.MAX_STOCK_QUANTITY, 'the maximum quantity is retained');
@@ -132,6 +148,8 @@ export async function verifyPagesEditor() {
     assert.equal(exported.content.settings.ordersOn, false);
     assert.equal(exported.content.products[0].homePriority, 123456, 'portable exports preserve home selections and priority');
     assert.equal(exported.content.products[0].variants[0].stockQuantity, 2, 'portable backups retain the stock quantity');
+    assert.equal(exported.content.products[0].variants[0].batteryHealth, 0, 'portable backups retain zero battery health');
+    assert.equal(exported.content.products[0].variants[0].batteryCycles, 0, 'portable backups retain zero battery cycles');
     assert.deepEqual(snapshot(), savedSnapshot, 'export does not publish or change stored data');
 
     const invalidChanges = [
@@ -141,6 +159,8 @@ export async function verifyPagesEditor() {
       (data) => { data.photos[photo.id] = 'https://example.com/remote.webp'; },
       (data) => { data.content.products[0].variants[0].price = -1; },
       ...[-1, 1.5, '2', pricing.MAX_STOCK_QUANTITY + 1, NaN, Infinity].map((quantity) => (data) => { data.content.products[0].variants[0].stockQuantity = quantity; }),
+      ...[-1, 101, 99.5, '95', NaN, Infinity].map((value) => (data) => { data.content.products[0].variants[0].batteryHealth = value; }),
+      ...[-1, 1.5, '12', Number.MAX_SAFE_INTEGER + 1, NaN, Infinity].map((value) => (data) => { data.content.products[0].variants[0].batteryCycles = value; }),
       (data) => { data.content.products[0].image = 'assets/../secret.png'; },
       (data) => { data.content.products[0].category = 'unknown'; },
       (data) => { data.content.products[0].technical.summary = { en: 'Missing Arabic' }; },
@@ -162,6 +182,17 @@ export async function verifyPagesEditor() {
       await assert.rejects(pagesAdmin.publish(invalid, 1), errorIs('invalid-draft', 400));
       assert.deepEqual(snapshot(), before, 'invalid quantities cannot replace the saved preview');
     }
+    for (const [field, value] of [
+      ...[-1, 101, 99.5, '95', NaN, Infinity].map((value) => ['batteryHealth', value]),
+      ...[-1, 1.5, '12', Number.MAX_SAFE_INTEGER + 1, NaN, Infinity].map((value) => ['batteryCycles', value]),
+    ]) {
+      const invalid = copy(draft);
+      invalid.products[0].variants[0][field] = value;
+      const before = snapshot();
+      await assert.rejects(pagesAdmin.publish(invalid, 1), errorIs('invalid-draft', 400));
+      await assert.rejects(pagesAdmin.exportDraft(invalid), errorIs('invalid-draft', 400));
+      assert.deepEqual(snapshot(), before, 'invalid battery values cannot replace the saved preview or become an export');
+    }
 
     const beforeFull = snapshot();
     storageFull = true;
@@ -182,6 +213,10 @@ export async function verifyPagesEditor() {
     assert.deepEqual(imported.products[0].technical, product.technical);
     assert.equal(imported.products[0].homePriority, 123456, 'imported selections retain their home showcase priority');
     assert.equal(imported.products[0].variants[0].stockQuantity, 2, 'imported backups retain numeric quantities');
+    assert.equal(imported.products[0].variants[0].batteryHealth, 0, 'imported backups retain zero battery health');
+    assert.equal(imported.products[0].variants[0].batteryCycles, 0, 'imported backups retain zero cycle counts');
+    assert.equal(imported.products[1].variants[0].batteryHealth, 100, 'imported backups retain the maximum whole battery percentage');
+    assert.equal(imported.products[1].variants[0].batteryCycles, Number.MAX_SAFE_INTEGER, 'imported backups retain exact safe cycle counts');
     assert.equal(imported.products[1].variants[0].stockQuantity, 0, 'imported backups retain zero quantity');
     assert.equal(imported.products[3].variants[0].stockQuantity, null, 'imported backups retain optional unlimited stock');
     assert.equal(pagesAdmin.photoUrl(photo.id), photoData, 'an exported photo survives import into a cleared browser');
@@ -397,7 +432,7 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   const source = readFileSync(new URL('../site/admin/src/admin.js', import.meta.url), 'utf8')
     .replace(/^import[^\n]*\n/gm, '').replace(/\(async function start\(\) \{[\s\S]*$/, '');
   const context = vm.createContext({
-    ...pricing, conditions, conditionGroup, conditionOptions, forwardArrow, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications, applyHomePlacement,
+    ...pricing, validBatteryHealth, validBatteryCycles, conditions, conditionGroup, conditionOptions, forwardArrow, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications, applyHomePlacement,
     api, pagesAdmin, MODE: 'pages', ApiError, local, withDefaults, document,
     window: { addEventListener() {} }, console, setTimeout, clearTimeout, setInterval() {},
   });
@@ -457,6 +492,23 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
       assert(options.includes(`name="v.${index}.condition"`), language + ': each option uses an independent radio group');
       assert(!options.includes('value="new-sealed"') && !options.includes('value="used-agency"') && !options.includes('value="used"'), language + ': legacy labels are not selectable');
       for (const label of Object.values(conditionOptions)) assert(options.includes(label[language]), language + ': both condition labels are visible without opening a dropdown');
+    }
+    const batteryFields = [...root.innerHTML.matchAll(/<fieldset class="battery-fields" data-battery-fields="(\d+)"([^>]*)>([\s\S]*?)<\/fieldset>/g)];
+    assert.equal(batteryFields.length, content.products[0].variants.length, `${language}: each device option has independent battery fields`);
+    for (const [, optionIndex, attributes, fields] of batteryFields) {
+      const variant = content.products[0].variants[Number(optionIndex)];
+      const used = conditionGroup(variant.condition) === 'like-new';
+      assert.equal(/\bhidden\b/.test(attributes), !used, `${language}: battery fields appear only for a used option`);
+      assert.equal(/\bdisabled\b/.test(attributes), !used, `${language}: a new option cannot submit battery measurements`);
+      const healthInput = fields.match(/<input\b[^>]*name="v\.\d+\.batteryHealth"[^>]*>/)?.[0];
+      const cyclesInput = fields.match(/<input\b[^>]*name="v\.\d+\.batteryCycles"[^>]*>/)?.[0];
+      for (const [input, key, maximum] of [[healthInput, 'batteryHealth', 100], [cyclesInput, 'batteryCycles', Number.MAX_SAFE_INTEGER]]) {
+        assert(input, `${language}: ${key} is editable for each option`);
+        assert(input.includes(`name="v.${optionIndex}.${key}"`) && input.includes('type="number"') && input.includes('inputmode="numeric"') && input.includes('min="0"') && input.includes(`max="${maximum}"`) && input.includes('step="1"'), `${language}: ${key} accepts only a bounded nonnegative whole measurement`);
+        assert(!/\brequired\b/.test(input), `${language}: ${key} is optional`);
+        assert(input.includes(`value="${variant[key] ?? ''}"`), `${language}: ${key} preserves a known zero and leaves unknown readings blank`);
+      }
+      for (const label of language === 'ar' ? ['حالة البطارية', 'صحة البطارية (%) (اختياري)', 'عدد دورات شحن البطارية (اختياري)'] : ['Battery condition', 'Battery health (%) (optional)', 'Battery cycles (optional)']) assert(fields.includes(label), `${language}: battery measurements have translated labels`);
     }
     assert(root.innerHTML.includes('name="technical.summary.en"') && root.innerHTML.includes('name="technical.summary.ar"'), `${language}: device summaries are editable in both languages`);
     assert(root.innerHTML.includes('class="stock-fields"') && root.innerHTML.includes('name="v.0.soldOut"'), `${language}: availability is a prominent separate control`);

@@ -3,6 +3,7 @@ import { api, local, MODE, ApiError } from './store.js';
 import { renderAccount, loadAccount, bindAccount, accountLabel, customerProfile } from './account.js';
 import { priceLines, fromPrice, formatJD, toFils, variantId, splitVariantId, visibleProducts, normaliseMobile, MAX_QTY, MAX_LINES, validPrice, variantQuantityLimit, variantFils, variantHasOffer, inOffers } from '../../shared/pricing.js';
 import { conditions, conditionShort, conditionGroup, notes as noteLabels, warranties, governorates } from '../../shared/labels.js';
+import { validBatteryHealth, validBatteryCycles } from '../../shared/battery.js';
 import { forwardArrow } from '../../shared/navigation.js';
 import { playHeroMotion } from './hero-motion.js';
 
@@ -33,7 +34,7 @@ const words = {
     priceLow: 'السعر: من الأقل', priceHigh: 'السعر: من الأعلى', nameSort: 'حسب الاسم', condAll: 'كل الحالات', condNew: 'جديد', condUsed: 'مستعمل بحالة الجديد',
     filters: 'فلترة وترتيب', clear: 'امسح البحث والفلاتر', noResults: 'ما لقينا أجهزة بهالبحث.', noResultsText: 'جرّب كلمة ثانية أو امسح الفلاتر.',
     savedIntro: 'الأجهزة اللي عجبتك، كلها بمكان واحد.', noSaved: 'لسه ما حفظت أجهزة.', noSavedText: 'اضغط القلب على أي جهاز ليرجع يظهر هون.',
-    stockLabel: 'الكمية المتوفرة', quantityLimit: 'وصلت للحد المسموح لهذا الخيار.',
+    stockLabel: 'الكمية المتوفرة', quantityLimit: 'وصلت للحد المسموح لهذا الخيار.', batteryHealth: 'صحة البطارية', batteryCycles: 'عدد دورات شحن البطارية',
     details: 'المواصفات التقنية', configuration: 'التهيئة', condition: 'الحالة', warranty: 'الكفالة', options: 'الخيارات', related: 'من نفس القسم', backCategory: 'كل أجهزة القسم',
     askWhatsapp: 'اسأل على واتساب', call: 'اتصل بتريو', ask: 'اسألنا على إنستغرام', source: 'شوف المنشور على إنستغرام', imageCard: 'صورة الجهاز قريباً',
     notFound: 'الجهاز مش موجود بهالقائمة.', notFoundText: 'ارجع للأجهزة لتشوف تشكيلة تريو.',
@@ -71,7 +72,7 @@ const words = {
     priceLow: 'Price: low to high', priceHigh: 'Price: high to low', nameSort: 'Name A–Z', condAll: 'Any condition', condNew: 'New', condUsed: 'Used like new',
     filters: 'Filters', clear: 'Clear search and filters', noResults: 'No devices match this search.', noResultsText: 'Try another word or clear the filters.',
     savedIntro: 'The devices you like, all in one place.', noSaved: 'Nothing saved yet.', noSavedText: 'Tap the heart on a device to save it here.',
-    stockLabel: 'Available quantity', quantityLimit: 'You have reached the quantity limit for this option.',
+    stockLabel: 'Available quantity', quantityLimit: 'You have reached the quantity limit for this option.', batteryHealth: 'Battery health', batteryCycles: 'Battery cycle count',
     details: 'Technical specifications', configuration: 'Configuration', condition: 'Condition', warranty: 'Warranty', options: 'Options', related: 'More in this category', backCategory: 'Back to category',
     askWhatsapp: 'Ask on WhatsApp', call: 'Call Trio', ask: 'Ask us on Instagram', source: 'See the post on Instagram', imageCard: 'Photo coming soon',
     notFound: 'This device is not in the collection.', notFoundText: 'Browse devices to explore Trio’s collection.',
@@ -337,6 +338,10 @@ function variantNotes(variant) {
   const rows = [];
   if (variant.stockQuantity !== null && variant.stockQuantity !== undefined && variantQuantityLimit(variant) > 0) rows.push([t('stockLabel'), num(variant.stockQuantity)]);
   if (variant.condition) rows.push([t('condition'), L(conditions[variant.condition])]);
+  if (conditionGroup(variant.condition) === 'like-new') {
+    if (variant.batteryHealth != null && validBatteryHealth(variant.batteryHealth)) rows.push([t('batteryHealth'), `${num(variant.batteryHealth)}${state.language === 'ar' ? '٪' : '%'}`]);
+    if (variant.batteryCycles != null && validBatteryCycles(variant.batteryCycles)) rows.push([t('batteryCycles'), num(variant.batteryCycles)]);
+  }
   for (const n of variant.notes || []) if (noteLabels[n]) rows.push(['', L(noteLabels[n])]);
   if (variant.warranty && warranties[variant.warranty]) rows.push([t('warranty'), L(warranties[variant.warranty])]);
   return rows;

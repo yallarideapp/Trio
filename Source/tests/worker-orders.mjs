@@ -105,7 +105,11 @@ export async function verifyWorkerOrders() {
     const published = structuredClone(seed);
     published.settings.ordersOn = true;
     published.products.find((product) => product.id === 'airtag').variants[0].stockQuantity = 2;
+    published.products[0].variants[0].batteryHealth = 0;
+    published.products[0].variants[0].batteryCycles = 0;
     published.products[1].variants[0].stockQuantity = 0;
+    published.products[1].variants[0].batteryHealth = 100;
+    published.products[1].variants[0].batteryCycles = Number.MAX_SAFE_INTEGER;
     published.products[1].variants[0].soldOut = false;
     published.products[2].variants[0].stockQuantity = MAX_STOCK_QUANTITY;
     published.products[2].variants[0].soldOut = true;
@@ -117,6 +121,17 @@ export async function verifyWorkerOrders() {
       assert.equal(invalidPublish.data.field, 'stock-quantity');
       assert.equal(count('content'), 0, 'invalid stock cannot publish or advance the catalog version');
     }
+    for (const [field, errorField, value] of [
+      ...[-1, 101, 99.5, '95'].map((value) => ['batteryHealth', 'battery-health', value]),
+      ...[-1, 1.5, '12', Number.MAX_SAFE_INTEGER + 1].map((value) => ['batteryCycles', 'battery-cycles', value]),
+    ]) {
+      const invalidBattery = structuredClone(published);
+      invalidBattery.products[0].variants[0][field] = value;
+      const invalidPublish = await send('PUT', '/api/admin/content', { baseVersion: 0, content: invalidBattery }, { cookie });
+      expectError(invalidPublish, 400, 'bad-content');
+      assert.equal(invalidPublish.data.field, errorField);
+      assert.equal(count('content'), 0, 'invalid battery measurements cannot publish or advance the catalog version');
+    }
     const publish = await send('PUT', '/api/admin/content', { baseVersion: 0, content: published }, { cookie });
     assert.deepEqual(publish.data, { ok: true, version: 1 });
     const publicCatalog = await send('GET', '/api/content');
@@ -124,6 +139,12 @@ export async function verifyWorkerOrders() {
     assert.equal(publicCatalog.data.content.settings.ordersOn, true, 'online ordering becomes available only after publishing it');
     assert.equal(publicCatalog.data.content.products.find((product) => product.id === 'airtag').variants[0].stockQuantity, 2, 'published content retains a numeric stock limit');
     assert.equal(publicCatalog.data.content.products[0].variants[0].stockQuantity, null, 'legacy options publish with an absent quantity');
+    assert.equal(publicCatalog.data.content.products[0].variants[0].batteryHealth, 0, 'published content retains a supplied zero battery health');
+    assert.equal(publicCatalog.data.content.products[0].variants[0].batteryCycles, 0, 'published content retains a supplied zero cycle count');
+    assert.equal(publicCatalog.data.content.products[1].variants[0].batteryHealth, 100, 'published content retains the maximum battery health');
+    assert.equal(publicCatalog.data.content.products[1].variants[0].batteryCycles, Number.MAX_SAFE_INTEGER, 'published content retains exact safe cycle counts');
+    assert.equal(publicCatalog.data.content.products[2].variants[0].batteryHealth, null, 'legacy battery health publishes as unknown');
+    assert.equal(publicCatalog.data.content.products[2].variants[0].batteryCycles, null, 'legacy cycle counts publish as unknown');
     assert.equal(publicCatalog.data.content.products[1].variants[0].stockQuantity, 0, 'publishing preserves zero quantity');
     assert.equal(publicCatalog.data.content.products[1].variants[0].soldOut, false, 'zero quantity does not rewrite the manual availability flag');
     assert.equal(publicCatalog.data.content.products[2].variants[0].stockQuantity, MAX_STOCK_QUANTITY, 'publishing retains the supported maximum quantity');

@@ -9,6 +9,7 @@ import * as pricing from '../shared/pricing.js';
 import { conditions, conditionShort, conditionGroup, notes, warranties, governorates } from '../shared/labels.js';
 import { forwardArrow } from '../shared/navigation.js';
 import { heroRigFor, heroMotionAssets } from '../site/src/hero-motion.js';
+import * as battery from '../shared/battery.js';
 import { existsSync, statSync } from 'node:fs';
 
 export function verifyStorefront() {
@@ -17,7 +18,7 @@ export function verifyStorefront() {
   const document = { querySelector: () => null, querySelectorAll: () => [], addEventListener() {} };
   const location = { hash: '#/', replace(value) { this.hash = value; } };
   const context = vm.createContext({
-    ...pricing, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates,
+    ...pricing, ...battery, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates,
     playHeroMotion: () => {},
     renderAccount: () => '<h1>My account</h1>', loadAccount: async () => {}, bindAccount: () => {}, accountLabel: () => 'Sign in', customerProfile: () => null,
     MODE: 'pages', api: { photoUrl: () => '' }, local: { read: (key, fallback = null) => stored.has(key) ? structuredClone(stored.get(key)) : fallback, write: (key, value) => { stored.set(key, structuredClone(value)); return true; } },
@@ -283,6 +284,43 @@ export function verifyStorefront() {
         assert(!options.includes(`data-variant="${other.key}"`), `${product.id}/${variant.key}: direct device pages keep opposite conditions separate`);
       }
     }
+    const beforeBatteryTest = { content: ui.state.content, selected: { ...ui.state.selected }, route: ui.state.route };
+    try {
+      ui.state.content = structuredClone(seed);
+      const device = ui.state.content.products.find((product) => product.id === 'iphone-17-pro-max');
+      const used = device.variants.filter((variant) => conditionGroup(variant.condition) === 'like-new');
+      const fresh = device.variants.find((variant) => conditionGroup(variant.condition) === 'new');
+      used[0].batteryHealth = 87; used[0].batteryCycles = 0;
+      used[1].batteryHealth = 95; used[1].batteryCycles = 42;
+      const healthLabel = language === 'ar' ? 'صحة البطارية' : 'Battery health';
+      const cycleLabel = language === 'ar' ? 'عدد دورات شحن البطارية' : 'Battery cycle count';
+      const number = (value) => new Intl.NumberFormat(language === 'ar' ? 'ar-JO' : 'en').format(value);
+      const healthRow = (value) => `<span>${healthLabel}</span><strong dir="auto">${number(value)}${language === 'ar' ? '٪' : '%'}</strong>`;
+      const cycleRow = (value) => `<span>${cycleLabel}</span><strong dir="auto">${number(value)}</strong>`;
+      ui.state.route = { name: 'p', id: device.id, params: new URLSearchParams('cond=used') };
+      ui.state.selected[device.id] = used[0].key;
+      for (const alias of ['like-new', 'used-agency', 'used']) {
+        used[0].condition = alias;
+        const html = ui.renderDetail(device.id);
+        assert(html.includes(healthRow(87)) && html.includes(cycleRow(0)), `${language}/${alias}: used battery readings include zero cycles`);
+      }
+      ui.state.selected[device.id] = used[1].key;
+      const second = ui.renderDetail(device.id);
+      assert(second.includes(healthRow(95)) && second.includes(cycleRow(42)) && !second.includes(healthRow(87)), `${language}: readings follow the selected used option`);
+      ui.state.selected[device.id] = used[0].key;
+      used[0].batteryHealth = null;
+      assert(!ui.renderDetail(device.id).includes(healthLabel) && ui.renderDetail(device.id).includes(cycleRow(0)), `${language}: one supplied reading does not invent the other`);
+      used[0].batteryHealth = 0; used[0].batteryCycles = null;
+      assert(ui.renderDetail(device.id).includes(healthRow(0)) && !ui.renderDetail(device.id).includes(cycleLabel), `${language}: zero health is distinct from a missing measurement`);
+      used[0].batteryHealth = 101; used[0].batteryCycles = -1;
+      assert(!ui.renderDetail(device.id).includes(healthLabel) && !ui.renderDetail(device.id).includes(cycleLabel), `${language}: invalid imported readings are not displayed`);
+      delete used[0].batteryHealth; delete used[0].batteryCycles;
+      assert(!ui.renderDetail(device.id).includes(healthLabel) && !ui.renderDetail(device.id).includes(cycleLabel), `${language}: legacy options have no invented battery readings`);
+      fresh.batteryHealth = 100; fresh.batteryCycles = 12;
+      ui.state.selected[device.id] = fresh.key;
+      ui.state.route.params.set('cond', 'new');
+      assert(!ui.renderDetail(device.id).includes(healthLabel) && !ui.renderDetail(device.id).includes(cycleLabel), `${language}: new devices never expose stale battery readings`);
+    } finally { ui.state.content = beforeBatteryTest.content; ui.state.selected = beforeBatteryTest.selected; ui.state.route = beforeBatteryTest.route; }
     const beforeStockTest = ui.state.content;
     try {
       ui.state.content = structuredClone(seed);

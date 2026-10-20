@@ -5,6 +5,7 @@ import { conditions, conditionGroup, conditionOptions, notes as noteLabels, warr
 import { pagesAdmin } from './pages-store.js';
 import deviceSpecifications from '../../../shared/device-specs.js';
 import { applyHomePlacement } from '../../../shared/home-placement.js';
+import { validBatteryHealth, validBatteryCycles } from '../../../shared/battery.js';
 
 const IS_PAGES = MODE === 'pages';
 const USE_TECHNICAL = MODE !== 'demo';
@@ -33,6 +34,8 @@ const AR = {
   'Photo': 'الصورة', 'Upload photo': 'ارفع صورة', 'Use the shipped photo': 'رجّع الصورة الأصلية', 'Uploading…': 'عم نرفع…', 'Photo uploaded. Publish to show it.': 'انرفعت الصورة. انشر لتظهر.', 'Could not upload the photo.': 'ما قدرنا نرفع الصورة.',
   'A photo with a plain or transparent background looks best.': 'الصورة بخلفية سادة أو شفافة بتطلع أحلى.', 'Show in offers': 'يظهر بالعروض', 'Show on home page': 'يظهر بالرئيسية', 'Hide from the site': 'إخفاء عن الموقع',
   'Choose New or Used like new for each option.': 'اختر جديد أو مستعمل بحالة الجديد لكل خيار.', 'Option': 'الخيار',
+  'Battery condition': 'حالة البطارية', 'Battery health (%) (optional)': 'صحة البطارية (%) (اختياري)', 'Battery cycles (optional)': 'عدد دورات شحن البطارية (اختياري)',
+  'Leave blank if unknown. Enter the readings from this device.': 'اتركها فارغة إذا لم تكن معروفة. أدخل القراءات من هذا الجهاز.', 'Not provided': 'غير مدخلة', 'has invalid battery details': 'فيه بيانات بطارية غير صحيحة',
   'Out of stock': 'غير متوفر', 'Stock quantity (optional)': 'الكمية المتوفرة (اختياري)', 'Availability': 'التوفر', 'Not tracked': 'غير محددة',
   'Leave blank for no stock limit. Enter 0 for out of stock.': 'اتركها فارغة بدون حد للمخزون. أدخل 0 إذا نفدت الكمية.', 'Update this quantity when your stock changes.': 'حدّث هذه الكمية عندما يتغير مخزونك.', 'has an invalid stock quantity': 'فيه كمية مخزون غير صحيحة', 'has an offer price that is not below its price': 'فيه سعر عرض مش أقل من السعر', 'Offer price (JD, optional)': 'سعر العرض (دينار، اختياري)', 'Leave blank for no offer. It must be lower than the price; the old price shows crossed out.': 'اتركه فاضي إذا ما في عرض. لازم يكون أقل من السعر، والسعر القديم بيطلع مشطوب.', 'A device with an offer price shows in offers automatically. Tick this to show it there without one.': 'الجهاز اللي إله سعر عرض بيطلع بالعروض لحاله. علّم هون عشان يطلع بالعروض بدون سعر عرض.',
   'Options and prices': 'الخيارات والأسعار', 'Storage / size': 'السعة / المقاس', 'Condition': 'الحالة', 'Warranty': 'الكفالة', 'Price (JD)': 'السعر (د.أ)', 'Sold out': 'نفد', 'Add option': 'أضف خيار', 'Remove': 'شيل',
@@ -228,8 +231,9 @@ function editView() {
   if (!p) { state.editing = null; return devicesView(); }
   const sel = (name, value, options) => `<select name="${name}">${options.map(([v, l]) => `<option value="${esc(v)}"${v === value ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   const warOpts = Object.keys(warranties).map((k) => [k, k ? L(warranties[k]) : t('none')]);
+  const batteryFields = (v, i) => `<fieldset class="battery-fields" data-battery-fields="${i}"${conditionGroup(v.condition) === 'like-new' ? '' : ' hidden disabled'}><legend>${esc(t('Battery condition'))}</legend><label class="f"><span>${esc(t('Battery health (%) (optional)'))}</span><input name="v.${i}.batteryHealth" type="number" inputmode="numeric" min="0" max="100" step="1" placeholder="${esc(t('Not provided'))}" value="${esc(v.batteryHealth ?? '')}" dir="ltr"${validBatteryHealth(v.batteryHealth) ? '' : ' aria-invalid="true"'}></label><label class="f"><span>${esc(t('Battery cycles (optional)'))}</span><input name="v.${i}.batteryCycles" type="number" inputmode="numeric" min="0" max="${Number.MAX_SAFE_INTEGER}" step="1" placeholder="${esc(t('Not provided'))}" value="${esc(v.batteryCycles ?? '')}" dir="ltr"${validBatteryCycles(v.batteryCycles) ? '' : ' aria-invalid="true"'}></label><p class="muted small">${esc(t('Leave blank if unknown. Enter the readings from this device.'))}</p></fieldset>`;
   const optionsSection = `<section class="card device-options"><h2>${esc(t('Options and prices'))}</h2><p class="muted condition-help">${esc(t('Choose New or Used like new for each option.'))}</p><div class="variants">${p.variants.map((v, i) => `<div class="variant"><fieldset class="condition-choice"><legend>${esc(t('Condition'))} · ${esc(t('Option'))} ${i + 1}</legend><div class="condition-options">${Object.entries(conditionOptions).map(([key, label]) => `<label class="condition-option"><input type="radio" name="v.${i}.condition" value="${key}"${conditionGroup(v.condition) === key ? ' checked' : ''}><span>${esc(L(label))}</span></label>`).join('')}</div></fieldset><label class="f"><span>${esc(t('Storage / size'))}</span><input name="v.${i}.storage" value="${esc(v.storage)}" dir="ltr"></label><label class="f"><span>${esc(t('Warranty'))}</span>${sel(`v.${i}.warranty`, v.warranty || '', warOpts)}</label><label class="f price"><span>${esc(t('Price (JD)'))}</span><input name="v.${i}.price" type="number" inputmode="decimal" min="0.001" step="0.001" value="${esc(v.price ?? '')}" dir="ltr"${validPrice(v.price) ? '' : ' aria-invalid="true"'}></label><label class="f price offer-price"><span>${esc(t('Offer price (JD, optional)'))}</span><input name="v.${i}.offerPrice" type="number" inputmode="decimal" min="0.001" step="0.001" value="${esc(v.offerPrice ?? '')}" dir="ltr"${validOfferPrice(v) ? '' : ' aria-invalid="true"'}><small>${esc(t('Leave blank for no offer. It must be lower than the price; the old price shows crossed out.'))}</small></label>
-  <div class="stock-fields"><fieldset class="stock-status"><legend>${esc(t('Availability'))}</legend><label class="stock-toggle"><input type="checkbox" name="v.${i}.soldOut"${v.soldOut ? ' checked' : ''}><span>${esc(t('Out of stock'))}</span></label></fieldset><label class="f stock-quantity"><span>${esc(t('Stock quantity (optional)'))}</span><input name="v.${i}.stockQuantity" type="number" inputmode="numeric" min="0" max="${MAX_STOCK_QUANTITY}" step="1" placeholder="${esc(t('Not tracked'))}" value="${esc(v.stockQuantity ?? '')}" dir="ltr"${validStockQuantity(v.stockQuantity) ? '' : ' aria-invalid="true"'}><small>${esc(t('Leave blank for no stock limit. Enter 0 for out of stock.'))} ${esc(t('Update this quantity when your stock changes.'))}</small></label></div>
+  ${batteryFields(v, i)}<div class="stock-fields"><fieldset class="stock-status"><legend>${esc(t('Availability'))}</legend><label class="stock-toggle"><input type="checkbox" name="v.${i}.soldOut"${v.soldOut ? ' checked' : ''}><span>${esc(t('Out of stock'))}</span></label></fieldset><label class="f stock-quantity"><span>${esc(t('Stock quantity (optional)'))}</span><input name="v.${i}.stockQuantity" type="number" inputmode="numeric" min="0" max="${MAX_STOCK_QUANTITY}" step="1" placeholder="${esc(t('Not tracked'))}" value="${esc(v.stockQuantity ?? '')}" dir="ltr"${validStockQuantity(v.stockQuantity) ? '' : ' aria-invalid="true"'}><small>${esc(t('Leave blank for no stock limit. Enter 0 for out of stock.'))} ${esc(t('Update this quantity when your stock changes.'))}</small></label></div>
   <div class="checks small">${Object.keys(noteLabels).map((n) => `<label><input type="checkbox" name="v.${i}.note.${n}"${(v.notes || []).includes(n) ? ' checked' : ''}> ${esc(L(noteLabels[n]))}</label>`).join('')}</div><button type="button" class="btn ghost small" data-remove-variant="${i}"${p.variants.length < 2 ? ' disabled' : ''}>${esc(t('Remove'))}</button></div>`).join('')}</div><button type="button" class="btn small" data-add-variant>${esc(t('Add option'))}</button></section>`;
   return `<div class="head"><button type="button" class="btn ghost small" data-close-edit>← ${esc(t('Done'))}</button><h1 dir="auto">${esc(L(p.name) || t('Add device'))}</h1><div class="btns"><button type="button" class="btn ghost small" data-duplicate>${esc(t('Duplicate'))}</button><button type="button" class="btn danger small" data-delete>${esc(t('Delete'))}</button></div></div>
   <form id="device-form" class="edit" autocomplete="off">${optionsSection}<div class="grid2"><section class="card"><div class="grid2 tight">${field('Name (Arabic)', 'name.ar', p.name.ar, { dir: 'auto' })}${field('Name (English)', 'name.en', p.name.en, { dir: 'ltr' })}${field('Brand', 'brand', p.brand, { dir: 'ltr' })}<label class="f"><span>${esc(t('Category'))}</span>${sel('category', p.category, state.draft.categories.map((c) => [c.id, L(c.name)]))}</label></div>
@@ -273,7 +277,22 @@ function readDeviceForm(form) {
     const parsedQuantity = quantity === '' ? null : Number(quantity);
     const stockQuantity = validStockQuantity(parsedQuantity) ? parsedQuantity : quantity;
     get(`v.${i}.stockQuantity`).setAttribute('aria-invalid', String(!validStockQuantity(stockQuantity)));
-    const next = { ...v, storage: get(`v.${i}.storage`).value.trim(), condition: get(`v.${i}.condition`).value, warranty: get(`v.${i}.warranty`).value, price: price === '' ? null : Math.round(Number(price) * 1000) / 1000, offerPrice: offer === '' ? null : Math.round(Number(offer) * 1000) / 1000, soldOut: get(`v.${i}.soldOut`).checked, stockQuantity, notes: Object.keys(noteLabels).filter((n) => get(`v.${i}.note.${n}`).checked) };
+    const condition = get(`v.${i}.condition`).value;
+    const used = conditionGroup(condition) === 'like-new';
+    const fields = form.querySelector(`[data-battery-fields="${i}"]`);
+    if (fields) { fields.hidden = !used; fields.disabled = !used; }
+    const reading = (key, valid) => {
+      const input = get(`v.${i}.${key}`);
+      if (!used) input.value = '';
+      const raw = input.value.trim();
+      const parsed = raw === '' ? null : Number(raw);
+      const value = valid(parsed) ? parsed : raw;
+      input.setAttribute('aria-invalid', String(!valid(value)));
+      return value;
+    };
+    const batteryHealth = reading('batteryHealth', validBatteryHealth);
+    const batteryCycles = reading('batteryCycles', validBatteryCycles);
+    const next = { ...v, storage: get(`v.${i}.storage`).value.trim(), condition, warranty: get(`v.${i}.warranty`).value, price: price === '' ? null : Math.round(Number(price) * 1000) / 1000, offerPrice: offer === '' ? null : Math.round(Number(offer) * 1000) / 1000, soldOut: get(`v.${i}.soldOut`).checked, stockQuantity, batteryHealth, batteryCycles, notes: Object.keys(noteLabels).filter((n) => get(`v.${i}.note.${n}`).checked) };
     get(`v.${i}.offerPrice`).setAttribute('aria-invalid', String(!validOfferPrice(next)));
     return next;
   });
@@ -320,6 +339,7 @@ function validate(c) {
     if (!cats.has(p.category)) problems.push(`${name}: ${t('has an unknown category')}`);
     if (!p.variants.length) problems.push(`${name}: ${t('needs at least one option')}`);
     if (p.variants.some((v) => !validStockQuantity(v.stockQuantity))) problems.push(`${name}: ${t('has an invalid stock quantity')}`);
+    if (p.variants.some((v) => !validBatteryHealth(v.batteryHealth) || !validBatteryCycles(v.batteryCycles))) problems.push(`${name}: ${t('has invalid battery details')}`);
     if (p.variants.some((v) => !validPrice(v.price))) problems.push(`${name}: ${t('has an option without a valid price')}`);
     else if (p.variants.some((v) => !validOfferPrice(v))) problems.push(`${name}: ${t('has an offer price that is not below its price')}`);
     if (new Set(p.variants.map((v) => v.key)).size !== p.variants.length) problems.push(`${name}: ${t('has two options with the same code')}`);
