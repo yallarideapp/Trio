@@ -99,7 +99,7 @@ export function verifyStorefront() {
     const originalOffersTitle = ui.state.content.settings.offersTitle;
     ui.state.content.settings.offersTitle = { ar: 'تشكيلة خاصة', en: 'Editor offer selection' };
     ui.state.route = { name: 'home' };
-    const lookingFor = language === 'ar' ? 'شو عم تدوّر عليه؟' : 'What are you looking for?';
+    const lookingFor = language === 'ar' ? 'عن ماذا تبحث' : 'What are you looking for?';
     const updatedHome = ui.renderHome();
     const homeOffers = updatedHome.match(/<section class="container offers-section">([\s\S]*?)<\/section>/)?.[1] || '';
     const homeCategoriesSection = updatedHome.match(/<section class="container categories-section">([\s\S]*?)<\/section>/)?.[1] || '';
