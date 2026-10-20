@@ -147,8 +147,6 @@ html[dir=ltr] .row-button:not(.is-next) .icon,html[dir=rtl] .row-button.is-next 
 .category-picture{aspect-ratio:1.45;border-radius:10px}
 .category-picture>img{padding:6% 14%}
 .category-card h3{font-size:17px;margin:14px 10px 2px}
-.category-count{display:block;font-size:12px;color:var(--muted);margin-inline:10px}
-.category-price{display:block;margin-top:2px}
 .service-panel{display:flex;align-items:center;justify-content:space-between;gap:24px;border:1px solid var(--line);border-radius:18px;background:var(--surface);padding:32px}
 .service-panel h2{font-size:34px}
 .service-panel p{font-size:14px;color:var(--muted);margin-top:12px;max-width:620px}
@@ -401,7 +399,7 @@ html[lang=en] .service-card h2{font-size:22px}
   .home-content>section{margin-top:40px}.offers-section{margin-top:30px!important}
   .offer-track{grid-auto-columns:72%;gap:12px;margin-inline:-16px;padding-inline:16px;scroll-padding-inline:16px}
   .trust-strip{grid-template-columns:1fr 1fr}.trust-item{flex-direction:column;gap:9px;padding:15px}.trust-icon{width:36px;height:36px}.trust-item strong{font-size:13px}.trust-item small{font-size:11px}
-  .category-grid{gap:10px}.category-card{padding:6px 6px 13px;border-radius:13px}.category-picture{aspect-ratio:1.4;border-radius:8px}.category-card h3{font-size:14px;margin:10px 6px 1px}.category-count{margin-inline:6px;font-size:11px}
+  .category-grid{gap:10px}.category-card{padding:6px 6px 13px;border-radius:13px}.category-picture{aspect-ratio:1.4;border-radius:8px}.category-card h3{font-size:14px;margin:10px 6px 1px}
   .product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 12px}
   .product-visual{border-radius:13px}.product-image>img{padding:7%}
   .save-product{width:44px;height:44px;top:5px;inset-inline-end:5px}
@@ -535,7 +533,6 @@ html[lang=en] .device-specs h2{font-size:18px;font-weight:600;letter-spacing:0}
   .category-card{padding:0 0 10px;border-radius:12px;background:var(--surface);border-color:#ffffff2e;text-align:center;min-width:0}
   .category-picture{aspect-ratio:1.05;border-radius:11px 11px 0 0}
   .category-card h3{font-size:12px;margin:8px 5px 3px}
-  .category-count{font-size:10px;line-height:1.6;margin-inline:5px}
   .trust-item{padding:16px}.trust-item small{font-size:12px}
   .page-shell{padding-top:20px}
   .catalog-page .page-heading{margin-bottom:16px}

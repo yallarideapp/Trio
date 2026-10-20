@@ -1,5 +1,10 @@
 # Replacement storefront verification — 18 October 2026
 
+## Home category images and names — 21 October 2026
+
+- Removed device counts and starting prices from the six home category tiles, leaving their images, translated names and category links. Removed unused metadata styles.
+- Live/Pages builds and the full existing regression suite pass. Chromium at 390px confirms Arabic/English tiles contain only category names, retain three columns and have no horizontal overflow.
+
 ## Optional used-device battery readings — 21 October 2026
 
 - Added per-option Battery health (%) and Battery cycles controls in the device editor. They appear for Used like new (including legacy used aliases), are optional, and hide/disable/clear when the option changes to New. Health accepts whole percentages from 0 to 100; cycles accepts nonnegative safe whole counts. No measurements were added to the shipped catalog.
