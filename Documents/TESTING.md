@@ -1,5 +1,12 @@
 # Replacement storefront verification — 18 October 2026
 
+## Mobile header search icon — 21 October 2026
+
+- Replaced the persistent phone search field with a labeled 44px search-icon button in the compact top header. Tapping reveals and immediately focuses the existing search input below the header. The button exposes expanded state and translated labels. Submit (including the same query), Escape, navigation, language changes and opening the menu close the field; Escape and repeated submissions restore focus to the toggle. Desktop retains its search input.
+- Narrow product headers retain bag and account access: use the Trio logo badge where needed and a named account icon at the smallest widths. The six home categories and three-column layout are unchanged.
+- Chromium QA: Arabic 390px home, Arabic 320px/390px product headers and English 320px home/390px product headers fit without horizontal overflow. Icon reveal focuses the input; Arabic Samsung and English Huawei searches return the expected products. Repeating a query closes search and restores focus. Escape and mutually exclusive menu/search states work. Desktop at 1280px retains a visible input and hidden mobile toggle. No captured console warnings/errors.
+- Live/Pages builds and all existing regression suites pass. Physical mobile devices were not tested.
+
 ## Compact search and all home categories — 21 October 2026
 
 - Mobile header search is now 38px high and at most 220px wide beside Sign in, retaining 16px input text. The What are you looking for? grid shows Phones, Laptops, Tablets, Watches, Audio and Accessories in catalog order, with three tiles per row at every breakpoint. Cards use real category photos and keep counts and starting prices on separate lines. The existing four hero choices and offer selection remain unchanged.

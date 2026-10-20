@@ -540,7 +540,17 @@ function syncFilterUrl() {
 function setMenu(open) {
   const menu = $('#mobile-nav'); const toggle = $('#menu-toggle');
   if (!menu || !toggle) return;
+  if (open) setHeaderSearch(false);
   menu.hidden = !open; toggle.setAttribute('aria-expanded', String(open)); toggle.setAttribute('aria-label', t(open ? 'menuClose' : 'menuOpen'));
+}
+function setHeaderSearch(open, { focus = false, restoreFocus = false } = {}) {
+  const toggle = $('#header-search-toggle');
+  if (!toggle) return;
+  $('.site-header')?.classList.toggle('search-open', open);
+  toggle.setAttribute('aria-expanded', String(open));
+  toggle.setAttribute('aria-label', open ? state.language === 'ar' ? 'إغلاق البحث' : 'Close search' : t('search'));
+  if (open) { setMenu(false); if (focus) $('#header-search')?.focus(); }
+  else if (restoreFocus) toggle.focus();
 }
 function updateCounts() {
   $$('[data-saved-count]').forEach((n) => { n.textContent = num(state.saved.size); n.hidden = !state.saved.size; });
@@ -576,6 +586,7 @@ function translateShell() {
   $$('[data-ar][data-en]').forEach((n) => { n.textContent = n.getAttribute(`data-${lang}`); });
   for (const [key, attr] of [['label', 'aria-label'], ['placeholder', 'placeholder']]) $$(`[data-ar-${key}][data-en-${key}]`).forEach((n) => n.setAttribute(attr, n.getAttribute(`data-${lang}-${key}`)));
   const b = $('#language-toggle'); if (b) { b.textContent = lang === 'ar' ? 'English' : 'عربي'; b.lang = lang === 'ar' ? 'en' : 'ar'; b.setAttribute('aria-label', t('switchLang')); }
+  setHeaderSearch(false);
   $$('[data-account-link]').forEach((link) => { link.textContent = accountLabel(lang); });
   $$('[data-phone-link]').forEach((a) => { a.href = phoneHref(); }); $$('[data-phone-text]').forEach((a) => { a.textContent = phoneText(); });
   $$('[data-address]').forEach((n) => { n.textContent = L(S().address); });
@@ -625,6 +636,7 @@ function renderRoute({ focus = false } = {}) {
   document.title = state.route.name === 'home' ? t('title') : `${heading?.textContent || t('shop')} | TRIO Mobile`;
   const hs = $('#header-search'); if (hs) hs.value = ['shop', 'saved', 'offers'].includes(state.route.name) ? state.query : '';
   setMenu(false);
+  setHeaderSearch(false);
   if (focus) requestAnimationFrame(() => { heading?.setAttribute('tabindex', '-1'); heading?.focus({ preventScroll: true }); window.scrollTo({ top: 0, behavior: 'instant' }); });
 }
 function updateDetailBuy(product) {
@@ -644,6 +656,7 @@ async function refreshContent() {
 document.addEventListener('click', (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
+  if (!target.closest('.site-header')) setHeaderSearch(false);
   if (target.closest('.skip-link')) { event.preventDefault(); const m = $('#main'); m.setAttribute('tabindex', '-1'); m.focus({ preventScroll: true }); m.scrollIntoView({ block: 'start' }); return; }
   const save = target.closest('[data-save]'); if (save) { toggleSaved(save.dataset.save); return; }
   const add = target.closest('[data-add]'); if (add) { addToBag(add.dataset.add); return; }
@@ -685,11 +698,16 @@ document.addEventListener('change', (event) => {
 });
 document.addEventListener('submit', (event) => {
   if (event.target.id === 'checkout-form') { event.preventDefault(); submitCheckout(event.target); }
-  if (event.target.id === 'header-search-form') { event.preventDefault(); const q = (event.target.querySelector('input[type=search]')?.value || '').trim(); location.hash = `#/shop${q ? `?q=${encodeURIComponent(q)}` : ''}`; }
+  if (event.target.id === 'header-search-form') { event.preventDefault(); const q = (event.target.querySelector('input[type=search]')?.value || '').trim(); setHeaderSearch(false, { restoreFocus: $('#header-search-toggle')?.getAttribute('aria-expanded') === 'true' }); location.hash = `#/shop${q ? `?q=${encodeURIComponent(q)}` : ''}`; }
 });
 $('#language-toggle')?.addEventListener('click', () => { state.language = state.language === 'ar' ? 'en' : 'ar'; local.write('trio-language', state.language); translateShell(); renderRoute(); });
+$('#header-search-toggle')?.addEventListener('click', () => { const open = $('#header-search-toggle').getAttribute('aria-expanded') !== 'true'; setHeaderSearch(open, { focus: open }); });
 $('#menu-toggle')?.addEventListener('click', () => setMenu($('#menu-toggle').getAttribute('aria-expanded') !== 'true'));
-document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && $('#menu-toggle')?.getAttribute('aria-expanded') === 'true') { setMenu(false); $('#menu-toggle').focus(); } });
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  if ($('#header-search-toggle')?.getAttribute('aria-expanded') === 'true') { setHeaderSearch(false); $('#header-search-toggle').focus(); }
+  else if ($('#menu-toggle')?.getAttribute('aria-expanded') === 'true') { setMenu(false); $('#menu-toggle').focus(); }
+});
 document.addEventListener('error', (event) => {
   const img = event.target;
   if (!(img instanceof HTMLImageElement) || !img.hasAttribute('data-device-image')) return;
