@@ -242,7 +242,7 @@ function renderHome() {
     return `<a class="category-card" href="${categoryUrl(id)}"><div class="category-picture device-media">${!homePriority(rep) && categoryArtwork(id) || media(rep)}</div><h3>${esc(categoryName(id))}</h3><span class="category-count">${esc(t('count')(inCat.length))}${lows.length ? ` · ${esc(t('from'))} <bdi>${esc(money(Math.min(...lows)))}</bdi>` : ''}</span></a>`;
   }).join('');
   const trust = t('trust').map(([title, text], i) => `<li class="trust-item"><span class="trust-icon" aria-hidden="true">${icon(['search', 'box', 'heart', 'swap'][i])}</span><span><strong>${esc(title)}</strong><small>${esc(text)}</small></span></li>`).join('');
-  return `<section class="hero"><div class="container hero-grid"><div class="hero-copy"><h1><span>${esc(t('heroLine1'))}</span> <span>${esc(t('heroLine2'))}</span></h1><form id="home-search-form" class="home-search" role="search">${icon('search')}<label class="sr-only" for="home-search">${esc(t('search'))}</label><input id="home-search" name="q" type="search" placeholder="${esc(t('searchPlaceholder'))}" autocomplete="off" enterkeyhint="search"></form><div class="hero-buttons"><a class="button button-dark" href="#/shop">${esc(t('heroShop'))}${arrow}</a><a class="button button-outline" href="#/offers">${esc(t('offersTitle'))}</a></div></div><div id="hero-showcase" class="hero-showcase">${heroShowcase()}</div></div></section>
+  return `<section class="hero"><div class="container hero-grid"><div class="hero-copy"><h1><span>${esc(t('heroLine1'))}</span> <span>${esc(t('heroLine2'))}</span></h1><div class="hero-buttons"><a class="button button-dark" href="#/shop">${esc(t('heroShop'))}${arrow}</a><a class="button button-outline" href="#/offers">${esc(t('offersTitle'))}</a></div></div><div id="hero-showcase" class="hero-showcase">${heroShowcase()}</div></div></section>
   <div class="home-content">
     <section class="container categories-section">${sectionHeading(t('lookingFor'), '#/shop')}<div class="category-grid">${cats}</div></section>
     ${offers.length ? `<section class="container offers-section">${sectionHeading(t('offers'), '#/offers', t('offersAll'))}${offersRow(offers)}</section>` : ''}
@@ -685,7 +685,7 @@ document.addEventListener('change', (event) => {
 });
 document.addEventListener('submit', (event) => {
   if (event.target.id === 'checkout-form') { event.preventDefault(); submitCheckout(event.target); }
-  if (['header-search-form', 'mobile-search-form', 'home-search-form'].includes(event.target.id)) { event.preventDefault(); const q = (event.target.querySelector('input[type=search]')?.value || '').trim(); location.hash = `#/shop${q ? `?q=${encodeURIComponent(q)}` : ''}`; }
+  if (event.target.id === 'header-search-form') { event.preventDefault(); const q = (event.target.querySelector('input[type=search]')?.value || '').trim(); location.hash = `#/shop${q ? `?q=${encodeURIComponent(q)}` : ''}`; }
 });
 $('#language-toggle')?.addEventListener('click', () => { state.language = state.language === 'ar' ? 'en' : 'ar'; local.write('trio-language', state.language); translateShell(); renderRoute(); });
 $('#menu-toggle')?.addEventListener('click', () => setMenu($('#menu-toggle').getAttribute('aria-expanded') !== 'true'));

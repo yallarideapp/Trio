@@ -1,5 +1,11 @@
 # Replacement storefront verification — 18 October 2026
 
+## Mobile search in the top header — 20 October 2026
+
+- Moved the mobile search field into the sticky header beside Sign in / تسجيل الدخول, with the logo, language switch and menu on the row above. Removed the duplicate home-hero and mobile-menu search forms. Catalog search/filter tools remain available, and desktop keeps its existing header layout. Existing backgrounds and newer hero animations/buttons are preserved.
+- Browser QA verified Arabic at 320px and 390px and English at 320px with no horizontal document overflow. Search and Sign in share the same row with 46px-high controls; the search input uses 16px text. Arabic سامسونج returns Galaxy S26+ and Galaxy S25 FE; English Huawei returns Huawei Watch GT6. The mobile menu opens/closes and contains no duplicate search input. Desktop header checked at 1280px. The rebuilt iPhone 17 Pro page at 320px keeps Sign in visible beside search without overflow.
+- Live/Pages builds and the complete existing regression suite pass. Browser tests use Chromium; physical iOS/Android devices were not tested.
+
 ## Out of stock and optional stock quantity — 20 October 2026
 
 - Added a prominent, bilingual Availability control with Out of stock plus an optional whole-number stock quantity for each option. Blank/null retains the standard order limit; 0 is unavailable, and a manual out-of-stock flag overrides positive quantity. Quantities are manually maintained and cap each order; orders do not decrement inventory. No stock amounts were added to the public seed catalog.
