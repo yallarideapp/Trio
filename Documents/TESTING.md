@@ -146,3 +146,12 @@ This release replaces the source/date/disclaimer sections described above with r
 - Browser (Chromium, Pages build): frame captures of all four motions at 1280px and 390px; reduced motion leaves the photo still; an offer of JD 50 on iPhone 17 Pro Max shows JD 789 crossed out and JD 739 on home, the card, the option and the device page with "You save JD 50", in Arabic at 1280px and English at 390px, no horizontal overflow; the admin shows the offer field for every option.
 - Fixed: the admin status message (`#flash`) showed as an empty pill while hidden.
 - Not tested: physical iOS or Android devices, Safari.
+
+## Hero buttons, brand line and AirPods motion — 20 October 2026
+
+- **Hero buttons:** the dark button is now «تسوّق الأجهزة» / "Shop devices" and opens the devices page; the outline button is «عروض تريو» / "Trio offers" and opens the offers. The words used elsewhere ("Browse devices" on the not-found page and the hero picture's label) are unchanged.
+- **Brand line under the default hero picture:** the brand of the pictured device instead of "TRIO COLLECTION": Huawei for watches (Huawei Watch GT 6), Apple for audio (AirPods Pro).
+- **AirPods motion, rebuilt:** each earbud starts deep in its well, hidden behind the well's front edge, rises out with a small tilt, past where the photo shows it, then settles into place (left first, right 140 ms later; about 1.7 s). New layers: a clean empty case and full cut-outs of both earbuds (`Documents/IMAGE-ASSETS.md`); the front-of-case layer is gone.
+- Automated: all checks pass after the change; all three builds (live, Pages, demo) succeed.
+- Browser (Chromium, Pages build): exact frames of the AirPods motion (every animation paused and stepped) at 1280px and 390px from start to end; the last frame matches the photo; no layers remain afterwards; the other three motions still run with no errors; reduced motion leaves all four photos still. Buttons and brand line checked in Arabic at 1280px and English at 390px and 1280px, with the outline button opening the offers and no horizontal overflow.
+- Not tested: physical iOS or Android devices, Safari.

@@ -20,7 +20,7 @@ const words = {
   ar: {
     title: 'TRIO Mobile | تريو موبايل', home: 'الرئيسية', shop: 'الأجهزة', offers: 'العروض', saved: 'المفضلة', bag: 'السلة',
     maintenance: 'الصيانة', tradein: 'التبديل', contact: 'زورونا', switchLang: 'Switch to English', menuOpen: 'فتح القائمة', menuClose: 'إغلاق القائمة',
-    heroLine1: 'إحنا اللعبة', heroLine2: 'الجديدة.', heroOffers: 'شوف عروض تريو', browse: 'تصفّح الأجهزة', heroChoose: 'اختار نوع الجهاز',
+    heroLine1: 'إحنا اللعبة', heroLine2: 'الجديدة.', heroShop: 'تسوّق الأجهزة', browse: 'تصفّح الأجهزة', heroChoose: 'اختار نوع الجهاز',
     from: 'من', view: 'شوف الجهاز', choose: 'اختار السعة', add: 'أضف للسلة', added: 'انضاف للسلة', soldOut: 'غير متوفر', unavailable: 'غير متوفر حالياً',
     save: 'حفظ الجهاز', unsave: 'إلغاء الحفظ', savedNow: 'انحفظ بالمفضلة.', unsavedNow: 'انشال من المفضلة.',
     lookingFor: 'شو عم تدوّر عليه؟', categories: 'تسوّق حسب القسم', allDevices: 'شوف كل الأجهزة', offersAll: 'كل العروض',
@@ -58,7 +58,7 @@ const words = {
   en: {
     title: 'TRIO Mobile | Amman', home: 'Home', shop: 'Devices', offers: 'Offers', saved: 'Saved', bag: 'Bag',
     maintenance: 'Repair', tradein: 'Trade in', contact: 'Visit us', switchLang: 'التبديل إلى العربية', menuOpen: 'Open menu', menuClose: 'Close menu',
-    heroLine1: 'A whole', heroLine2: 'new game.', heroOffers: 'Explore Trio offers', browse: 'Browse devices', heroChoose: 'Choose a device type',
+    heroLine1: 'A whole', heroLine2: 'new game.', heroShop: 'Shop devices', browse: 'Browse devices', heroChoose: 'Choose a device type',
     from: 'from', view: 'View device', choose: 'Choose option', add: 'Add to bag', added: 'Added to bag', soldOut: 'Out of stock', unavailable: 'Not available right now',
     save: 'Save device', unsave: 'Remove from saved', savedNow: 'Saved.', unsavedNow: 'Removed from saved.',
     lookingFor: 'What are you looking for?', categories: 'Shop by category', allDevices: 'View all devices', offersAll: 'All offers',
@@ -208,12 +208,14 @@ function heroProduct() {
   const list = homeProducts();
   return homeRepresentative(list.filter((product) => product.category === state.heroCategory)) || list[0];
 }
+// Default pictures for categories without a chosen home device: [photo, alt text, brand shown under it].
+const categoryPicture = (id) => id === 'watches'
+  ? ['assets/devices/huawei-watch-gt6.webp', 'Huawei Watch GT 6', 'Huawei']
+  : id === 'audio'
+    ? ['assets/categories/airpods-pro.png', 'AirPods', 'Apple']
+    : null;
 function categoryArtwork(id, { eager = false } = {}) {
-  const picture = id === 'watches'
-    ? ['assets/devices/huawei-watch-gt6.webp', 'Huawei Watch GT 6']
-    : id === 'audio'
-      ? ['assets/categories/airpods-pro.png', 'AirPods']
-      : null;
+  const picture = categoryPicture(id);
   if (!picture) return '';
   const [src, alt] = picture;
   return `<span class="category-artwork ${id}"><img src="${src}" alt="${alt}" loading="${eager ? 'eager' : 'lazy'}" decoding="async" draggable="false"></span>`;
@@ -225,7 +227,7 @@ function heroShowcase() {
   const artwork = homePriority(product) ? '' : categoryArtwork(state.heroCategory, { eager: true });
   const title = artwork ? categoryName(state.heroCategory) : L(product.name);
   const caption = artwork ? `<span class="hero-price">${arrow}</span>` : low !== null ? `<span class="hero-price"><small>${esc(t('from'))}</small> <bdi>${esc(money(low))}</bdi></span>` : `<span class="hero-price">${esc(t('soldOut'))}</span>`;
-  return `<a class="hero-product" href="${artwork ? categoryUrl(state.heroCategory) : productUrl(product, startingVariant(product))}" aria-label="${esc(`${artwork ? t('browse') : t('view')}: ${title}`)}"><div class="device-media hero-device">${artwork || media(product, { eager: true })}</div><div class="hero-product-caption"><div><p class="product-brand" dir="ltr">${esc(artwork ? 'TRIO COLLECTION' : product.brand)}</p><p class="hero-product-name" dir="auto">${esc(title)}</p></div>${caption}</div></a><div class="hero-tabs" role="group" aria-label="${esc(t('heroChoose'))}">${homeCategoryIds().map((id) => `<button type="button" data-hero-category="${esc(id)}" aria-pressed="${id === state.heroCategory}">${esc(categoryName(id))}</button>`).join('')}</div>`;
+  return `<a class="hero-product" href="${artwork ? categoryUrl(state.heroCategory) : productUrl(product, startingVariant(product))}" aria-label="${esc(`${artwork ? t('browse') : t('view')}: ${title}`)}"><div class="device-media hero-device">${artwork || media(product, { eager: true })}</div><div class="hero-product-caption"><div><p class="product-brand" dir="ltr">${esc(artwork ? categoryPicture(state.heroCategory)[2] : product.brand)}</p><p class="hero-product-name" dir="auto">${esc(title)}</p></div>${caption}</div></a><div class="hero-tabs" role="group" aria-label="${esc(t('heroChoose'))}">${homeCategoryIds().map((id) => `<button type="button" data-hero-category="${esc(id)}" aria-pressed="${id === state.heroCategory}">${esc(categoryName(id))}</button>`).join('')}</div>`;
 }
 function offersRow(list) {
   return `<div class="offer-row" data-scroller><div class="offer-track">${list.map((product) => `<div class="offer-slide">${productCard(product)}</div>`).join('')}</div><div class="row-controls" aria-hidden="true"><button type="button" class="row-button" data-scroll="-1" tabindex="-1">${icon('chevron')}</button><button type="button" class="row-button is-next" data-scroll="1" tabindex="-1">${icon('chevron')}</button></div></div>`;
@@ -240,7 +242,7 @@ function renderHome() {
     return `<a class="category-card" href="${categoryUrl(id)}"><div class="category-picture device-media">${!homePriority(rep) && categoryArtwork(id) || media(rep)}</div><h3>${esc(categoryName(id))}</h3><span class="category-count">${esc(t('count')(inCat.length))}${lows.length ? ` · ${esc(t('from'))} <bdi>${esc(money(Math.min(...lows)))}</bdi>` : ''}</span></a>`;
   }).join('');
   const trust = t('trust').map(([title, text], i) => `<li class="trust-item"><span class="trust-icon" aria-hidden="true">${icon(['search', 'box', 'heart', 'swap'][i])}</span><span><strong>${esc(title)}</strong><small>${esc(text)}</small></span></li>`).join('');
-  return `<section class="hero"><div class="container hero-grid"><div class="hero-copy"><h1><span>${esc(t('heroLine1'))}</span> <span>${esc(t('heroLine2'))}</span></h1><form id="home-search-form" class="home-search" role="search">${icon('search')}<label class="sr-only" for="home-search">${esc(t('search'))}</label><input id="home-search" name="q" type="search" placeholder="${esc(t('searchPlaceholder'))}" autocomplete="off" enterkeyhint="search"></form><div class="hero-buttons"><a class="button button-dark" href="#/offers">${esc(t('heroOffers'))}${arrow}</a><a class="button button-outline" href="#/shop">${esc(t('browse'))}</a></div></div><div id="hero-showcase" class="hero-showcase">${heroShowcase()}</div></div></section>
+  return `<section class="hero"><div class="container hero-grid"><div class="hero-copy"><h1><span>${esc(t('heroLine1'))}</span> <span>${esc(t('heroLine2'))}</span></h1><form id="home-search-form" class="home-search" role="search">${icon('search')}<label class="sr-only" for="home-search">${esc(t('search'))}</label><input id="home-search" name="q" type="search" placeholder="${esc(t('searchPlaceholder'))}" autocomplete="off" enterkeyhint="search"></form><div class="hero-buttons"><a class="button button-dark" href="#/shop">${esc(t('heroShop'))}${arrow}</a><a class="button button-outline" href="#/offers">${esc(t('offersTitle'))}</a></div></div><div id="hero-showcase" class="hero-showcase">${heroShowcase()}</div></div></section>
   <div class="home-content">
     <section class="container categories-section">${sectionHeading(t('lookingFor'), '#/shop')}<div class="category-grid">${cats}</div></section>
     ${offers.length ? `<section class="container offers-section">${sectionHeading(t('offers'), '#/offers', t('offersAll'))}${offersRow(offers)}</section>` : ''}

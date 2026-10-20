@@ -27,7 +27,7 @@ All device stages use contain sizing and white backgrounds; transparent images r
 
 ## Hero motion layers — 20 October 2026
 
-Short home hero animations (`Source/site/src/hero-motion.js`) use layers cut from the shipped hero photos below. They show only during the 1–2 second animation; the original photo is shown again when it ends. The empty AirPods case is the one reconstructed area: it is visible only while the earbuds rise, and shows no device that is not in the original photo.
+Short home hero animations (`Source/site/src/hero-motion.js`) use layers cut from the shipped hero photos below. They show only during the 1–2 second animation; the original photo is shown again when it ends. The empty AirPods case is the one reconstructed area: it is visible only while the earbuds rise out of their wells, and shows no device that is not in the original photo. The earlier `airpods-pro-case-front.webp` layer was removed; the wells' front edges are now a clip outline in the code.
 
 | File (`assets/hero/`) | From | What was done | Size | SHA-256 |
 |---|---|---|---|---|
@@ -36,7 +36,6 @@ Short home hero animations (`Source/site/src/hero-motion.js`) use layers cut fro
 | `macbook-pro-lid.webp` | `assets/devices/macbook-pro.webp` | The lid above the hinge line, cropped. | 856×601 | `8f0114b5ee7dbb297603b443a8237b337a089756cf53741ade1f03e81939588b` |
 | `macbook-pro-lid-off.webp` | `assets/devices/macbook-pro.webp` | The lid with the screen replaced by black glass. | 856×601 | `03e11613bae6cb7bee8c5152126dbf6da5a88318d357cc1371caa746d456157c` |
 | `huawei-watch-gt6-screen-off.webp` | `assets/devices/huawei-watch-gt6.webp` | The round display replaced with black glass. | 964×1200 | `97e46778de0372c1f6dbe63f2c486a0641099160a0cc2f906a834ff3762b2613` |
-| `airpods-pro-case-empty.webp` | `assets/categories/airpods-pro.png` | Both earbuds removed; the case interior behind them filled in from the surrounding case. | 1000×1000 | `20831eb6c7f580f211c652eb5c72b08cfff64a7c36ac2462fb216ee89dab0f1c` |
-| `airpods-pro-case-front.webp` | `assets/categories/airpods-pro.png` | The lower front of the case, cropped (drawn over the rising earbuds). | 1000×483 | `6b186bb1869cbf30863738b4fa0ad8e979365a17ed79e6b37537d74323ca57e8` |
-| `airpods-pro-bud-left.webp` | `assets/categories/airpods-pro.png` | The left earbud, cut out. | 309×382 | `5b9b6ebaecca5b0c0c2d1cbd3638cbb7a19478a5a94a9f0d76963961b50867ea` |
-| `airpods-pro-bud-right.webp` | `assets/categories/airpods-pro.png` | The right earbud, cut out. | 296×436 | `e0d1d72c584ae257ca3494e08424a00fecf2368b9e007155c92a0f310a3f927f` |
+| `airpods-pro-case-empty.webp` | `assets/categories/airpods-pro.png` | Both earbuds removed. The right well behind the right earbud was filled in by image inpainting; the left well is the mirror image of the right one (the case is symmetric); the back rim and the case outline above both earbuds were redrawn from the clear rim between them. Replaced the first version on 20 October 2026 (`20831eb6…`), which showed smudges. | 1000×1000 | `f0d7c35f58bbd96a07da5b3b2f8b26b1d8609fd60bd12390b662f32aaf31e4f9` |
+| `airpods-pro-bud-left.webp` | `assets/categories/airpods-pro.png` | The left earbud, cut out with its whole stem; edge pixels over the case take the earbud's own colour. | 285×384 | `d4b467f30fea518fa7eea3117f83862b6e72685f312fbbefae11fac43425c658` |
+| `airpods-pro-bud-right.webp` | `assets/categories/airpods-pro.png` | The right earbud, cut out with its whole stem and tip; edge pixels over the case take the earbud's own colour. | 286×438 | `cd630f66f3f1ef6e44ed9fab4ff9bd933e74b0563904ece472f8f7158fa4c6a2` |

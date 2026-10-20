@@ -2,7 +2,7 @@
 //   iPhone   the screen lights up
 //   MacBook  the lid opens on its hinge, then the screen lights up
 //   Watch    raised as if to look at it, then the screen lights up
-//   AirPods  the earbuds rise out of the case
+//   AirPods  the earbuds rise out of their wells and settle into place
 // The layers are cut from the same photos (Documents/IMAGE-ASSETS.md). When the motion ends
 // the original photo is shown again. Any other photo (another device, an uploaded photo)
 // keeps the simple fade. Nothing moves when the visitor prefers reduced motion.
@@ -20,17 +20,24 @@ const RIGS = [
   },
   {
     match: 'assets/categories/airpods-pro.png', kind: 'pods', size: [1000, 1000],
-    back: `${DIR}airpods-pro-case-empty.webp`, front: { src: `${DIR}airpods-pro-case-front.webp`, box: [0, 517, 1000, 1000] },
-    // Each bud starts inside the case (hidden by its front) and rises to where the photo shows it.
+    back: `${DIR}airpods-pro-case-empty.webp`,
+    // Each earbud starts deep in its well, hidden behind the well's front edge (edge, left to right,
+    // in photo pixels). It rises out (sink), past where the photo shows it (lift), then settles into place.
     buds: [
-      { src: `${DIR}airpods-pro-bud-left.webp`, box: [166, 141, 475, 523], from: [14, 430, -7], delay: 0 },
-      { src: `${DIR}airpods-pro-bud-right.webp`, box: [534, 22, 830, 458], from: [-10, 530, 7], delay: 160 },
+      {
+        src: `${DIR}airpods-pro-bud-left.webp`, box: [169, 138, 454, 522], sink: 340, lift: 84, tilt: -5, delay: 0,
+        edge: [[107, 372], [110, 404], [116, 417], [144, 445], [158, 452], [196, 459], [296, 458], [318, 449], [399, 446], [423, 440], [450, 425], [469, 405], [489, 350]],
+      },
+      {
+        src: `${DIR}airpods-pro-bud-right.webp`, box: [542, 25, 828, 463], sink: 456, lift: 34, tilt: 5, delay: 140,
+        edge: [[507, 334], [508, 358], [521, 396], [532, 411], [549, 427], [573, 440], [615, 448], [682, 449], [704, 458], [801, 459], [819, 457], [840, 451], [865, 435], [888, 398], [889, 371]],
+      },
     ],
   },
 ];
 
 export const heroRigFor = (src) => RIGS.find((rig) => typeof src === 'string' && (src === rig.match || src.endsWith(`/${rig.match}`))) || null;
-export const heroMotionAssets = () => RIGS.flatMap((r) => [r.off, r.base, r.lid, r.lidOff, r.back, r.front?.src, ...(r.buds || []).map((b) => b.src)].filter(Boolean));
+export const heroMotionAssets = () => RIGS.flatMap((r) => [r.off, r.base, r.lid, r.lidOff, r.back, ...(r.buds || []).map((b) => b.src)].filter(Boolean));
 
 const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 const image = (src, className) => { const el = document.createElement('img'); el.src = src; el.alt = ''; el.className = className; el.decoding = 'async'; el.draggable = false; return el; };
@@ -138,21 +145,30 @@ export function playHeroMotion(root) {
   }
 
   if (rig.kind === 'pods') {
-    const s = box.s, f = rig.front.box;
-    stage.innerHTML = `<img class="hero-pods-layer" alt="" src="${rig.back}">${rig.buds.map((b) => `<img class="hero-pods-bud" alt="" src="${b.src}">`).join('')}<img class="hero-pods-front" alt="" src="${rig.front.src}">`;
-    const front = stage.querySelector('.hero-pods-front');
-    Object.assign(front.style, { left: `${f[0] * s}px`, top: `${f[1] * s}px`, width: `${(f[2] - f[0]) * s}px`, height: `${(f[3] - f[1]) * s}px` });
-    const buds = [...stage.querySelectorAll('.hero-pods-bud')];
-    rig.buds.forEach((b, i) => { const [x0, y0, x1, y1] = b.box; Object.assign(buds[i].style, { left: `${x0 * s}px`, top: `${y0 * s}px`, width: `${(x1 - x0) * s}px`, height: `${(y1 - y0) * s}px` }); });
+    const s = box.s, px = (v) => `${(v * s).toFixed(2)}px`;
+    // Each earbud sits in its own full-size layer, clipped to what is in front of its well while it is inside the case.
+    stage.innerHTML = `<img class="hero-pods-layer" alt="" src="${rig.back}">${rig.buds.map((b) => `<div class="hero-pods-well"><img class="hero-pods-bud" alt="" src="${b.src}"></div>`).join('')}`;
+    const wells = [...stage.querySelectorAll('.hero-pods-well')], buds = wells.map((w) => w.firstElementChild);
+    rig.buds.forEach((b, i) => { const [x0, y0, x1, y1] = b.box; Object.assign(buds[i].style, { left: px(x0), top: px(y0), width: px(x1 - x0), height: px(y1 - y0) }); });
     img.style.opacity = '0';
     ready([...stage.querySelectorAll('img')]).then(() => {
       if (done) return;
-      stage.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'ease' });
+      stage.animate([{ transform: 'translateY(14px) scale(.98)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.2,.8,.2,1)' });
+      const rise = 640, settle = 540, k = rise / (rise + settle), rim = 215;   // rim: above it nothing of the case is in front
       let waiting = buds.length;
       rig.buds.forEach((b, i) => {
-        const [dx, dy, turn] = b.from;
-        const move = buds[i].animate([{ transform: `translate(${dx * s}px,${dy * s}px) rotate(${turn}deg)` }, { transform: 'none' }], { duration: 1150, delay: 300 + b.delay, easing: 'cubic-bezier(.22,.8,.24,1)', fill: 'both' });
-        move.onfinish = () => { if (--waiting === 0) setTimeout(() => end(), 140); };
+        const e = b.edge, last = e[e.length - 1];
+        const shape = [[-1000, -1000], [2000, -1000], [2000, rim], [last[0], rim], ...e.slice().reverse(), [e[0][0], rim], [-1000, rim]];
+        const clip = `polygon(${shape.map(([x, y]) => `${px(x)} ${px(y)}`).join(',')})`;
+        const timing = { duration: rise + settle, delay: 380 + b.delay, fill: 'both' };
+        // Once the earbud is clear of the case (the top of its rise) nothing is in front of it any more.
+        wells[i].animate([{ clipPath: clip }, { clipPath: clip, offset: k }, { clipPath: 'none', offset: k }, { clipPath: 'none' }], timing);
+        const move = buds[i].animate([
+          { transform: `translateY(${px(b.sink)}) rotate(${b.tilt}deg)`, easing: 'cubic-bezier(.18,.72,.32,1)' },
+          { transform: `translateY(${px(-b.lift)}) rotate(${(-b.tilt * 0.15).toFixed(2)}deg)`, offset: k, easing: 'cubic-bezier(.42,0,.28,1)' },
+          { transform: 'none' },
+        ], timing);
+        move.onfinish = () => { if (--waiting === 0) setTimeout(() => end(260), 120); };
       });
     }).catch(() => { clearTimeout(fallback); finish(); });
   }
