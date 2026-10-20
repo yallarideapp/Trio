@@ -712,7 +712,6 @@ async function start() {
     document.body.insertAdjacentHTML('beforeend', `<a class="demo-corner" href="admin/index.html" lang="${state.language}">${state.language === 'ar' ? 'نسخة عرض · لوحة التحكم' : 'Demo · Admin panel'}</a>`);
   }
   await refreshContent();
-  const demoNotice = $('#owner-demo-notice'); if (demoNotice) demoNotice.hidden = MODE !== 'pages';
   if (state.source === 'preview') document.querySelector('#preview-notice').hidden = false;
   const ids = new Set(products().map((p) => p.id));
   const saved = local.read(visitorKey('saved'), []);

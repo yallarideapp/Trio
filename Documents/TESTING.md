@@ -161,3 +161,9 @@ This release replaces the source/date/disclaimer sections described above with r
 - Automated: all checks pass after the change; all three builds (live, Pages, demo) succeed.
 - Browser (Chromium, Pages build): exact frames of the AirPods motion (every animation paused and stepped) at 1280px and 390px from start to end; the last frame matches the photo; no layers remain afterwards; the other three motions still run with no errors; reduced motion leaves all four photos still. Buttons and brand line checked in Arabic at 1280px and English at 390px and 1280px, with the outline button opening the offers and no horizontal overflow.
 - Not tested: physical iOS or Android devices, Safari.
+
+## Owner demo banner removed — 20 October 2026
+
+- The bar «عرض تجريبي للمالك · الحسابات والطلبات على هذا المتصفح فقط · لا يتم تحصيل دفعات» no longer shows on the GitHub Pages copy (removed from `index.html`, `app.js` and `styles.css`). The demo order's done page still says it was not sent to the store and no payment was collected.
+- Automated: all checks pass; all three builds succeed.
+- Browser (Chromium, Pages build): home, devices and account at 390px and 1280px show no banner, no errors and no horizontal overflow.
