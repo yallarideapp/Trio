@@ -1,5 +1,10 @@
 # Replacement storefront verification — 18 October 2026
 
+## Order confirmation layout — 23 October 2026
+
+- Replaced the receipt's reused compact bag grid with full-width receipt rows: device name, storage and quantity share the flexible column, with each saved line total beside it. The order reference and overall total have dedicated styles, Arabic names use bidi isolation with inherited alignment, and action buttons wrap safely. Guest checkout has one Keep shopping action; signed-in Pages customers retain My orders. Receipt identity/channel checks, saved prices and truthful demo messaging are unchanged.
+- Live/Pages builds and the complete existing regression suite pass. Chromium QA on a separate localhost origin reproduced the pictured order (3 × JD829 plus JD789 = JD3276), verified reload persistence and the single working shopping link, and checked Arabic/English receipt layouts at 320px, 390px and desktop widths without horizontal document overflow. No captured console warnings/errors. The owner's public browser draft/orders were not modified; physical devices and a production Worker checkout were not tested.
+
 ## Home category images and names — 21 October 2026
 
 - Removed device counts and starting prices from the six home category tiles, leaving their images, translated names and category links. Removed unused metadata styles.

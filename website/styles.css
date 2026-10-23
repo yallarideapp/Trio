@@ -311,11 +311,23 @@ html[dir=rtl] .control-field select,html[dir=rtl] .field select{background-posit
 .hp{position:absolute;inset-inline-start:-9999px;width:1px;height:1px;overflow:hidden}
 .form-alert{padding:12px 14px;border-radius:10px;background:#ff8a7a1f;border:1px solid #ff8a7a59;color:#ffd2cb;font-size:13px;line-height:1.7;margin-top:12px}
 .checkout-form .form-alert{margin-top:0}
-.done-card{max-width:560px;margin-inline:auto;text-align:center;padding:40px 28px;border:1px solid var(--line);border-radius:22px;background:var(--surface);display:flex;flex-direction:column;align-items:center;gap:12px}
+.done-card{width:100%;max-width:680px;min-width:0;margin-inline:auto;text-align:center;padding:36px 28px;border:1px solid var(--line);border-radius:22px;background:var(--surface);display:flex;flex-direction:column;align-items:center;gap:18px}
+.done-card h1{font-size:clamp(26px,4vw,36px);line-height:1.3;max-width:100%}
 .done-card p{color:var(--muted);font-size:14px}
 .done-icon{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--accent);color:var(--ink);font-size:32px;font-weight:700}
-.order-number{font:700 34px/1.2 Plex,Arial,sans-serif;color:var(--paper)!important;letter-spacing:1px}
-.done-card .contact-actions{width:100%;margin-top:8px}
+.receipt-reference{max-width:100%;display:grid;gap:7px}
+.done-card .order-number{font:700 clamp(18px,4vw,28px)/1.4 Plex,Arial,sans-serif;color:var(--paper);letter-spacing:.4px;overflow-wrap:anywhere}
+.receipt-message{line-height:1.8;max-width:56ch}
+.receipt-lines{list-style:none;display:grid;width:100%;min-width:0;margin:4px 0 0;padding:0 16px;text-align:start;border:1px solid var(--line);border-radius:14px;background:var(--ink)}
+.receipt-line{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:18px;padding-block:16px;min-width:0}
+.receipt-line+.receipt-line{border-top:1px solid var(--line)}
+.receipt-item-info{min-width:0}.receipt-item-name{display:block;font-size:16px;line-height:1.5;overflow-wrap:anywhere}
+.receipt-item-meta{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:5px;color:var(--muted);font-size:12px;line-height:1.6}
+.receipt-line-total{font-size:16px;line-height:1.5;white-space:nowrap}
+.done-card .receipt-total{width:100%;display:flex;justify-content:space-between;align-items:center;gap:14px;padding-top:16px;border-top:1px solid var(--line);font-size:17px;color:var(--paper)}
+.receipt-total strong{font-size:23px;white-space:nowrap}
+.receipt-actions{display:flex;flex-wrap:wrap;gap:10px;width:100%;margin-top:4px}.receipt-actions .button{flex:1 1 auto;min-width:0;white-space:normal}
+@media(max-width:640px){.done-card{padding:28px 18px;border-radius:18px;gap:16px}.receipt-lines{padding-inline:12px}.receipt-line{gap:12px}.receipt-item-name,.receipt-line-total{font-size:14px}.receipt-actions{flex-direction:column}}
 
 /* services + contact */
 .service-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}
