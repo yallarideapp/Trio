@@ -645,3 +645,6 @@ img.hero-motion-off{object-fit:contain;object-position:center;max-width:none}
 .hero-pods-bud{will-change:transform}
 .hero-product:hover .hero-device .hero-motion-stage img{transform:none}
 @media(prefers-reduced-motion:reduce){.hero-motion{display:none}}
+
+/* Phone menu: Saved with its count (the phone bar shows Repair instead). */
+.mobile-nav .mobile-nav-saved{gap:8px}.mobile-nav .mobile-nav-saved .count-badge{position:static}

@@ -23,7 +23,7 @@ const words = {
     maintenance: 'الصيانة', tradein: 'التبديل', contact: 'زورونا', switchLang: 'Switch to English', menuOpen: 'فتح القائمة', menuClose: 'إغلاق القائمة',
     heroLine1: 'إحنا اللعبة', heroLine2: 'الجديدة.', heroShop: 'تسوّق الأجهزة', browse: 'تصفّح الأجهزة', heroChoose: 'اختار نوع الجهاز',
     from: 'من', view: 'شوف الجهاز', choose: 'اختار السعة', add: 'أضف للسلة', added: 'انضاف للسلة', soldOut: 'غير متوفر', unavailable: 'غير متوفر حالياً',
-    save: 'حفظ الجهاز', unsave: 'إلغاء الحفظ', savedNow: 'انحفظ بالمفضلة.', unsavedNow: 'انشال من المفضلة.',
+    save: 'حفظ الجهاز', unsave: 'إلغاء الحفظ', savedNow: 'انحفظ بالمفضلة.', viewSaved: 'شوف المفضلة', unsavedNow: 'انشال من المفضلة.',
     lookingFor: 'عن ماذا تبحث', categories: 'تسوّق حسب القسم', allDevices: 'شاهد كل الأجهزة', offersAll: 'كل العروض',
     count: (n) => n === 2 ? 'جهازين' : `${n} ${n === 1 ? 'جهاز' : n <= 10 ? 'أجهزة' : 'جهاز'}`,
     trust: [['اعثر على جهازك', 'ابحث حسب الماركة ونوع الجهاز'], ['قارن الخيارات', 'السعة والحالة في مكان واحد'], ['احفظ مفضلتك', 'ارجع للأجهزة اللي عجبتك'], ['بيع · شراء · تبديل', 'وصيانة احترافية بالمحل']],
@@ -61,7 +61,7 @@ const words = {
     maintenance: 'Repair', tradein: 'Trade in', contact: 'Visit us', switchLang: 'التبديل إلى العربية', menuOpen: 'Open menu', menuClose: 'Close menu',
     heroLine1: 'A whole', heroLine2: 'new game.', heroShop: 'Shop devices', browse: 'Browse devices', heroChoose: 'Choose a device type',
     from: 'from', view: 'View device', choose: 'Choose option', add: 'Add to bag', added: 'Added to bag', soldOut: 'Out of stock', unavailable: 'Not available right now',
-    save: 'Save device', unsave: 'Remove from saved', savedNow: 'Saved.', unsavedNow: 'Removed from saved.',
+    save: 'Save device', unsave: 'Remove from saved', savedNow: 'Saved.', viewSaved: 'View saved', unsavedNow: 'Removed from saved.',
     lookingFor: 'What are you looking for?', categories: 'Shop by category', allDevices: 'View all devices', offersAll: 'All offers',
     count: (n) => `${n} ${n === 1 ? 'device' : 'devices'}`,
     trust: [['Find your device', 'Search by brand and category'], ['Compare options', 'Storage and condition together'], ['Save your favorites', 'Keep the devices you like'], ['Buy · Sell · Trade in', 'And professional repair in store']],
@@ -584,7 +584,8 @@ function toggleSaved(id) {
   local.write(visitorKey('saved'), [...state.saved]);
   updateCounts(); updateSavedButtons();
   if (state.route.name === 'saved') { const tabs = $('.catalog-tabs'); if (tabs) tabs.outerHTML = categoryTabs(); updateResults(); }
-  announce(t(saved ? 'savedNow' : 'unsavedNow'));
+  // The phone bar has no Saved tab, so saving says where the list is.
+  if (saved) toast(t('savedNow'), '#/saved', t('viewSaved')); else announce(t('unsavedNow'));
 }
 function translateShell() {
   const lang = state.language;

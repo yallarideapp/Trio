@@ -197,3 +197,10 @@ This release replaces the source/date/disclaimer sections described above with r
 - The bar «عرض تجريبي للمالك · الحسابات والطلبات على هذا المتصفح فقط · لا يتم تحصيل دفعات» no longer shows on the GitHub Pages copy (removed from `index.html`, `app.js` and `styles.css`). The demo order's done page still says it was not sent to the store and no payment was collected.
 - Automated: all checks pass; all three builds succeed.
 - Browser (Chromium, Pages build): home, devices and account at 390px and 1280px show no banner, no errors and no horizontal overflow.
+
+## Repair in the phone bar — 25 October 2026
+
+- Phone bottom bar: Home, Devices, Offers, **Repair** (wrench icon, highlighted on the repair page), Bag. Saved left the bar.
+- Saved stays reachable: in the phone menu (with its count), the heart on every device, and the header heart on desktop. Saving a device now shows «انحفظ بالمفضلة.» with a «شوف المفضلة» link.
+- Automated: all checks pass; all three builds succeed.
+- Browser (Chromium, Pages build): Arabic and English at 320, 390 and 1280px: bar labels, Repair opens the repair page and is highlighted, the menu's Saved shows the count and opens the list, the save message links to Saved; no errors and no horizontal overflow.
