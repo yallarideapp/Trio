@@ -11,6 +11,7 @@ import { forwardArrow } from '../shared/navigation.js';
 import { heroRigFor, heroMotionAssets } from '../site/src/hero-motion.js';
 import * as battery from '../shared/battery.js';
 import * as siteCopy from '../shared/site-text.js';
+import * as homeArtwork from '../shared/home-artwork.js';
 import { existsSync, statSync } from 'node:fs';
 
 export function verifyStorefront() {
@@ -19,7 +20,7 @@ export function verifyStorefront() {
   const document = { documentElement: {}, querySelector: () => null, querySelectorAll: () => [], addEventListener() {} };
   const location = { hash: '#/', replace(value) { this.hash = value; } };
   const context = vm.createContext({
-    ...pricing, ...battery, ...siteCopy, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates,
+    ...pricing, ...battery, ...siteCopy, ...homeArtwork, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates, PREVIEW_KEY: 'trio-pages-preview-v1',
     playHeroMotion: () => {},
     renderAccount: () => '<h1>My account</h1>', loadAccount: async () => {}, bindAccount: () => {}, accountLabel: () => 'Sign in', customerProfile: () => null, setAccountText: () => {},
     MODE: 'pages', api: { photoUrl: () => '' }, local: { read: (key, fallback = null) => stored.has(key) ? structuredClone(stored.get(key)) : fallback, write: (key, value) => { stored.set(key, structuredClone(value)); return true; } },
@@ -247,7 +248,7 @@ export function verifyStorefront() {
       const promotedTablet = ui.state.content.products.find((product) => product.id === 'ipad-pro-m5');
       promotedTablet.homePriority = 100001;
       const tabletTile = ui.renderHome().match(/<a class="category-card" href="#\/shop\/tablets"[^>]*>([\s\S]*?)<\/a>/)?.[1] || '';
-      assert(tabletTile.includes(`src="${promotedTablet.image}"`), `${language}: newly selected tablet leads its category tile`);
+      assert(tabletTile.includes(`src="${homeArtwork.defaultCategoryImage('tablets')}"`), `${language}: promoting another tablet preserves the independent category picture`);
       for (const category of ['tablets', 'accessories']) {
         ui.state.heroCategory = category;
         checkHome(ui.renderHome());
@@ -256,6 +257,35 @@ export function verifyStorefront() {
       ui.state.content = contentBeforeHomeCheck;
       ui.state.heroCategory = 'phones';
     }
+    const beforeArtworkCheck = ui.state.content;
+    const beforeArtworkPhotoUrl = context.api.photoUrl;
+    try {
+      ui.state.content = structuredClone(seed);
+      const expectedPictures = seed.categories.map((category) => [category.id, homeArtwork.defaultCategoryImage(category.id)]);
+      const tilePictures = () => [...ui.renderHome().matchAll(/<a class="category-card" href="#\/shop\/([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)]
+        .map((match) => [match[1], match[2].match(/<img src="([^"]+)"/)?.[1] || '']);
+      for (const [id, path] of expectedPictures) assert(existsSync(new URL('../site/' + path, import.meta.url)), `${language}/${id}: independent category artwork exists`);
+      assert.deepEqual(tilePictures(), expectedPictures, `${language}: every default category has its own fixed picture`);
+      context.api.photoUrl = (id) => id === 'pdevice' ? 'data:image/webp;base64,ZGV2aWNl' : id === 'pcategory' ? 'data:image/webp;base64,Y2F0ZWdvcnk=' : '';
+      for (const product of ui.state.content.products) {
+        product.photo = 'pdevice'; product.image = 'assets/devices/iphone-17e.png';
+        product.featured = true; product.homePriority = 100000;
+      }
+      assert.deepEqual(tilePictures(), expectedPictures, `${language}: device photos and home selections do not change category pictures`);
+      ui.state.content.products.reverse();
+      ui.state.content.products.forEach((product) => { product.hidden = true; });
+      assert.deepEqual(tilePictures(), expectedPictures, `${language}: hiding or reordering devices does not change category pictures`);
+      const phones = ui.state.content.categories.find((category) => category.id === 'phones');
+      phones.image = 'assets/devices/ipad.webp'; phones.photo = 'pcategory';
+      assert.equal(tilePictures()[0][1], 'data:image/webp;base64,Y2F0ZWdvcnk=', `${language}: an explicit category upload overrides the default and category image`);
+      phones.photo = '';
+      assert.equal(tilePictures()[0][1], phones.image, `${language}: a category's saved image overrides only its own tile`);
+      phones.image = '';
+      assert.deepEqual(tilePictures(), expectedPictures, `${language}: resetting a category picture restores its fixed default`);
+      ui.state.content.categories.push({ id: 'gaming', name: { ar: 'ألعاب', en: 'Gaming' } });
+      ui.state.content.products[0].category = 'gaming'; ui.state.content.products[0].hidden = false;
+      assert.equal(tilePictures().at(-1)[1], '', `${language}: a new category keeps a placeholder until its own image is supplied`);
+    } finally { ui.state.content = beforeArtworkCheck; context.api.photoUrl = beforeArtworkPhotoUrl; }
     const beforeCategoryEdits = ui.state.content;
     const oldPhotoUrl = context.api.photoUrl;
     try {

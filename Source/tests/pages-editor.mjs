@@ -16,6 +16,8 @@ import { PREVIEW_KEY, PHOTO_KEY, EDITOR_KEY } from '../site/src/pages-preview.js
 import { applyHomePlacement, nextHomePriority, validHomePriority } from '../shared/home-placement.js';
 import { MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage } from '../shared/categories.js';
 import { siteTextEntries, siteText, SITE_TEXT_LIMIT, validSiteText, validHeroMode } from '../shared/site-text.js';
+import { categoryArtworkSource } from '../shared/home-artwork.js';
+import { availabilitySummary, setDeviceSoldOut } from '../shared/availability.js';
 
 const copy = (value) => structuredClone(value);
 const errorIs = (code, status) => (error) => error.code === code && error.status === status;
@@ -541,11 +543,11 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   const source = readFileSync(new URL('../site/admin/src/admin.js', import.meta.url), 'utf8')
     .replace(/^import[^\n]*\n/gm, '').replace(/\(async function start\(\) \{[\s\S]*$/, '');
   const context = vm.createContext({
-    ...pricing, validBatteryHealth, validBatteryCycles, conditions, conditionGroup, conditionOptions, forwardArrow, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications, applyHomePlacement, MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage, siteTextEntries, siteText, SITE_TEXT_LIMIT, validSiteText, validHeroMode,
+    ...pricing, validBatteryHealth, validBatteryCycles, conditions, conditionGroup, conditionOptions, forwardArrow, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications, applyHomePlacement, MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage, siteTextEntries, siteText, SITE_TEXT_LIMIT, validSiteText, validHeroMode, categoryArtworkSource, availabilitySummary, setDeviceSoldOut, PREVIEW_KEY,
     api, pagesAdmin, MODE: 'pages', ApiError, local, withDefaults, document,
     window: { addEventListener() {} }, Element: class {}, console, setTimeout, clearTimeout, setInterval() {},
   });
-  vm.runInContext(source + '\n globalThis.ui = { state, render, readWebsiteTexts, textValue, validate, setLanguage: (value) => { lang = value; } };', context);
+  vm.runInContext(source + '\n globalThis.ui = { state, render, readWebsiteTexts, textValue, selectedTextEntries, textEntryTitle, validate, setLanguage: (value) => { lang = value; } };', context);
   const { ui } = context;
   ui.state.draft = copy(content);
   ui.state.published = copy(content);
@@ -567,6 +569,8 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
       assert(html.includes('href="../index.html#/"'), 'public store link excludes the preview parameter');
       if (view !== 'orders') for (const id of ['export-draft', 'import-draft', 'reset-preview']) assert(html.includes(`id="${id}"`), `${language}: ${id} is accessible`);
       if (view === 'devices') {
+        for (let index = 0; index < content.products.length; index++) assert(html.includes(`data-stock-edit="${index}"`), `${language}: stock is reachable directly from the device list`);
+        assert(html.includes('stock-flag'), `${language}: the device overview shows availability`);
         const switches = [...html.matchAll(/<input type="checkbox" role="switch" data-home-device="([^"]+)"([^>]*)>/g)];
         assert.equal(switches.length, content.products.length, `${language}: each listed device has a home selection switch`);
         for (const [, id, attributes] of switches) assert.equal(attributes.includes(' checked'), content.products.find((product) => product.id === id).featured === true, `${language}: home switch reflects its saved selection`);
@@ -575,7 +579,10 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
       }
       if (view === 'settings') {
         assert(html.includes('id="site-text-search"'), `${language}: website copy can be searched`);
-        for (const entry of siteTextEntries) for (const locale of ['ar', 'en']) assert(html.includes(`name="siteText.${entry.id}.${locale}"`), `${language}: ${entry.id} is editable in ${locale}`);
+        assert(html.includes('id="site-text-area"') && html.includes('data-text-advanced'), `${language}: text editing offers a page selector and optional additional messages`);
+        assert.equal((html.match(/data-text-entry=/g) || []).length, 11, `${language}: the first screen shows only common home texts`);
+        for (const id of ['store.heroLine1', 'store.lookingFor', 'store.offersTitle']) for (const locale of ['ar', 'en']) assert(html.includes(`name="siteText.${id}.${locale}"`), `${language}: common home texts remain bilingual`);
+        assert(!html.includes('name="siteText.store.errors.network.ar"') && !html.includes('name="siteText.account.password.ar"'), `${language}: unrelated forms and error messages stay off the first screen`);
         assert(html.includes('data-reset-all-text') && html.includes('data-reset-text="store.offersTitle"'), `${language}: default text can be restored per item or all at once`);
         assert(html.includes('data-hero-mode="default"') && html.includes('data-hero-mode="selected"'), `${language}: default animation and device selections are reversible choices`);
         assert(!html.includes('name="offersTitle.ar"'), `${language}: offers heading has one editor rather than conflicting duplicate controls`);
@@ -614,6 +621,23 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
     assert(root.innerHTML.includes(language === 'ar' ? 'لا توجد طلبات تجريبية بعد.' : 'No demo orders yet.'), `${language}: an empty page invites a storefront checkout demonstration`);
     assert(!root.innerHTML.includes('data-new-order') && !root.innerHTML.includes('id="new-order-form"'), `${language}: an empty Pages order book offers no manual creation`);
     ui.state.orders = copy(orders);
+    ui.state.view = 'settings';
+    const reachedTexts = new Set();
+    for (const area of ['home', 'navigation', 'devices', 'services', 'checkout', 'account']) {
+      ui.state.textArea = area; ui.state.textAdvanced = false; ui.render();
+      assert((root.innerHTML.match(/data-text-entry=/g) || []).length <= 12, `${language}: ${area} starts with a short set of common fields`);
+      ui.state.textAdvanced = true; ui.render();
+      for (const entry of ui.selectedTextEntries()) {
+        reachedTexts.add(entry.id);
+        assert(ui.textEntryTitle(entry).length <= 56, `${language}: field headings stay short, including long messages`);
+        for (const locale of ['ar', 'en']) assert(root.innerHTML.includes(`name="siteText.${entry.id}.${locale}"`), `${language}: additional ${area} text is editable in ${locale}`);
+      }
+    }
+    assert.equal(reachedTexts.size, siteTextEntries.length, `${language}: every registered text is reachable through its page`);
+    ui.state.textArea = 'home'; ui.state.textAdvanced = false; ui.state.textQuery = 'browser does not have enough space'; ui.render();
+    assert(ui.selectedTextEntries().some((entry) => entry.id === 'store.errors.storage-full'), `${language}: search reaches additional messages outside the current page`);
+    assert(!root.innerHTML.includes('name="siteText.store.heroLine1.ar"'), `${language}: search mounts only its results`);
+    ui.state.textQuery = ''; ui.state.textArea = 'home'; ui.state.textAdvanced = false;
     ui.state.view = 'devices';
     ui.state.editing = { index: 0 };
     ui.render();
@@ -688,6 +712,16 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   assert.equal(ui.state.draft.settings.siteText['store.home'].ar, '<strong>واجهة جديدة</strong>', 'the text editor stores literal text for escaped storefront rendering');
   assert.equal(ui.state.draft.settings.siteText['store.home'].en, 'A new home', 'the text editor preserves independent bilingual edits');
   assert.equal(Object.keys(ui.state.draft.settings.siteText).length, 1, 'unchanged defaults are not expanded into hundreds of overrides');
+  ui.state.draft.settings.siteText['store.heroLine1'] = { ar: 'عنوان محفوظ', en: 'Saved title' };
+  ui.state.draft.settings.siteText['account.title'] = { ar: 'حساب العميل', en: 'Customer profile' };
+  ui.readWebsiteTexts({ elements: { 'siteText.store.heroLine1.ar': { value: 'عنوان جديد' } } });
+  assert.equal(ui.state.draft.settings.siteText['store.heroLine1'].en, 'Saved title', 'editing one language keeps its unmounted translation');
+  assert.equal(ui.state.draft.settings.siteText['account.title'].en, 'Customer profile', 'switching text pages keeps overrides on other pages');
+  ui.readWebsiteTexts({ elements: { 'siteText.store.heroLine1.ar': { value: '' } } });
+  assert(!ui.state.draft.settings.siteText['store.heroLine1'].ar && ui.state.draft.settings.siteText['store.heroLine1'].en === 'Saved title', 'clearing a mounted translation restores only that language');
+  ui.state.textQuery = 'Customer profile';
+  assert(ui.selectedTextEntries().some((entry) => entry.id === 'account.title'), 'search includes saved custom text as well as default text');
+  ui.state.textQuery = '';
   const preservedProducts = copy(ui.state.draft.products);
   const preservedCategories = copy(ui.state.draft.categories);
   const preservedPhone = ui.state.draft.settings.phone;
@@ -696,6 +730,16 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
     target.closest = (value) => value === selector ? { dataset } : null;
     await listeners.click({ target });
   };
+  const stockTarget = ui.state.draft.products[0];
+  const originalVariants = copy(stockTarget.variants);
+  await clickControl('[data-set-device-stock]', { setDeviceStock: stockTarget.id, soldOut: 'true' });
+  assert(stockTarget.variants.every((variant) => variant.soldOut === true), 'the device control disables every option');
+  ui.state.view = 'devices'; ui.state.editing = null; ui.state.query = ''; ui.state.category = 'all'; ui.render();
+  assert(root.innerHTML.includes('stock-flag is-out'), 'the list reflects device unavailability outside the edit form');
+  assert.deepEqual((await pagesAdmin.content()).content, previewBefore, 'stock edits do not silently publish an unsaved draft');
+  await clickControl('[data-set-device-stock]', { setDeviceStock: stockTarget.id, soldOut: 'false' });
+  assert(stockTarget.variants.every((variant) => variant.soldOut === false), 'clearing manual flags affects all options');
+  stockTarget.variants = originalVariants;
   await clickControl('[data-hero-mode]', { heroMode: 'default' });
   assert.equal(ui.state.draft.settings.heroMode, 'default', 'the default-animation control changes only the presentation mode');
   assert.deepEqual(ui.state.draft.products, preservedProducts, 'restoring default animation keeps products, uploaded photo references and home selections');

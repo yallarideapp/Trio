@@ -7,6 +7,8 @@ import { validBatteryHealth, validBatteryCycles } from '../../shared/battery.js'
 import { forwardArrow } from '../../shared/navigation.js';
 import { playHeroMotion } from './hero-motion.js';
 import { storeCopy, resolvedCopy, siteText, shellTextId } from '../../shared/site-text.js';
+import { PREVIEW_KEY } from './pages-preview.js';
+import { categoryArtworkSource } from '../../shared/home-artwork.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -126,7 +128,8 @@ function productCard(product) {
   if (group) product = conditionProduct(product, group === 'new' ? 'new' : 'used');
   const name = esc(L(product.name));
   const href = productUrl(product, startingVariant(product));
-  return `<article class="product-card" data-product="${esc(product.id)}"><div class="product-visual"><a class="product-image device-media" href="${href}" aria-label="${esc(`${t('view')}: ${L(product.name)}`)}">${media(product)}</a>${saveButton(product)}${inOffers(product) ? `<span class="offer-badge">${esc(t('offers'))}</span>` : ''}</div><div class="product-body"><p class="product-brand" dir="ltr">${esc(product.brand)}</p><h3 class="product-name" dir="auto"><a href="${href}">${name}</a></h3><p class="product-caption">${esc(L(specification(product)?.specs[0]?.value))}</p>${conditionChips(product)}${batterySummary(product)}<div class="product-buy">${priceTag(product)}${cardAction(product)}</div></div></article>`;
+  const unavailable = !availableVariants(product).length;
+  return `<article class="product-card${unavailable ? ' is-out-of-stock' : ''}" data-product="${esc(product.id)}"><div class="product-visual"><a class="product-image device-media" href="${href}" aria-label="${esc(`${t('view')}: ${L(product.name)}`)}">${media(product)}</a>${saveButton(product)}${unavailable ? `<span class="stock-badge">${esc(t('soldOut'))}</span>` : inOffers(product) ? `<span class="offer-badge">${esc(t('offers'))}</span>` : ''}</div><div class="product-body"><p class="product-brand" dir="ltr">${esc(product.brand)}</p><h3 class="product-name" dir="auto"><a href="${href}">${name}</a></h3><p class="product-caption">${esc(L(specification(product)?.specs[0]?.value))}</p>${conditionChips(product)}${batterySummary(product)}<div class="product-buy">${priceTag(product)}${cardAction(product)}</div></div></article>`;
 }
 function sectionHeading(title, href, label = t('allDevices'), eyebrow = '') {
   return `<div class="section-heading"><div>${eyebrow ? `<p class="eyebrow">${esc(eyebrow)}</p>` : ''}<h2>${esc(title)}</h2></div>${href ? `<a class="text-link" href="${esc(href)}">${esc(label)}${arrow}</a>` : ''}</div>`;
@@ -182,9 +185,8 @@ function renderHome() {
   const offers = list.filter(inOffers);
   const cats = categoryIds().map((id) => {
     const category = state.content.categories.find((item) => item.id === id);
-    const inCat = products().filter((p) => p.category === id);
-    const rep = homeRepresentative(inCat);
-    const picture = imageSrc(category) ? media(category) : (!homePriority(rep) && categoryArtwork(id)) || (rep ? media(rep) : `<span class="category-placeholder" aria-hidden="true">${icon('grid')}</span>`);
+    const artwork = categoryArtworkSource(category, { photoUrl: (photo) => api.photoUrl(photo) });
+    const picture = artwork.src ? media({ ...category, photo: '', image: artwork.src }) : `<span class="category-placeholder" aria-hidden="true">${icon('grid')}</span>`;
     return `<a class="category-card" href="${categoryUrl(id)}"><div class="category-picture device-media">${picture}</div><h3>${esc(categoryName(id))}</h3></a>`;
   }).join('');
   const trust = t('trust').map(([title, text], i) => `<li class="trust-item"><span class="trust-icon" aria-hidden="true">${icon(['search', 'box', 'heart', 'swap'][i])}</span><span><strong>${esc(title)}</strong><small>${esc(text)}</small></span></li>`).join('');
@@ -606,9 +608,35 @@ function updateDetailBuy(product) {
   if (specs && freshSpecs) specs.replaceWith(freshSpecs);
   $$('[data-variant]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.variant === state.selected[product.id])));
 }
+let contentRequest = 0;
 async function refreshContent() {
+  const request = ++contentRequest;
   const loaded = await api.loadContent();
+  // A slower response must never replace a newer saved preview.
+  if (request !== contentRequest) return false;
+  const changed = state.source !== loaded.source || JSON.stringify(state.content) !== JSON.stringify(loaded.content);
   state.content = loaded.content; state.source = loaded.source;
+  return changed;
+}
+async function syncSavedPreview() {
+  // Public visits keep the committed catalog. Only an explicitly opened owner
+  // preview follows this browser's saved preview, including resets to the seed.
+  if (MODE !== 'pages' || state.source !== 'preview' || !state.content || document.visibilityState === 'hidden') return;
+  try {
+    if (!await refreshContent()) return;
+    const categories = homeCategoryIds();
+    if (!categories.includes(state.heroCategory)) state.heroCategory = categories[0] || 'phones';
+    translateShell();
+    if (['checkout', 'account'].includes(state.route.name) || state.busy) {
+      // Keep unfinished customer fields intact. Checkout still validates its bag
+      // against the freshly loaded content before it can place an order.
+      const notice = `<aside id="catalog-update-notice" class="form-alert" role="status"><span>${esc(t('catalogUpdated'))}</span> <a href="#/bag">${esc(t('bag'))}${arrow}</a></aside>`;
+      const previous = $('#catalog-update-notice');
+      if (previous) previous.outerHTML = notice;
+      else $('#main')?.insertAdjacentHTML('afterbegin', notice);
+      announce(t('catalogUpdated'));
+    } else renderRoute();
+  } catch { /* A later focus or storage event retries without losing the page. */ }
 }
 
 document.addEventListener('click', (event) => {
@@ -676,10 +704,13 @@ document.addEventListener('error', (event) => {
 window.addEventListener('hashchange', () => { renderRoute({ focus: true }); if (state.route.name === 'account') loadAccount(); });
 window.matchMedia?.('(min-width: 641px)').addEventListener('change', (event) => { $('.catalog-filter-panel')?.toggleAttribute('open', event.matches); });
 window.addEventListener('storage', (event) => {
+  if (event.key === PREVIEW_KEY || event.key === null) syncSavedPreview();
   if (MODE === 'pages' && event.key === 'trio-browser-shop-v1') loadAccount();
   if (event.key === visitorKey('bag')) { state.bag = loadBag(); updateCounts(); if (['bag', 'checkout'].includes(state.route.name)) renderRoute(); }
   if (event.key === visitorKey('saved')) { state.saved = new Set(local.read(visitorKey('saved'), [])); updateCounts(); updateSavedButtons(); }
 });
+window.addEventListener('focus', syncSavedPreview);
+document.addEventListener('visibilitychange', syncSavedPreview);
 
 async function start() {
   document.documentElement.classList.toggle('reduced-motion', window.matchMedia('(prefers-reduced-motion: reduce)').matches);
