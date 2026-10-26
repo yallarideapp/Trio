@@ -424,9 +424,10 @@ async function verifyDemoCheckoutOrders(api, values) {
 
 async function verifyEditorViews(content, orders, legacyOrders, api) {
   const root = { innerHTML: '' };
+  const listeners = {};
   const document = {
     querySelector: (selector) => selector === '#admin' ? root : null,
-    querySelectorAll: () => [], addEventListener() {}, documentElement: {},
+    querySelectorAll: () => [], addEventListener(type, listener) { listeners[type] = listener; }, documentElement: {},
     body: { classList: { toggle() {} } },
   };
   const source = readFileSync(new URL('../site/admin/src/admin.js', import.meta.url), 'utf8')
@@ -457,6 +458,12 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
       assert(html.includes('href="../index.html?preview=draft#/"'), 'preview link opts into local changes');
       assert(html.includes('href="../index.html#/"'), 'public store link excludes the preview parameter');
       if (view !== 'orders') for (const id of ['export-draft', 'import-draft', 'reset-preview']) assert(html.includes(`id="${id}"`), `${language}: ${id} is accessible`);
+      if (view === 'devices') {
+        const switches = [...html.matchAll(/<input type="checkbox" role="switch" data-home-device="([^"]+)"([^>]*)>/g)];
+        assert.equal(switches.length, content.products.length, `${language}: each listed device has a home selection switch`);
+        for (const [, id, attributes] of switches) assert.equal(attributes.includes(' checked'), content.products.find((product) => product.id === id).featured === true, `${language}: home switch reflects its saved selection`);
+        assert(html.includes(language === 'ar' ? 'يظهر بالرئيسية' : 'Show on home page'), `${language}: list controls clearly label home selection`);
+      }
       assert(html.includes('data-view="orders"'), `${language}: local orders are reachable from the editor tabs`);
       assert(!/id="(?:sign-form|password-form|logout)"|name="ordersOn"/.test(html), `${language}: no authentication or public checkout controls are shown`);
       if (view === 'orders') {
@@ -519,6 +526,32 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
     assert(root.innerHTML.includes(language === 'ar' ? 'آخر جهاز تختاره يتصدر قسمه في واجهة الرئيسية' : 'The latest selected device leads its category in the home showcase'), `${language}: home selection help explains the category showcase`);
     assert(root.innerHTML.includes(language === 'ar' ? 'احفظ المعاينة لتظهر اختياراتك في الرئيسية.' : 'Save preview to see your home selections.'), `${language}: home selections require an explicit preview save`);
   }
+  ui.state.view = 'devices';
+  ui.state.editing = null;
+  ui.state.draft = copy(content);
+  const [first, second] = ui.state.draft.products.filter((product) => product.category === 'phones');
+  Object.assign(first, { featured: true, homePriority: 100 });
+  Object.assign(second, { featured: false, hidden: true });
+  ui.state.published = copy(ui.state.draft);
+  ui.state.category = 'phones';
+  ui.state.query = second.name.en;
+  ui.state.draft.products.reverse();
+  const optionsBefore = copy(second.variants);
+  const previewBefore = copy((await pagesAdmin.content()).content);
+  const changeHome = (id, checked) => listeners.change({ target: { dataset: { homeDevice: id }, checked, closest: () => null } });
+  await changeHome(second.id, true);
+  assert(first.featured && second.featured, 'quick home selection preserves earlier selected devices');
+  assert(second.homePriority > first.homePriority && !second.hidden, 'quick home selection promotes and unhides the actual product after filtering/reordering');
+  assert.equal(ui.state.query, second.name.en, 'quick selections preserve search');
+  assert.equal(ui.state.category, 'phones', 'quick selections preserve category');
+  assert.equal(ui.state.editing, null, 'quick home selection does not open the editor');
+  assert(ui.state.dirty, 'quick home selection requires Save preview');
+  const stored = local.read('trio-pages-editor-draft-v1');
+  assert(stored.content.products.find((product) => product.id === second.id).featured, 'quick home selection persists in the pending editor draft');
+  assert.deepEqual((await pagesAdmin.content()).content, previewBefore, 'quick selection does not publish or replace the saved preview');
+  await changeHome(second.id, false);
+  assert(first.featured && !second.featured && !second.hidden, 'unchecking changes only this device selection and does not hide it');
+  assert.deepEqual(second.variants, optionsBefore, 'quick selection preserves prices and device options');
 }
 
 function verifyHomeSelections() {

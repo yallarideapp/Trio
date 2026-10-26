@@ -1,5 +1,10 @@
 # Replacement storefront verification — 18 October 2026
 
+## Quick homepage selections in the device list — 26 October 2026
+
+- Each admin Devices row now has a labeled Show on home page switch, replacing the passive Featured badge. It works without opening the device editor, preserves earlier selections, assigns latest-selection priority through the existing placement helper, and unhides newly selected devices. Changes remain in the draft until Save preview/Publish. Stable product IDs keep filtered/reordered lists accurate; the row does not rerender, preserving search, keyboard focus and scroll position.
+- Live/Pages builds and the complete regression suite pass. Added editor integration coverage for translated switches, independent selections, hidden-device promotion, filtered/reordered identity, pending-draft persistence, unchanged saved preview and unchanged prices/options. Chromium on an isolated localhost origin verified direct/keyboard selection, Save preview and reload, the latest selected iPhone in the home preview, and unticking without opening the editor. English 320px, Arabic 390px and English 1280px layouts fit without horizontal overflow; labels have at least 44px touch height. No captured console warnings/errors. Owner public drafts/orders were not modified; physical devices and production Worker publication were not tested.
+
 ## Order confirmation layout — 23 October 2026
 
 - Replaced the receipt's reused compact bag grid with full-width receipt rows: device name, storage and quantity share the flexible column, with each saved line total beside it. The order reference and overall total have dedicated styles, Arabic names use bidi isolation with inherited alignment, and action buttons wrap safely. Guest checkout has one Keep shopping action; signed-in Pages customers retain My orders. Receipt identity/channel checks, saved prices and truthful demo messaging are unchanged.

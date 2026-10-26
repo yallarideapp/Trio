@@ -85,6 +85,7 @@ const AR = {
   'Export demo orders': 'تصدير الطلبات التجريبية', 'Demo orders exported from this browser.': 'تم تصدير طلبات العرض من هذا المتصفح.',
   'The latest selected device leads its category in the home showcase for Phones, Laptops, Watches and Audio. Selecting a device also makes it visible.': 'آخر جهاز تختاره يتصدر قسمه في واجهة الرئيسية للهواتف واللابتوبات والساعات والسماعات. تحديد الجهاز يجعله ظاهراً أيضاً.',
   'Save preview to see your home selections.': 'احفظ المعاينة لتظهر اختياراتك في الرئيسية.', 'Publish to show your home selections.': 'انشر لتظهر اختياراتك في الرئيسية.',
+  'Choose home devices directly from this list. The latest selection leads its category.': 'اختر أجهزة الرئيسية مباشرة من هذه القائمة. آخر جهاز تختاره يتصدر قسمه.',
 };
 let lang = local.read('trio-admin-lang') === 'en' ? 'en' : 'ar';
 const t = (s, vars = {}) => (lang === 'ar' ? AR[s] || s : ({ new: 'New', confirmed: 'Confirmed', out: 'Out for delivery', delivered: 'Delivered', cancelled: 'Cancelled' }[s] || s)).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
@@ -216,7 +217,8 @@ function devicesView() {
   return `<div class="head"><h1>${esc(t('Devices'))}</h1><button type="button" class="btn primary" data-add-device>${esc(t('Add device'))}</button></div><p class="muted">${esc(t(IS_PAGES ? 'Preview prices come from this list.' : 'Prices shown on the site come from this list.'))}</p>
   <div class="chips">${[['all', t('All')], ...c.categories.map((x) => [x.id, L(x.name)])].map(([id, label]) => `<button type="button" class="chip" data-cat="${esc(id)}" aria-pressed="${state.category === id}">${esc(label)} <span>${c.products.filter((p) => id === 'all' || p.category === id).length}</span></button>`).join('')}</div>
   <label class="f search"><span class="sr">${esc(t('Search devices'))}</span><input id="device-search" type="search" placeholder="${esc(t('Search devices'))}" value="${esc(state.query)}"></label>
-  <ul class="rows">${list.map((p) => { const low = fromPrice(p); const i = c.products.indexOf(p); return `<li class="row device-row"><span class="thumb">${thumb(p)}</span><span class="d-main"><strong dir="auto">${esc(L(p.name))}</strong><small>${esc(p.brand)} · ${p.variants.length} ${esc(t('options'))}${low !== null ? ` · ${esc(t('from'))} ${esc(formatJD(low, lang))}` : ''}</small><span class="flags">${p.hidden ? `<em class="flag off">${esc(t('Hidden'))}</em>` : ''}${inOffers(p) ? `<em class="flag">${esc(t('Offer'))}</em>` : ''}${p.featured ? `<em class="flag">${esc(t('Featured'))}</em>` : ''}</span></span><span class="d-actions"><button type="button" class="btn small" data-edit="${i}">${esc(t('Edit'))}</button><button type="button" class="btn ghost small icon" data-move="${i}" data-dir="-1" aria-label="${esc(t('Move up'))}"${i === 0 ? ' disabled' : ''}>↑</button><button type="button" class="btn ghost small icon" data-move="${i}" data-dir="1" aria-label="${esc(t('Move down'))}"${i === c.products.length - 1 ? ' disabled' : ''}>↓</button></span></li>`; }).join('')}</ul>`;
+  <p class="muted home-list-help">${esc(t('Choose home devices directly from this list. The latest selection leads its category.'))} ${esc(t(IS_PAGES ? 'Save preview to see your home selections.' : 'Publish to show your home selections.'))}</p>
+  <ul class="rows">${list.map((p) => { const low = fromPrice(p); const i = c.products.indexOf(p); return `<li class="row device-row"><span class="thumb">${thumb(p)}</span><span class="d-main"><strong dir="auto">${esc(L(p.name))}</strong><small>${esc(p.brand)} · ${p.variants.length} ${esc(t('options'))}${low !== null ? ` · ${esc(t('from'))} ${esc(formatJD(low, lang))}` : ''}</small><span class="flags">${p.hidden ? `<em class="flag off">${esc(t('Hidden'))}</em>` : ''}${inOffers(p) ? `<em class="flag">${esc(t('Offer'))}</em>` : ''}</span></span><span class="d-actions"><label class="home-toggle"><input type="checkbox" role="switch" data-home-device="${esc(p.id)}"${p.featured ? ' checked' : ''}><span>${esc(t('Show on home page'))}<span class="sr">: ${esc(L(p.name))}</span></span></label><button type="button" class="btn small" data-edit="${i}">${esc(t('Edit'))}</button><button type="button" class="btn ghost small icon" data-move="${i}" data-dir="-1" aria-label="${esc(t('Move up'))}"${i === 0 ? ' disabled' : ''}>↑</button><button type="button" class="btn ghost small icon" data-move="${i}" data-dir="1" aria-label="${esc(t('Move down'))}"${i === c.products.length - 1 ? ' disabled' : ''}>↓</button></span></li>`; }).join('')}</ul>`;
 }
 function photoSrc(p) { if (p.photo) { const u = IS_PAGES ? adminApi.photoUrl(p.photo) : api.photoUrl(p.photo); if (u) return u; } return p.image ? `../${p.image}` : ''; }
 function thumb(p) { const s = photoSrc(p); return s ? `<img src="${esc(s)}" alt="" loading="lazy">` : `<span class="noimg">${esc(p.brand.slice(0, 1))}</span>`; }
@@ -445,6 +447,14 @@ document.addEventListener('click', async (e) => {
 function confirmed(text) { try { return window.confirm(text); } catch { return true; } }
 document.addEventListener('change', async (e) => {
   const form = e.target.closest && e.target.closest('form');
+  if (e.target.dataset?.homeDevice !== undefined) {
+    const product = state.draft?.products.find((item) => item.id === e.target.dataset.homeDevice);
+    if (!state.signedIn || state.view !== 'devices' || state.editing || !product) return;
+    applyHomePlacement(product, state.draft.products, { featured: e.target.checked, category: product.category, hidden: product.hidden });
+    saveDraft();
+    if (!product.hidden) e.target.closest('.device-row')?.querySelector('.flag.off')?.remove();
+    return;
+  }
   if (IS_PAGES && e.target.id === 'import-draft' && e.target.files?.[0]) {
     const file = e.target.files[0];
     try {
