@@ -545,7 +545,7 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   const context = vm.createContext({
     ...pricing, validBatteryHealth, validBatteryCycles, conditions, conditionGroup, conditionOptions, forwardArrow, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications, applyHomePlacement, MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage, siteTextEntries, siteText, SITE_TEXT_LIMIT, validSiteText, validHeroMode, categoryArtworkSource, availabilitySummary, setDeviceSoldOut, PREVIEW_KEY,
     api, pagesAdmin, MODE: 'pages', ApiError, local, withDefaults, document,
-    window: { addEventListener() {} }, Element: class {}, console, setTimeout, clearTimeout, setInterval() {},
+    window: { addEventListener() {} }, history: { replaceState() {} }, Element: class {}, console, setTimeout, clearTimeout, setInterval() {},
   });
   vm.runInContext(source + '\n globalThis.ui = { state, render, readWebsiteTexts, textValue, selectedTextEntries, textEntryTitle, validate, setLanguage: (value) => { lang = value; } };', context);
   const { ui } = context;
@@ -578,15 +578,19 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
         for (const [index, product] of content.products.entries()) if (product.variants.some((variant) => conditionGroup(variant.condition) === 'like-new')) assert(html.includes(`data-battery-edit="${index}"`), `${language}: used devices expose battery editing directly from the list`);
       }
       if (view === 'settings') {
-        assert(html.includes('id="site-text-search"'), `${language}: website copy can be searched`);
-        assert(html.includes('id="site-text-area"') && html.includes('data-text-advanced'), `${language}: text editing offers a page selector and optional additional messages`);
-        assert.equal((html.match(/data-text-entry=/g) || []).length, 11, `${language}: the first screen shows only common home texts`);
-        for (const id of ['store.heroLine1', 'store.lookingFor', 'store.offersTitle']) for (const locale of ['ar', 'en']) assert(html.includes(`name="siteText.${id}.${locale}"`), `${language}: common home texts remain bilingual`);
+        assert(!html.includes('id="site-text-search"') && !html.includes('id="site-text-area"') && !html.includes('data-text-advanced'), `${language}: the first screen does not require a page or message selector`);
+        assert(html.includes('data-text-mode="more"'), `${language}: other website text controls remain available on request`);
+        assert.equal((html.match(/data-text-entry=/g) || []).length, 7, `${language}: the first screen shows only seven important headings and introductions`);
+        for (const id of ['store.heroLine1', 'store.heroLine2', 'store.lookingFor', 'store.offersTitle', 'store.shopIntro', 'store.serviceText', 'store.contactIntro']) for (const locale of ['ar', 'en']) assert(html.includes(`name="siteText.${id}.${locale}"`), `${language}: important website texts remain bilingual`);
+        assert.equal((html.match(/name="siteText\.store\.heroLine1\.ar"/g) || []).length, 1, `${language}: a text has only one mounted editor`);
+        assert(html.indexOf('data-text-mode-panel="main"') < html.indexOf('class="card home-presentation"') && html.indexOf('data-text-mode-panel="main"') < html.indexOf('name="phone"'), `${language}: important text editing appears before animation and contact settings`);
+        assert(html.includes(language === 'ar' ? 'عنوان الرئيسية — السطر الأول' : 'Hero title — first line'), `${language}: fields explain their purpose`);
+        assert(html.includes('value="A whole"') && html.includes('value="new game."'), `${language}: the actual English default title is visible in editable fields`);
         assert(!html.includes('name="siteText.store.errors.network.ar"') && !html.includes('name="siteText.account.password.ar"'), `${language}: unrelated forms and error messages stay off the first screen`);
-        assert(html.includes('data-reset-all-text') && html.includes('data-reset-text="store.offersTitle"'), `${language}: default text can be restored per item or all at once`);
+        assert(html.includes('data-reset-text="store.offersTitle"') && !html.includes('data-reset-all-text'), `${language}: the important-text screen restores individual texts without a broad reset`);
         assert(html.includes('data-hero-mode="default"') && html.includes('data-hero-mode="selected"'), `${language}: default animation and device selections are reversible choices`);
         assert(!html.includes('name="offersTitle.ar"'), `${language}: offers heading has one editor rather than conflicting duplicate controls`);
-        assert(html.includes(language === 'ar' ? 'نصوص الموقع' : 'Website texts'), `${language}: text editor title is translated`);
+        assert(html.includes(language === 'ar' ? 'النصوص المهمة في الموقع' : 'Main website text'), `${language}: the important-text card title is translated`);
       }
       if (view === 'categories') {
         assert(html.includes('data-add-category'), `${language}: categories can be added without editing a device`);
@@ -622,10 +626,13 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
     assert(!root.innerHTML.includes('data-new-order') && !root.innerHTML.includes('id="new-order-form"'), `${language}: an empty Pages order book offers no manual creation`);
     ui.state.orders = copy(orders);
     ui.state.view = 'settings';
+    ui.state.textMode = 'more';
     const reachedTexts = new Set();
     for (const area of ['home', 'navigation', 'devices', 'services', 'checkout', 'account']) {
       ui.state.textArea = area; ui.state.textAdvanced = false; ui.render();
       assert((root.innerHTML.match(/data-text-entry=/g) || []).length <= 12, `${language}: ${area} starts with a short set of common fields`);
+      assert(root.innerHTML.includes('id="site-text-search"') && root.innerHTML.includes('id="site-text-area"'), `${language}: the optional full editor offers page selection and search`);
+      assert(root.innerHTML.includes('data-text-mode="main"') && root.innerHTML.includes('data-reset-all-text'), `${language}: the full editor can return to important texts or restore all defaults`);
       ui.state.textAdvanced = true; ui.render();
       for (const entry of ui.selectedTextEntries()) {
         reachedTexts.add(entry.id);
@@ -637,7 +644,7 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
     ui.state.textArea = 'home'; ui.state.textAdvanced = false; ui.state.textQuery = 'browser does not have enough space'; ui.render();
     assert(ui.selectedTextEntries().some((entry) => entry.id === 'store.errors.storage-full'), `${language}: search reaches additional messages outside the current page`);
     assert(!root.innerHTML.includes('name="siteText.store.heroLine1.ar"'), `${language}: search mounts only its results`);
-    ui.state.textQuery = ''; ui.state.textArea = 'home'; ui.state.textAdvanced = false;
+    ui.state.textQuery = ''; ui.state.textArea = 'home'; ui.state.textAdvanced = false; ui.state.textMode = 'main';
     ui.state.view = 'devices';
     ui.state.editing = { index: 0 };
     ui.render();
@@ -719,7 +726,7 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   assert.equal(ui.state.draft.settings.siteText['account.title'].en, 'Customer profile', 'switching text pages keeps overrides on other pages');
   ui.readWebsiteTexts({ elements: { 'siteText.store.heroLine1.ar': { value: '' } } });
   assert(!ui.state.draft.settings.siteText['store.heroLine1'].ar && ui.state.draft.settings.siteText['store.heroLine1'].en === 'Saved title', 'clearing a mounted translation restores only that language');
-  ui.state.textQuery = 'Customer profile';
+  ui.state.textMode = 'more'; ui.state.textQuery = 'Customer profile';
   assert(ui.selectedTextEntries().some((entry) => entry.id === 'account.title'), 'search includes saved custom text as well as default text');
   ui.state.textQuery = '';
   const preservedProducts = copy(ui.state.draft.products);
@@ -730,6 +737,19 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
     target.closest = (value) => value === selector ? { dataset } : null;
     await listeners.click({ target });
   };
+  const savedTextOverrides = copy(ui.state.draft.settings.siteText);
+  await clickControl('[data-text-mode]', { textMode: 'main' });
+  assert.equal(ui.state.textMode, 'main', 'returning to important texts closes the full editor');
+  assert.equal(ui.selectedTextEntries().length, 7, 'returning shows only the seven important texts');
+  assert.deepEqual(copy(ui.state.draft.settings.siteText), savedTextOverrides, 'changing text editor mode preserves hidden overrides and translations');
+  await clickControl('[data-text-mode]', { textMode: 'more' });
+  assert.equal(ui.state.textMode, 'more', 'the full text editor is reachable from the important-text screen');
+  ui.state.textQuery = 'Customer profile';
+  assert(ui.selectedTextEntries().some((entry) => entry.id === 'account.title'), 'the full editor keeps custom messages reachable after switching modes');
+  ui.state.textQuery = '';
+  await clickControl('[data-view]', { view: 'settings' });
+  assert.equal(ui.state.textMode, 'main', 'opening Settings always starts with important texts');
+  assert.deepEqual(copy(ui.state.draft.settings.siteText), savedTextOverrides, 'opening Settings preserves less-used saved text');
   const stockTarget = ui.state.draft.products[0];
   const originalVariants = copy(stockTarget.variants);
   await clickControl('[data-set-device-stock]', { setDeviceStock: stockTarget.id, soldOut: 'true' });

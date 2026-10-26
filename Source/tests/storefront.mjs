@@ -12,6 +12,7 @@ import { heroRigFor, heroMotionAssets } from '../site/src/hero-motion.js';
 import * as battery from '../shared/battery.js';
 import * as siteCopy from '../shared/site-text.js';
 import * as homeArtwork from '../shared/home-artwork.js';
+import { conditionListings, catalogListings } from '../shared/listings.js';
 import { existsSync, statSync } from 'node:fs';
 
 export function verifyStorefront() {
@@ -20,7 +21,7 @@ export function verifyStorefront() {
   const document = { documentElement: {}, querySelector: () => null, querySelectorAll: () => [], addEventListener() {} };
   const location = { hash: '#/', replace(value) { this.hash = value; } };
   const context = vm.createContext({
-    ...pricing, ...battery, ...siteCopy, ...homeArtwork, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates, PREVIEW_KEY: 'trio-pages-preview-v1',
+    ...pricing, ...battery, ...siteCopy, ...homeArtwork, conditionListings, catalogListings, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates, PREVIEW_KEY: 'trio-pages-preview-v1',
     playHeroMotion: () => {},
     renderAccount: () => '<h1>My account</h1>', loadAccount: async () => {}, bindAccount: () => {}, accountLabel: () => 'Sign in', customerProfile: () => null, setAccountText: () => {},
     MODE: 'pages', api: { photoUrl: () => '' }, local: { read: (key, fallback = null) => stored.has(key) ? structuredClone(stored.get(key)) : fallback, write: (key, value) => { stored.set(key, structuredClone(value)); return true; } },
@@ -28,7 +29,7 @@ export function verifyStorefront() {
   });
   const source = readFileSync(new URL('../site/src/app.js', import.meta.url), 'utf8')
     .replace(/^import[^\n]*\n/gm, '').replace(/^start\(\);\s*$/m, '');
-  vm.runInContext(source + '\n globalThis.ui = { state, translateShell, batterySummary, conditionChips, renderHome, renderCatalog, renderProductResults, filteredProducts, readRoute, renderDetail, renderService, renderContact, renderBag, renderCheckout, renderDone, instagramAllowed, loadBag, saveBag, cleanBag, addToBag, toggleSaved, phoneHref, phoneText };', context);
+  vm.runInContext(source + '\n globalThis.ui = { state, translateShell, batterySummary, conditionChips, productCard, renderHome, renderCatalog, renderProductResults, filteredProducts, readRoute, renderDetail, renderService, renderContact, renderBag, renderCheckout, renderDone, instagramAllowed, loadBag, saveBag, cleanBag, addToBag, toggleSaved, phoneHref, phoneText };', context);
   const ui = context.ui;
   ui.state.content = structuredClone(seed);
   // Editing a local preview must not remove a public shopping bag item or
@@ -76,6 +77,7 @@ export function verifyStorefront() {
   const instagram = /https?:\/\/(?:www\.)?instagram\.com|إنستغرام|انستغرام|(?:>|\s)Instagram(?:<|\s|↗|$)/i;
   const commentary = /منشور|غير موثق|أكّد|أكد|historical|not documented|confirm|\bposted\b/i;
   const categoryCounts = { phones: 12, laptops: 4, tablets: 2, watches: 4, audio: 1, accessories: 1 };
+  const listingCounts = { ...categoryCounts, phones: 15 };
   const homeCategories = ['phones', 'laptops', 'watches', 'audio'];
   const homeTileCategories = seed.categories.map((category) => category.id);
   const categoryMembers = {
@@ -87,6 +89,35 @@ export function verifyStorefront() {
   assert.deepEqual(seed.categories.map((category) => category.id), Object.keys(categoryCounts), 'six separate device categories');
   for (const [id, count] of Object.entries(categoryCounts)) assert.equal(seed.products.filter((product) => product.category === id).length, count, `${id}: category count`);
   const cardIds = (html) => [...html.matchAll(/<article\b[^>]*\bdata-product="([^"]+)"/g)].map((match) => match[1]);
+  const cards = (html) => [...html.matchAll(/<article\b[^>]*\bdata-product="([^"]+)"[^>]*>([\s\S]*?)<\/article>/g)].map((match) => ({ id: match[1], html: match[0], condition: match[2].match(/href="#\/p\/[^"?]+\?cond=(new|used)"/)?.[1] || '' }));
+  const cardIdentities = (html) => cards(html).map((card) => `${card.id}:${card.condition}`);
+  // Listing membership follows condition rather than availability. No stored ids,
+  // option keys or uploaded media are changed when a model becomes two cards.
+  {
+    const mixed = structuredClone(seed.products.find((product) => product.id === 'iphone-17'));
+    mixed.photo = 'uploaded-photo'; mixed.variants.reverse();
+    const before = JSON.stringify(mixed);
+    const listings = conditionListings(mixed);
+    assert.deepEqual(listings.map((product) => product.conditionFilter), ['new', 'used'], 'mixed models have stable New then Used listings');
+    for (const listing of listings) {
+      assert.equal(listing.id, mixed.id, 'condition cards preserve the model id');
+      assert.equal(listing.photo, mixed.photo, 'condition cards preserve uploaded photos');
+      assert.equal(listing.featured, mixed.featured, 'condition cards preserve home selection');
+      assert.equal(listing.offer, mixed.offer, 'condition cards preserve offer flags');
+      assert.deepEqual(conditionListings(listing), [listing], 'already restricted listings are idempotent');
+    }
+    assert.deepEqual(listings.map((product) => product.variants.map((variant) => variant.key)), [['256-new'], ['256-used']], 'condition cards preserve the original option keys');
+    assert.equal(JSON.stringify(mixed), before, 'creating listings never changes catalog data');
+    mixed.variants.forEach((variant) => { variant.soldOut = true; });
+    assert.deepEqual(conditionListings(mixed).map((product) => product.conditionFilter), ['new', 'used'], 'all sold-out condition cards remain present in the same order');
+    const unknown = { ...mixed, variants: [{ ...mixed.variants[0], condition: '', key: 'unspecified' }, { ...mixed.variants[0], condition: 'unrecognized', key: 'future' }] };
+    const unspecified = conditionListings(unknown);
+    assert.equal(unspecified.length, 1, 'unclassified options retain their own listing');
+    assert.equal(unspecified[0].conditionFilter, '', 'an unspecified condition is never invented as New');
+    assert.deepEqual(unspecified[0].variants.map((variant) => variant.key), ['unspecified', 'future'], 'unclassified option identities are retained');
+    assert.deepEqual(conditionListings({ ...mixed, conditionFilter: 'used', variants: [mixed.variants.find((variant) => conditionGroup(variant.condition) === 'new')] }), [], 'a restricted input cannot restore an excluded condition');
+    assert.equal(catalogListings(seed.products).length, 27, 'the shipped catalog has 27 condition listings for 24 models');
+  }
   const resetCatalog = () => Object.assign(ui.state, { route: { name: 'shop', params: new URLSearchParams() }, category: 'all', query: '', brand: 'all', cond: 'all', sort: 'featured' });
   let productViews = 0;
   for (const language of ['ar', 'en']) {
@@ -145,22 +176,33 @@ export function verifyStorefront() {
     assert.equal(JSON.stringify(ui.state.content), catalogBeforeConditionFilter, `${language}: condition filtering never changes catalog data`);
     ui.state.bag = [];
     resetCatalog();
-    const unfilteredPhone = ui.filteredProducts().find((product) => product.id === 'iphone-17');
-    const unfilteredCard = ui.renderProductResults([unfilteredPhone]);
-    assert(unfilteredCard.includes('href="#/p/iphone-17?cond=used"'), `${language}: ordinary card links preserve the condition shown with its starting price`);
-    assert(unfilteredCard.includes('data-add="iphone-17:256-used"'), `${language}: ordinary card actions use the displayed condition`);
-    assert.equal((unfilteredCard.match(/class="cond-chip /g) || []).length, 1, `${language}: ordinary mixed-option card has only one badge`);
+    const unfilteredPhones = ui.filteredProducts().filter((product) => product.id === 'iphone-17');
+    assert.deepEqual(Array.from(unfilteredPhones, (product) => product.conditionFilter), ['new', 'used'], `${language}: ordinary catalog has separate New and Used cards for a mixed model`);
+    const unfilteredCards = cards(ui.renderProductResults(unfilteredPhones));
+    assert.deepEqual(unfilteredCards.map((card) => card.condition), ['new', 'used'], `${language}: each card links to its own condition`);
+    for (const card of unfilteredCards) {
+      const key = card.condition === 'new' ? '256-new' : '256-used';
+      assert(card.html.includes(`data-add="iphone-17:${key}"`), `${language}/${card.condition}: card actions use only the displayed condition`);
+      assert.equal((card.html.match(/class="cond-chip /g) || []).length, 1, `${language}/${card.condition}: each card has exactly one condition badge`);
+      const opposite = card.condition === 'new' ? 'Used like new' : 'New';
+      if (language === 'en') assert(!card.html.includes(`>${opposite}</span>`), `${language}/${card.condition}: a card never combines the opposite label`);
+    }
     const grouped = ui.renderProductResults(ui.filteredProducts());
+    assert.deepEqual(cardIdentities(ui.renderProductResults(seed.products)), cardIdentities(grouped), `${language}: rendering raw models or expanded listings produces the same cards without duplicates`);
     const groups = [...grouped.matchAll(/<section\b[^>]*\bdata-category-group="([^"]+)"[^>]*>([\s\S]*?)<\/section>/g)];
     assert.deepEqual(groups.map((match) => match[1]), Object.keys(categoryCounts), `${language}: all devices have six ordered sections`);
-    assert.deepEqual(cardIds(grouped).sort(), seed.products.map((product) => product.id).sort(), `${language}: every device appears exactly once`);
+    assert.deepEqual(cardIdentities(grouped).sort(), catalogListings(seed.products).map((product) => `${product.id}:${product.conditionFilter}`).sort(), `${language}: every model and condition appears exactly once`);
+    assert.equal(cardIds(grouped).length, 27, `${language}: grouped catalog counts condition listings`);
     for (const [, categoryId, html] of groups) {
       const category = seed.categories.find((item) => item.id === categoryId);
-      assert.equal(cardIds(html).length, categoryCounts[categoryId], `${language}/${categoryId}: section count`);
-      assert.deepEqual(cardIds(html).sort(), seed.products.filter((product) => product.category === categoryId).map((product) => product.id).sort(), `${language}/${categoryId}: section contains only its devices`);
+      assert.equal(cardIds(html).length, listingCounts[categoryId], `${language}/${categoryId}: section count includes separate conditions`);
+      assert.deepEqual(cardIdentities(html).sort(), catalogListings(seed.products.filter((product) => product.category === categoryId)).map((product) => `${product.id}:${product.conditionFilter}`).sort(), `${language}/${categoryId}: section contains only its model conditions`);
       assert.equal(html.match(/<h2\b[^>]*>([^<]+)<\/h2>/)?.[1], category.name[language], `${language}/${categoryId}: translated heading`);
       assert(html.includes(`href="#/shop/${categoryId}"`), `${language}/${categoryId}: category link`);
     }
+    const tabs = ui.renderCatalog().match(/<nav class="catalog-tabs"[\s\S]*?<\/nav>/)?.[0] || '';
+    const countNumber = (value) => new Intl.NumberFormat(language === 'ar' ? 'ar-JO' : 'en').format(value);
+    assert(tabs.includes(`<span>${countNumber(27)}</span>`) && tabs.includes(`<span>${countNumber(15)}</span>`), `${language}: catalog category counts match rendered condition listings`);
     for (const [categoryId, expectedIds] of Object.entries(categoryMembers)) {
       ui.state.category = categoryId;
       const rows = ui.filteredProducts();
@@ -425,6 +467,66 @@ export function verifyStorefront() {
       for (let i = 0; i < pricing.MAX_QTY + 1; i++) ui.addToBag('iphone-17-pro:256-new');
       assert.equal(ui.state.bag[0].qty, pricing.MAX_QTY, `${language}: blank stock preserves the existing order limit`);
     } finally { ui.state.content = beforeStockTest; ui.state.bag = []; }
+    // A sold-out Used device must stay visible beside its available New card.
+    // Stock changes may change the selected capacity, never the card condition.
+    const beforeMixedStock = { content: ui.state.content, saved: ui.state.saved };
+    try {
+      ui.state.content = structuredClone(seed);
+      const model = ui.state.content.products.find((product) => product.id === 'iphone-17');
+      const used = model.variants.find((variant) => conditionGroup(variant.condition) === 'like-new');
+      const fresh = model.variants.find((variant) => conditionGroup(variant.condition) === 'new');
+      used.batteryHealth = 97; used.batteryCycles = 333;
+      const modelCards = () => cards(ui.renderProductResults(ui.filteredProducts())).filter((card) => card.id === model.id);
+      const identities = () => modelCards().map((card) => `${card.id}:${card.condition}`);
+      resetCatalog(); ui.state.category = 'phones';
+      const originalIdentities = identities();
+      assert.deepEqual(originalIdentities, ['iphone-17:new', 'iphone-17:used'], `${language}: both condition cards exist before changing stock`);
+      used.soldOut = true;
+      let rendered = modelCards();
+      const usedCard = rendered.find((card) => card.condition === 'used').html;
+      const newCard = rendered.find((card) => card.condition === 'new').html;
+      assert(usedCard.includes('stock-badge') && usedCard.includes('aria-disabled="true"') && !usedCard.includes('data-add='), `${language}: sold-out Used card stays visible and cannot be bought`);
+      assert(usedCard.includes(language === 'ar' ? 'غير متوفر' : 'Out of stock'), `${language}: sold-out Used has a visible translated status`);
+      const reading = (value) => new Intl.NumberFormat(language === 'ar' ? 'ar-JO' : 'en').format(value);
+      assert(usedCard.includes(`<bdi>${reading(97)}%</bdi>`) && usedCard.includes(`<bdi>${reading(333)}</bdi>`), `${language}: owner's sold-out Used listing retains its 97% health and 333 cycles`);
+      assert(newCard.includes('data-add="iphone-17:256-new"') && newCard.includes(pricing.formatJD(655000, language)) && !newCard.includes('stock-badge'), `${language}: New remains available at its own price`);
+      assert(!newCard.includes('battery-summary'), `${language}: the New card never borrows Used battery readings`);
+      assert.deepEqual(identities(), originalIdentities, `${language}: disabling Used never replaces it with another New card`);
+      const home = cards(ui.renderHome()).filter((card) => card.id === model.id);
+      assert.deepEqual(home.map((card) => card.condition), ['new', 'used'], `${language}: home offers retain both conditions after Used sells out`);
+      assert(home.find((card) => card.condition === 'used').html.includes('stock-badge'), `${language}: home Used offer reflects its stock`);
+      const related = cards(ui.renderDetail('iphone-17-pro-max')).filter((card) => card.id === model.id);
+      assert.deepEqual(related.map((card) => card.condition), ['new', 'used'], `${language}: related devices also show separate conditions`);
+      assert(related.find((card) => card.condition === 'used').html.includes('stock-badge') && related.find((card) => card.condition === 'new').html.includes('data-add="iphone-17:256-new"'), `${language}: related devices keep Used unavailable and New purchasable`);
+      ui.state.cond = 'used';
+      assert.equal(modelCards().length, 1, `${language}: Used filter retains the sold-out listing`);
+      assert(modelCards()[0].html.includes('stock-badge'), `${language}: filtered Used card remains sold out`);
+      ui.state.cond = 'new';
+      assert.equal(modelCards().length, 1, `${language}: New filter retains only New`);
+      assert(modelCards()[0].html.includes('data-add="iphone-17:256-new"'), `${language}: New filter remains purchasable`);
+      resetCatalog(); ui.state.route.name = 'saved'; ui.state.saved = new Set([model.id]);
+      assert.deepEqual(identities(), originalIdentities, `${language}: favorites preserve both conditions for the saved model`);
+      resetCatalog(); ui.state.category = 'phones';
+      fresh.soldOut = true;
+      assert.deepEqual(identities(), originalIdentities, `${language}: all-sold-out model retains both listing identities`);
+      assert(modelCards().every((card) => card.html.includes('stock-badge') && !card.html.includes('data-add=')), `${language}: both condition cards reflect all sold out`);
+      used.soldOut = false; used.stockQuantity = 0;
+      assert(modelCards().find((card) => card.condition === 'used').html.includes('stock-badge'), `${language}: zero Used quantity also keeps its card unavailable`);
+      used.stockQuantity = null;
+      assert.deepEqual(identities(), originalIdentities, `${language}: restocking Used preserves the same identities and order`);
+      assert(modelCards().find((card) => card.condition === 'used').html.includes('data-add="iphone-17:256-used"'), `${language}: restocking Used restores only its own purchase action`);
+      const capacities = ui.state.content.products.find((product) => product.id === 'iphone-17-pro-max');
+      capacities.variants.find((variant) => variant.key === '256-like').soldOut = true;
+      const capacityCards = cards(ui.renderProductResults(ui.filteredProducts())).filter((card) => card.id === capacities.id);
+      assert.equal(capacityCards.length, 2, `${language}: several capacities still produce only one card per condition`);
+      assert(capacityCards.find((card) => card.condition === 'used').html.includes(pricing.formatJD(859000, language)), `${language}: Used starts at the cheapest available Used capacity`);
+      assert(capacityCards.find((card) => card.condition === 'new').html.includes(pricing.formatJD(839000, language)), `${language}: New starts at its own cheapest available capacity`);
+      model.offer = false; used.offerPrice = 500; fresh.soldOut = false;
+      resetCatalog(); ui.state.route.name = 'offers';
+      assert.deepEqual(modelCards().map((card) => card.condition), ['used'], `${language}: a Used-only offer does not put New in offers`);
+      const discountedHome = cards(ui.renderHome()).filter((card) => card.id === model.id);
+      assert.deepEqual(discountedHome.map((card) => card.condition), ['used'], `${language}: home offers also respect the condition with the offer price`);
+    } finally { ui.state.content = beforeMixedStock.content; ui.state.saved = beforeMixedStock.saved; resetCatalog(); }
     ui.state.route = { name: 'trade-in' };
     assert(!instagram.test(ui.renderService(true)), `${language}: trade-in has no Instagram links`);
     ui.state.content.settings.ordersOn = true;
@@ -582,5 +684,5 @@ export function verifyStorefront() {
   }
   for (const name of ['home', 'shop', 'offers', 'saved', 'p', 'bag', 'checkout', 'done', 'trade-in']) assert(!ui.instagramAllowed(name), `${name}: footer social link hidden`);
   for (const name of ['maintenance', 'contact']) assert(ui.instagramAllowed(name), `${name}: footer social link allowed`);
-  console.log(`storefront checks passed: six home category tiles, four hero choices, six separate catalog categories, grouped catalog, global search/sort, ${productViews} bilingual device views, selected options, browser checkout/receipts, and route-specific contact rules`);
+  console.log(`storefront checks passed: 27 stable condition listings, independent New/Used stock, six home category tiles, four hero choices, six catalog categories, global search/sort, ${productViews} bilingual device views, browser checkout/receipts, and route-specific contact rules`);
 }

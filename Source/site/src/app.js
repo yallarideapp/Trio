@@ -9,6 +9,7 @@ import { playHeroMotion } from './hero-motion.js';
 import { storeCopy, resolvedCopy, siteText, shellTextId } from '../../shared/site-text.js';
 import { PREVIEW_KEY } from './pages-preview.js';
 import { categoryArtworkSource } from '../../shared/home-artwork.js';
+import { conditionListings, catalogListings } from '../../shared/listings.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -124,12 +125,13 @@ function cardAction(product) {
   return `<a class="card-button is-outline" href="${productUrl(product, startingVariant(product))}">${esc(t('choose'))}</a>`;
 }
 function productCard(product) {
-  const group = conditionGroup(startingVariant(product)?.condition);
-  if (group) product = conditionProduct(product, group === 'new' ? 'new' : 'used');
+  const listings = conditionListings(product);
+  if (listings.length > 1) return listings.map(productCard).join('');
+  product = listings[0] || product;
   const name = esc(L(product.name));
   const href = productUrl(product, startingVariant(product));
   const unavailable = !availableVariants(product).length;
-  return `<article class="product-card${unavailable ? ' is-out-of-stock' : ''}" data-product="${esc(product.id)}"><div class="product-visual"><a class="product-image device-media" href="${href}" aria-label="${esc(`${t('view')}: ${L(product.name)}`)}">${media(product)}</a>${saveButton(product)}${unavailable ? `<span class="stock-badge">${esc(t('soldOut'))}</span>` : inOffers(product) ? `<span class="offer-badge">${esc(t('offers'))}</span>` : ''}</div><div class="product-body"><p class="product-brand" dir="ltr">${esc(product.brand)}</p><h3 class="product-name" dir="auto"><a href="${href}">${name}</a></h3><p class="product-caption">${esc(L(specification(product)?.specs[0]?.value))}</p>${conditionChips(product)}${batterySummary(product)}<div class="product-buy">${priceTag(product)}${cardAction(product)}</div></div></article>`;
+  return `<article class="product-card${unavailable ? ' is-out-of-stock' : ''}" data-product="${esc(product.id)}" data-condition="${esc(product.conditionFilter || '')}"><div class="product-visual"><a class="product-image device-media" href="${href}" aria-label="${esc(`${t('view')}: ${L(product.name)}`)}">${media(product)}</a>${saveButton(product)}${unavailable ? `<span class="stock-badge">${esc(t('soldOut'))}</span>` : inOffers(product) ? `<span class="offer-badge">${esc(t('offers'))}</span>` : ''}</div><div class="product-body"><p class="product-brand" dir="ltr">${esc(product.brand)}</p><h3 class="product-name" dir="auto"><a href="${href}">${name}</a></h3><p class="product-caption">${esc(L(specification(product)?.specs[0]?.value))}</p>${conditionChips(product)}${batterySummary(product)}<div class="product-buy">${priceTag(product)}${cardAction(product)}</div></div></article>`;
 }
 function sectionHeading(title, href, label = t('allDevices'), eyebrow = '') {
   return `<div class="section-heading"><div>${eyebrow ? `<p class="eyebrow">${esc(eyebrow)}</p>` : ''}<h2>${esc(title)}</h2></div>${href ? `<a class="text-link" href="${esc(href)}">${esc(label)}${arrow}</a>` : ''}</div>`;
@@ -178,6 +180,7 @@ function heroShowcase() {
   return `<a class="hero-product" href="${artwork ? categoryUrl(state.heroCategory) : productUrl(product, startingVariant(product))}" aria-label="${esc(`${artwork ? t('browse') : t('view')}: ${title}`)}"><div class="device-media hero-device">${artwork || media(product, { eager: true, hero: true })}</div><div class="hero-product-caption"><div><p class="product-brand" dir="ltr">${esc(artwork ? categoryPicture(state.heroCategory)[2] : product.brand)}</p><p class="hero-product-name" dir="auto">${esc(title)}</p></div>${caption}</div></a><div class="hero-tabs" role="group" aria-label="${esc(t('heroChoose'))}">${homeCategoryIds().map((id) => `<button type="button" data-hero-category="${esc(id)}" aria-pressed="${id === state.heroCategory}">${esc(categoryName(id))}</button>`).join('')}</div>`;
 }
 function offersRow(list) {
+  list = catalogListings(list).filter(inOffers);
   return `<div class="offer-row" data-scroller><div class="offer-track">${list.map((product) => `<div class="offer-slide">${productCard(product)}</div>`).join('')}</div><div class="row-controls" aria-hidden="true"><button type="button" class="row-button" data-scroll="-1" tabindex="-1">${icon('chevron')}</button><button type="button" class="row-button is-next" data-scroll="1" tabindex="-1">${icon('chevron')}</button></div></div>`;
 }
 function renderHome() {
@@ -207,7 +210,7 @@ function normalize(value) {
 }
 function baseProducts() {
   const r = state.route.name;
-  return products().filter((p) => (r !== 'saved' || state.saved.has(p.id)) && (r !== 'offers' || inOffers(p)) && (state.category === 'all' || p.category === state.category));
+  return catalogListings(products()).filter((p) => (r !== 'saved' || state.saved.has(p.id)) && (r !== 'offers' || inOffers(p)) && (state.category === 'all' || p.category === state.category));
 }
 function filteredProducts() {
   const query = normalize(state.query);
@@ -229,7 +232,7 @@ function filteredProducts() {
 function categoryTabs() {
   const r = state.route.name;
   const base = r === 'saved' ? `saved` : r === 'offers' ? 'offers' : 'shop';
-  const avail = products().filter((p) => (r !== 'saved' || state.saved.has(p.id)) && (r !== 'offers' || inOffers(p)));
+  const avail = catalogListings(products()).filter((p) => (r !== 'saved' || state.saved.has(p.id)) && (r !== 'offers' || inOffers(p)));
   return `<nav class="catalog-tabs" aria-label="${esc(t('heroChoose'))}">${['all', ...categoryIds()].map((id) => {
     const count = avail.filter((p) => id === 'all' || p.category === id).length;
     if (id !== 'all' && !count && r !== 'shop') return '';
@@ -254,6 +257,7 @@ function renderCatalog() {
   <div id="catalog-results"></div></div>`;
 }
 function renderProductResults(rows) {
+  rows = catalogListings(rows);
   const groupByCategory = state.route.name === 'shop' && state.category === 'all' && !state.query.trim()
     && state.brand === 'all' && state.cond === 'all' && state.sort === 'featured' && !state.route.params?.has('sort');
   if (!groupByCategory) return `<div id="product-grid" class="product-grid">${rows.map(productCard).join('')}</div>`;
@@ -306,7 +310,7 @@ function renderDetail(id) {
   const product = original && conditionProduct(original, condition);
   if (!product?.variants.length) return `<div class="container page-shell"><div class="empty-state"><h1>${esc(t('notFound'))}</h1><p>${esc(t('notFoundText'))}</p><a class="button button-primary" href="#/shop">${esc(t('browse'))}</a></div></div>`;
   const variant = defaultVariant(product);
-  const related = products().filter((p) => p.category === product.category && p.id !== product.id).slice(0, 4);
+  const related = catalogListings(products().filter((p) => p.category === product.category && p.id !== product.id)).slice(0, 4);
   const chips = product.variants.length > 1 ? `<fieldset class="variant-picker"><legend>${esc(t('options'))}</legend><div class="variant-list">${product.variants.map((v) => `<button type="button" class="variant-chip" data-variant="${esc(v.key)}" data-product-id="${esc(product.id)}" aria-pressed="${v.key === variant.key}"${variantQuantityLimit(v) === 0 ? ' disabled' : ''}><span class="variant-name" dir="auto">${esc(variantLabel(v, { short: true }) || L(product.name))}</span><span class="variant-price">${variantQuantityLimit(v) !== 0 && variantHasOffer(v) ? `<s class="price-was"><bdi>${esc(money(toFils(v.price)))}</bdi></s> ` : ''}<bdi>${esc(variantQuantityLimit(v) === 0 ? t('soldOut') : money(variantFils(v)))}</bdi></span></button>`).join('')}</div></fieldset>` : '';
   const rows = variantNotes(variant).map(([label, value]) => `<li>${label ? `<span>${esc(label)}</span>` : ''}<strong dir="auto">${esc(value)}</strong></li>`).join('');
   const canBuy = variantQuantityLimit(variant) > 0 && validPrice(variant.price);
