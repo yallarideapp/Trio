@@ -204,3 +204,8 @@ This release replaces the source/date/disclaimer sections described above with r
 - Saved stays reachable: in the phone menu (with its count), the heart on every device, and the header heart on desktop. Saving a device now shows «انحفظ بالمفضلة.» with a «شوف المفضلة» link.
 - Automated: all checks pass; all three builds succeed.
 - Browser (Chromium, Pages build): Arabic and English at 320, 390 and 1280px: bar labels, Repair opens the repair page and is highlighted, the menu's Saved shows the count and opens the list, the save message links to Saved; no errors and no horizontal overflow.
+
+## Footer trademark notice — 26 October 2026
+
+- Footer line: «متجر مستقل وغير تابع لـ Apple أو Samsung أو Huawei. الأسماء والعلامات التجارية لأصحابها.» / "Independent store, not affiliated with Apple, Samsung or Huawei. Names and trademarks belong to their owners."
+- Automated: all checks pass; all three builds succeed. Browser (Pages build): Arabic and English at 320, 390 and 1280px, no errors, no horizontal overflow.

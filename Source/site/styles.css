@@ -648,3 +648,6 @@ img.hero-motion-off{object-fit:contain;object-position:center;max-width:none}
 
 /* Phone menu: Saved with its count (the phone bar shows Repair instead). */
 .mobile-nav .mobile-nav-saved{gap:8px}.mobile-nav .mobile-nav-saved .count-badge{position:static}
+
+/* Footer: independent-store and trademark notice. */
+.footer-legal{margin:14px 0 0;font-size:10.5px;line-height:1.7;color:var(--muted);opacity:.85}
