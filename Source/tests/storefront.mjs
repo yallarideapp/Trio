@@ -253,6 +253,40 @@ export function verifyStorefront() {
       ui.state.content = contentBeforeHomeCheck;
       ui.state.heroCategory = 'phones';
     }
+    const beforeCategoryEdits = ui.state.content;
+    const oldPhotoUrl = context.api.photoUrl;
+    try {
+      ui.state.content = structuredClone(seed);
+      const phones = ui.state.content.categories.find((category) => category.id === 'phones');
+      phones.name = { ar: 'هواتف معدلة', en: 'Edited phones' };
+      phones.image = 'assets/devices/ipad.webp';
+      const selectedPhone = ui.state.content.products.find((product) => product.id === 'iphone-16-pro-max');
+      selectedPhone.featured = true; selectedPhone.homePriority = 999999;
+      const custom = { id: 'gaming', name: { ar: 'ألعاب', en: 'Gaming' }, photo: 'pcategorytest' };
+      ui.state.content.categories.unshift(custom);
+      context.api.photoUrl = (id) => id === custom.photo ? 'data:image/webp;base64,Y2F0ZWdvcnk=' : '';
+      let html = ui.renderHome();
+      const phoneTile = html.match(/<a class="category-card" href="#\/shop\/phones"[^>]*>([\s\S]*?)<\/a>/)?.[1] || '';
+      assert(phoneTile.includes('src="assets/devices/ipad.webp"'), `${language}: category artwork is independent of selected home device`);
+      assert(phoneTile.includes(phones.name[language]), `${language}: edited category names appear at home`);
+      assert(html.indexOf('class="category-card" href="#/shop/gaming"') < html.indexOf('class="category-card" href="#/shop/phones"'), `${language}: home follows saved category order`);
+      assert(html.includes('src="data:image/webp;base64,Y2F0ZWdvcnk="'), `${language}: category upload appears even before adding devices`);
+      delete custom.photo;
+      html = ui.renderHome();
+      assert(html.includes('class="category-placeholder"'), `${language}: a new empty category has an intentional image state`);
+      location.hash = '#/shop/gaming';
+      assert.equal(ui.readRoute().category, 'gaming', `${language}: empty category links resolve to the selected category`);
+      ui.state.content.categories.push({ id: 'computers', name: { ar: 'كمبيوتر', en: 'Computers' } });
+      location.hash = '#/shop/computers';
+      assert.equal(ui.readRoute().category, 'computers', `${language}: real custom categories take precedence over legacy route aliases`);
+      ui.state.route = { name: 'shop' }; ui.state.category = 'gaming';
+      assert(ui.renderCatalog().includes('href="#/shop/gaming"'), `${language}: an empty category remains reachable in catalog navigation`);
+      ui.state.heroCategory = 'phones';
+      assert(ui.renderHome().includes('src="assets/hero/iphone-16-pro-max-cutout.png"'), `${language}: selected iPhone uses standalone hero artwork`);
+    } finally {
+      ui.state.content = beforeCategoryEdits; context.api.photoUrl = oldPhotoUrl;
+      ui.state.category = 'all'; location.hash = '#/'; ui.state.heroCategory = 'phones';
+    }
     for (const name of ['shop', 'offers', 'saved']) {
       ui.state.route = { name };
       assert(!instagram.test(ui.renderCatalog()), `${language}: ${name} has no Instagram copy`);

@@ -115,9 +115,9 @@ const ordersEnabled = () => S().ordersOn === true;
 const visitorKey = (name) => `trio-${state.source === 'preview' ? 'preview-' : ''}${name}`;
 const offersHeading = () => L(S().offersTitle) || t('offersTitle');
 const products = () => visibleProducts(state.content);
-const categoryIds = () => state.content.categories.map((c) => c.id).filter((id) => products().some((p) => p.category === id));
+const categoryIds = () => state.content.categories.map((c) => c.id);
 const homeCategoryOrder = ['phones', 'laptops', 'watches', 'audio'];
-const homeCategoryIds = () => homeCategoryOrder.filter((id) => categoryIds().includes(id));
+const homeCategoryIds = () => homeCategoryOrder.filter((id) => categoryIds().includes(id) && products().some((product) => product.category === id));
 const homeProducts = () => products().filter((product) => homeCategoryOrder.includes(product.category));
 const instagramAllowed = (routeName) => ['maintenance', 'contact'].includes(routeName);
 const specification = (product) => product.technical || deviceSpecifications[product.id];
@@ -157,8 +157,9 @@ function imageSrc(product) {
   if (product.photo) { const url = api.photoUrl(product.photo); if (url) return url; }
   return product.image || '';
 }
-function media(product, { eager = false } = {}) {
-  const src = imageSrc(product);
+function media(product, { eager = false, hero = false } = {}) {
+  const original = imageSrc(product);
+  const src = hero && !product.photo && original === 'assets/devices/iphone-16-pro-max.jpg' ? 'assets/hero/iphone-16-pro-max-cutout.png' : original;
   const name = esc(L(product.name));
   if (!src) return `<span class="name-card"><span class="name-card-brand" dir="ltr">${esc(product.brand)}</span><span class="name-card-name" dir="ltr">${name}</span><span class="name-card-note">${esc(t('imageCard'))}</span></span>`;
   return `<img src="${esc(src)}" alt="${name}" loading="${eager ? 'eager' : 'lazy'}" decoding="async" draggable="false" data-device-image>`;
@@ -202,7 +203,7 @@ function contactActions({ instagram = false } = {}) {
 }
 
 // ---------- home ----------
-const homePriority = (product) => Number.isSafeInteger(product.homePriority) && product.homePriority > 0 ? product.homePriority : 0;
+const homePriority = (product) => Number.isSafeInteger(product?.homePriority) && product.homePriority > 0 ? product.homePriority : 0;
 const featuredFirst = (list) => list.slice().sort((a, b) => Number(b.featured === true) - Number(a.featured === true) || homePriority(b) - homePriority(a));
 const homeRepresentative = (list) => featuredFirst(list).find((product) => imageSrc(product)) || list[0];
 function heroProduct() {
@@ -228,7 +229,7 @@ function heroShowcase() {
   const artwork = homePriority(product) ? '' : categoryArtwork(state.heroCategory, { eager: true });
   const title = artwork ? categoryName(state.heroCategory) : L(product.name);
   const caption = artwork ? `<span class="hero-price">${arrow}</span>` : low !== null ? `<span class="hero-price"><small>${esc(t('from'))}</small> <bdi>${esc(money(low))}</bdi></span>` : `<span class="hero-price">${esc(t('soldOut'))}</span>`;
-  return `<a class="hero-product" href="${artwork ? categoryUrl(state.heroCategory) : productUrl(product, startingVariant(product))}" aria-label="${esc(`${artwork ? t('browse') : t('view')}: ${title}`)}"><div class="device-media hero-device">${artwork || media(product, { eager: true })}</div><div class="hero-product-caption"><div><p class="product-brand" dir="ltr">${esc(artwork ? categoryPicture(state.heroCategory)[2] : product.brand)}</p><p class="hero-product-name" dir="auto">${esc(title)}</p></div>${caption}</div></a><div class="hero-tabs" role="group" aria-label="${esc(t('heroChoose'))}">${homeCategoryIds().map((id) => `<button type="button" data-hero-category="${esc(id)}" aria-pressed="${id === state.heroCategory}">${esc(categoryName(id))}</button>`).join('')}</div>`;
+  return `<a class="hero-product" href="${artwork ? categoryUrl(state.heroCategory) : productUrl(product, startingVariant(product))}" aria-label="${esc(`${artwork ? t('browse') : t('view')}: ${title}`)}"><div class="device-media hero-device">${artwork || media(product, { eager: true, hero: true })}</div><div class="hero-product-caption"><div><p class="product-brand" dir="ltr">${esc(artwork ? categoryPicture(state.heroCategory)[2] : product.brand)}</p><p class="hero-product-name" dir="auto">${esc(title)}</p></div>${caption}</div></a><div class="hero-tabs" role="group" aria-label="${esc(t('heroChoose'))}">${homeCategoryIds().map((id) => `<button type="button" data-hero-category="${esc(id)}" aria-pressed="${id === state.heroCategory}">${esc(categoryName(id))}</button>`).join('')}</div>`;
 }
 function offersRow(list) {
   return `<div class="offer-row" data-scroller><div class="offer-track">${list.map((product) => `<div class="offer-slide">${productCard(product)}</div>`).join('')}</div><div class="row-controls" aria-hidden="true"><button type="button" class="row-button" data-scroll="-1" tabindex="-1">${icon('chevron')}</button><button type="button" class="row-button is-next" data-scroll="1" tabindex="-1">${icon('chevron')}</button></div></div>`;
@@ -237,9 +238,11 @@ function renderHome() {
   const list = homeProducts();
   const offers = list.filter(inOffers);
   const cats = categoryIds().map((id) => {
+    const category = state.content.categories.find((item) => item.id === id);
     const inCat = products().filter((p) => p.category === id);
     const rep = homeRepresentative(inCat);
-    return `<a class="category-card" href="${categoryUrl(id)}"><div class="category-picture device-media">${!homePriority(rep) && categoryArtwork(id) || media(rep)}</div><h3>${esc(categoryName(id))}</h3></a>`;
+    const picture = imageSrc(category) ? media(category) : (!homePriority(rep) && categoryArtwork(id)) || (rep ? media(rep) : `<span class="category-placeholder" aria-hidden="true">${icon('grid')}</span>`);
+    return `<a class="category-card" href="${categoryUrl(id)}"><div class="category-picture device-media">${picture}</div><h3>${esc(categoryName(id))}</h3></a>`;
   }).join('');
   const trust = t('trust').map(([title, text], i) => `<li class="trust-item"><span class="trust-icon" aria-hidden="true">${icon(['search', 'box', 'heart', 'swap'][i])}</span><span><strong>${esc(title)}</strong><small>${esc(text)}</small></span></li>`).join('');
   return `<section class="hero"><div class="container hero-grid"><div class="hero-copy"><h1><span>${esc(t('heroLine1'))}</span> <span>${esc(t('heroLine2'))}</span></h1><div class="hero-buttons"><a class="button button-dark" href="#/shop">${esc(t('heroShop'))}${arrow}</a><a class="button button-outline" href="#/offers">${esc(t('offersTitle'))}</a></div></div><div id="hero-showcase" class="hero-showcase">${heroShowcase()}</div></div></section>
@@ -284,7 +287,7 @@ function categoryTabs() {
   const avail = products().filter((p) => (r !== 'saved' || state.saved.has(p.id)) && (r !== 'offers' || inOffers(p)));
   return `<nav class="catalog-tabs" aria-label="${esc(t('heroChoose'))}">${['all', ...categoryIds()].map((id) => {
     const count = avail.filter((p) => id === 'all' || p.category === id).length;
-    if (id !== 'all' && !count) return '';
+    if (id !== 'all' && !count && r !== 'shop') return '';
     const href = `#/${base}${id === 'all' ? '' : `/${id}`}`;
     const label = id === 'all' ? (state.language === 'ar' ? 'الكل' : 'All') : categoryName(id);
     return `<a class="filter-button ${id === state.category ? 'active' : ''}" href="${href}"${id === state.category ? ' aria-current="page"' : ''}>${esc(label)}<span>${esc(num(count))}</span></a>`;
@@ -529,7 +532,7 @@ function readRoute() {
   const allowed = ['shop', 'offers', 'saved', 'p', 'bag', 'checkout', 'done', 'maintenance', 'trade-in', 'contact', 'account'];
   const name = allowed.includes(parts[0]) ? parts[0] : 'home';
   const categoryAliases = { computers: 'laptops', wearables: 'watches' };
-  const category = categoryAliases[parts[1]] || parts[1];
+  const category = categoryIds().includes(parts[1]) ? parts[1] : categoryAliases[parts[1]] || parts[1];
   return { name, id: name === 'p' ? (legacyIds[parts[1]] || parts[1]) : parts[1], category: state.content && categoryIds().includes(category) ? category : 'all', params: new URLSearchParams(query) };
 }
 function syncFilterUrl() {

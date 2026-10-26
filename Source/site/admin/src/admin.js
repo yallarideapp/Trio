@@ -6,6 +6,7 @@ import { pagesAdmin } from './pages-store.js';
 import deviceSpecifications from '../../../shared/device-specs.js';
 import { applyHomePlacement } from '../../../shared/home-placement.js';
 import { validBatteryHealth, validBatteryCycles } from '../../../shared/battery.js';
+import { MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage } from '../../../shared/categories.js';
 
 const IS_PAGES = MODE === 'pages';
 const USE_TECHNICAL = MODE !== 'demo';
@@ -86,14 +87,23 @@ const AR = {
   'The latest selected device leads its category in the home showcase for Phones, Laptops, Watches and Audio. Selecting a device also makes it visible.': 'آخر جهاز تختاره يتصدر قسمه في واجهة الرئيسية للهواتف واللابتوبات والساعات والسماعات. تحديد الجهاز يجعله ظاهراً أيضاً.',
   'Save preview to see your home selections.': 'احفظ المعاينة لتظهر اختياراتك في الرئيسية.', 'Publish to show your home selections.': 'انشر لتظهر اختياراتك في الرئيسية.',
   'Choose home devices directly from this list. The latest selection leads its category.': 'اختر أجهزة الرئيسية مباشرة من هذه القائمة. آخر جهاز تختاره يتصدر قسمه.',
+  'Categories': 'الأقسام', 'Add category': 'أضف قسماً', 'New category': 'قسم جديد', 'Category id': 'رمز القسم', 'Category photo': 'صورة القسم', 'Change photo': 'غيّر الصورة', 'Reset photo': 'استعادة الصورة الافتراضية',
+  'Edit the home category names, pictures and order here. Device categories use the same names.': 'عدّل أسماء الأقسام وصورها وترتيبها في الرئيسية من هنا. تستخدم الأجهزة أسماء الأقسام نفسها.',
+  'Save preview to see your category changes.': 'احفظ المعاينة لتظهر تعديلات الأقسام.', 'Publish to show your category changes.': 'انشر لتظهر تعديلات الأقسام.',
+  'You can add up to {max} categories.': 'يمكنك إضافة حتى {max} قسماً.', 'Choose names in Arabic and English, up to {max} characters each.': 'اكتب اسماً بالعربي والإنجليزي، حتى {max} حرف لكل اسم.',
+  'The category id stays the same when you rename it.': 'يبقى رمز القسم ثابتاً عند تغيير اسمه.', 'The picture appears in the home category tile. A transparent image looks best.': 'تظهر الصورة في بطاقة القسم بالرئيسية. الصورة بخلفية شفافة هي الأنسب.',
+  'Uses a device picture until you upload a category photo.': 'تُستخدم صورة جهاز افتراضية حتى ترفع صورة للقسم.', 'No category photo yet.': 'لم تُضف صورة للقسم بعد.',
+  'devices in this category': 'جهاز في هذا القسم', 'Move its devices to another category before deleting it.': 'انقل أجهزة هذا القسم إلى قسم آخر قبل حذفه.', 'Keep at least one category.': 'يجب إبقاء قسم واحد على الأقل.',
+  'Delete this empty category?': 'هل تريد حذف هذا القسم الفارغ؟', 'Category added. Add its photo or assign devices to it.': 'أُضيف القسم. ارفع صورته أو انقل أجهزة إليه.',
+  'Category names are required in both languages.': 'اسم القسم مطلوب بالعربي والإنجليزي.', 'Check category names, ids and photos. Keep between 1 and {max} categories.': 'تحقق من أسماء الأقسام ورموزها وصورها. يجب أن يكون عدد الأقسام بين 1 و{max}.',
 };
 let lang = local.read('trio-admin-lang') === 'en' ? 'en' : 'ar';
 const t = (s, vars = {}) => (lang === 'ar' ? AR[s] || s : ({ new: 'New', confirmed: 'Confirmed', out: 'Out for delivery', delivered: 'Delivered', cancelled: 'Cancelled' }[s] || s)).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
 const L = (o) => (o && typeof o === 'object' ? o[lang] || o.ar || o.en || '' : String(o || ''));
 const money = (jd) => formatJD(toFils(jd), lang);
 
-const initialView = IS_PAGES ? ({ '#orders': 'orders', '#settings': 'settings' }[globalThis.location?.hash] || 'devices') : 'orders';
-const state = { view: initialView, signedIn: IS_PAGES, setup: true, published: null, version: 0, draft: null, dirty: false, orders: [], legacyOrders: [], orderFilter: '', orderOpen: null, orderQuery: '', orderBefore: null, editing: null, category: 'all', query: '', message: '' };
+const initialView = IS_PAGES ? ({ '#orders': 'orders', '#categories': 'categories', '#settings': 'settings' }[globalThis.location?.hash] || 'devices') : 'orders';
+const state = { view: initialView, signedIn: IS_PAGES, setup: true, published: null, version: 0, draft: null, dirty: false, orders: [], legacyOrders: [], orderFilter: '', orderOpen: null, orderQuery: '', orderBefore: null, editing: null, category: 'all', query: '', addingCategory: null, message: '' };
 
 function saveDraft() {
   state.dirty = JSON.stringify(state.draft) !== JSON.stringify(state.published);
@@ -121,7 +131,7 @@ async function guard(fn) {
 // ---------- shell ----------
 function topBar() {
   const n = state.orders.filter((o) => o.status === 'new').length;
-  const tabs = IS_PAGES ? [['devices', 'Devices'], ['orders', 'Orders'], ['settings', 'Settings']] : [['orders', 'Orders'], ['devices', 'Devices'], ['settings', 'Settings']];
+  const tabs = IS_PAGES ? [['devices', 'Devices'], ['categories', 'Categories'], ['orders', 'Orders'], ['settings', 'Settings']] : [['orders', 'Orders'], ['devices', 'Devices'], ['categories', 'Categories'], ['settings', 'Settings']];
   return `<header class="bar"><div class="bar-in"><a class="brand" href="../index.html#/" ${MODE === 'demo' ? '' : 'target="_blank" rel="noopener"'}><img src="../assets/instagram/logo.jpg" alt="" width="34" height="34"><span dir="ltr">TRIO</span><small>${esc(t(IS_PAGES ? 'Catalog editor' : 'Admin'))}</small></a>
   <nav class="tabs">${tabs.map(([id, label]) => `<button type="button" data-view="${id}" aria-current="${state.view === id}">${esc(t(label))}${id === 'orders' && n ? `<span class="badge">${n}</span>` : ''}</button>`).join('')}</nav>
   <div class="bar-actions"><span id="draft-state" class="draft-state" role="status"></span><button type="button" id="publish" class="btn primary">${esc(t(IS_PAGES ? 'Save preview' : 'Publish'))}</button>${IS_PAGES ? `<a class="btn ghost" href="../index.html?preview=draft#/" target="_blank" rel="noopener">${esc(t('View preview'))}${forwardArrow}</a>` : ''}<button type="button" id="lang" class="btn ghost" lang="${lang === 'ar' ? 'en' : 'ar'}">${lang === 'ar' ? 'EN' : 'ع'}</button>${MODE === 'demo' || IS_PAGES ? '' : `<button type="button" id="logout" class="btn ghost">${esc(t('Sign out'))}</button>`}</div></div>
@@ -138,12 +148,13 @@ function updateBar() {
   let d = $('#discard'); if (state.dirty && !d && s) { s.insertAdjacentHTML('afterend', `<button type="button" id="discard" class="btn ghost small">${esc(t('Discard changes'))}</button>`); } else if (!state.dirty && d) d.remove();
 }
 function render() {
+  if (state.draft && state.category !== 'all' && !state.draft.categories.some((category) => category.id === state.category)) state.category = 'all';
   document.documentElement.lang = lang; document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
   document.title = `${t(IS_PAGES ? 'Catalog editor' : 'Admin')} | TRIO Mobile`;
   document.body.classList.toggle('pages-editor', IS_PAGES);
   const root = $('#admin');
   if (!state.signedIn) { root.innerHTML = signInView(); return; }
-  root.innerHTML = `${topBar()}<main class="wrap">${IS_PAGES && state.view !== 'orders' ? previewTools() : ''}${state.view === 'orders' ? ordersView() : state.view === 'devices' ? (state.editing ? editView() : devicesView()) : settingsView()}</main><p id="flash" class="flash" role="status" hidden></p>`;
+  root.innerHTML = `${topBar()}<main class="wrap">${IS_PAGES && state.view !== 'orders' ? previewTools() : ''}${state.view === 'orders' ? ordersView() : state.view === 'devices' ? (state.editing ? editView() : devicesView()) : state.view === 'categories' ? categoriesView() : settingsView()}</main><p id="flash" class="flash" role="status" hidden></p>`;
   updateBar();
 }
 function signInView() {
@@ -315,6 +326,49 @@ async function resizeImage(file) {
   } finally { URL.revokeObjectURL(url); }
 }
 
+// ---------- categories ----------
+function categoryPhoto(category) {
+  const chosen = photoSrc(category);
+  if (chosen) return { src: chosen, custom: true };
+  const products = state.draft.products.filter((product) => product.category === category.id && !product.hidden);
+  products.sort((a, b) => Number(b.featured === true) - Number(a.featured === true) || (b.homePriority || 0) - (a.homePriority || 0));
+  const representative = products.find((product) => photoSrc(product));
+  const defaultImage = !representative?.homePriority && ({ watches: 'assets/devices/huawei-watch-gt6.webp', audio: 'assets/categories/airpods-pro.png' })[category.id];
+  return { src: defaultImage ? `../${defaultImage}` : representative ? photoSrc(representative) : '', custom: false };
+}
+function categoriesView() {
+  const list = state.draft.categories;
+  const adding = state.addingCategory;
+  return `<div class="head"><h1>${esc(t('Categories'))}</h1><button type="button" class="btn primary" data-add-category${list.length >= MAX_CATEGORIES || adding ? ' disabled' : ''}>${esc(t('Add category'))}</button></div>
+  <p class="muted category-intro">${esc(t('Edit the home category names, pictures and order here. Device categories use the same names.'))} ${esc(t(IS_PAGES ? 'Save preview to see your category changes.' : 'Publish to show your category changes.'))}</p>
+  <p class="muted small category-limit">${esc(t('You can add up to {max} categories.', { max: MAX_CATEGORIES }))}</p>
+  ${adding ? `<form id="add-category-form" class="card add-category" autocomplete="off"><div class="head"><h2>${esc(t('New category'))}</h2><button type="button" class="btn ghost small" data-cancel-category>${esc(t('Cancel'))}</button></div><div class="grid2 tight">${field('Name (Arabic)', 'name.ar', adding.ar, { dir: 'rtl', attrs: `required maxlength="${CATEGORY_NAME_LIMIT}"` })}${field('Name (English)', 'name.en', adding.en, { dir: 'ltr', attrs: `required maxlength="${CATEGORY_NAME_LIMIT}"` })}</div><p class="muted small">${esc(t('Choose names in Arabic and English, up to {max} characters each.', { max: CATEGORY_NAME_LIMIT }))}</p><div class="btns"><button type="submit" class="btn primary">${esc(t('Add category'))}</button></div></form>` : ''}
+  <ol class="category-editor-list">${list.map((category, index) => {
+    const photo = categoryPhoto(category);
+    const deviceCount = state.draft.products.filter((product) => product.category === category.id).length;
+    const deleteReason = deviceCount ? t('Move its devices to another category before deleting it.') : list.length <= 1 ? t('Keep at least one category.') : '';
+    return `<li class="card category-editor-card" data-category-card="${esc(category.id)}"><form data-category-form="${esc(category.id)}" autocomplete="off"><div class="category-card-head"><h2 dir="auto">${esc(L(category.name))}</h2><div class="category-card-actions"><button type="button" class="btn ghost small icon" data-category-move="${esc(category.id)}" data-dir="-1" aria-label="${esc(t('Move up'))}: ${esc(L(category.name))}"${index === 0 ? ' disabled' : ''}>↑</button><button type="button" class="btn ghost small icon" data-category-move="${esc(category.id)}" data-dir="1" aria-label="${esc(t('Move down'))}: ${esc(L(category.name))}"${index === list.length - 1 ? ' disabled' : ''}>↓</button><button type="button" class="btn danger small" data-category-delete="${esc(category.id)}" aria-label="${esc(t('Delete'))}: ${esc(L(category.name))}"${deleteReason ? ` disabled title="${esc(deleteReason)}"` : ''}>${esc(t('Delete'))}</button></div></div>
+    <div class="category-card-content"><div class="category-image-editor"><div class="category-photo">${photo.src ? `<img src="${esc(photo.src)}" alt="${esc(L(category.name))}" loading="lazy">` : `<span class="category-photo-placeholder" aria-label="${esc(t('No category photo yet.'))}">${esc((L(category.name) || '?').slice(0, 1))}</span>`}</div><div class="btns category-photo-actions"><label class="btn small" for="category-photo-${esc(category.id)}">${esc(t(photo.custom ? 'Change photo' : 'Upload photo'))}<input type="file" id="category-photo-${esc(category.id)}" data-category-photo="${esc(category.id)}" accept="image/*" class="file-input" aria-label="${esc(t('Category photo'))}: ${esc(L(category.name))}"></label>${photo.custom ? `<button type="button" class="btn ghost small" data-category-reset-photo="${esc(category.id)}">${esc(t('Reset photo'))}</button>` : ''}</div></div>
+    <div class="category-fields">${field('Name (Arabic)', 'name.ar', category.name.ar, { dir: 'rtl', attrs: `required maxlength="${CATEGORY_NAME_LIMIT}"` })}${field('Name (English)', 'name.en', category.name.en, { dir: 'ltr', attrs: `required maxlength="${CATEGORY_NAME_LIMIT}"` })}<p class="muted small">${esc(t('Category id'))}: <code dir="ltr">${esc(category.id)}</code></p><p class="muted small">${esc(t('The category id stays the same when you rename it.'))}</p><p class="muted small category-photo-help">${esc(t('The picture appears in the home category tile. A transparent image looks best.'))}${!photo.custom ? ` ${esc(t('Uses a device picture until you upload a category photo.'))}` : ''}</p><p class="muted small">${deviceCount} ${esc(t('devices in this category'))}${deleteReason ? ` · ${esc(deleteReason)}` : ''}</p></div></div></form></li>`;
+  }).join('')}</ol>`;
+}
+function readCategoryForm(form) {
+  const category = state.draft.categories.find((item) => item.id === form.dataset.categoryForm);
+  if (!category) return;
+  category.name = { ar: form.elements['name.ar'].value.trim(), en: form.elements['name.en'].value.trim() };
+  for (const code of ['ar', 'en']) form.elements[`name.${code}`].setAttribute('aria-invalid', String(!category.name[code] || category.name[code].length > CATEGORY_NAME_LIMIT));
+  const heading = form.querySelector('h2');
+  if (heading) heading.textContent = L(category.name) || category.id;
+  saveDraft();
+}
+function nextCategoryId(name) {
+  const ids = new Set(state.draft.categories.map((category) => category.id));
+  const base = slugify(name).slice(0, 30).replace(/-$/, '') || 'category';
+  let id = base; let n = 2;
+  while (ids.has(id) || !validCategoryId(id)) { const suffix = `-${n++}`; id = `${base.slice(0, 30 - suffix.length).replace(/-$/, '')}${suffix}`; }
+  return id;
+}
+
 // ---------- settings ----------
 function settingsView() {
   const s = state.draft.settings;
@@ -335,6 +389,7 @@ function readSettings(form) {
 // ---------- publish ----------
 function validate(c) {
   const problems = []; const cats = new Set(c.categories.map((x) => x.id));
+  if (!c.categories.length || c.categories.length > MAX_CATEGORIES || cats.size !== c.categories.length || c.categories.some((category) => !validCategoryId(category.id) || !validCategoryName(category.name) || !validCategoryImage(category.image))) problems.push(t('Check category names, ids and photos. Keep between 1 and {max} categories.', { max: MAX_CATEGORIES }));
   for (const p of c.products) {
     const name = L(p.name) || p.id;
     if (!p.name.ar || !p.name.en) problems.push(`${name}: ${t('needs an Arabic and English name')}`);
@@ -384,6 +439,7 @@ function readCurrentForm() {
   const settings = $('#settings-form');
   if (device && state.editing) readDeviceForm(device);
   if (settings) readSettings(settings);
+  for (const form of $$('[data-category-form]')) readCategoryForm(form);
 }
 async function exportDraft() {
   readCurrentForm();
@@ -403,18 +459,18 @@ async function exportDraft() {
 document.addEventListener('click', async (e) => {
   const el = e.target instanceof Element ? e.target : null; if (!el) return;
   const hit = (s) => el.closest(s);
-  if (hit('#lang')) { lang = lang === 'ar' ? 'en' : 'ar'; local.write('trio-admin-lang', lang); render(); return; }
-  if (hit('[data-view]')) { const view = hit('[data-view]').dataset.view; if (IS_PAGES && !['devices', 'orders', 'settings'].includes(view)) return; state.view = view; state.editing = null; state.orderOpen = null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); if (state.view === 'orders') await loadOrders(); render(); return; }
+  if (hit('#lang')) { readCurrentForm(); lang = lang === 'ar' ? 'en' : 'ar'; local.write('trio-admin-lang', lang); render(); return; }
+  if (hit('[data-view]')) { const view = hit('[data-view]').dataset.view; if (!['devices', 'categories', 'orders', 'settings'].includes(view)) return; readCurrentForm(); state.view = view; state.editing = null; state.orderOpen = null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); if (state.view === 'orders') await loadOrders(); render(); return; }
   if (hit('#publish')) { publish(); return; }
   if (IS_PAGES && hit('#export-draft')) { await exportDraft(); return; }
   if (IS_PAGES && hit('#reset-preview')) {
     if (!confirmed(t('Reset this browser preview to the public catalog? Your exported files are kept.'))) return;
-    try { await adminApi.reset(); local.remove(draftKey); await loadContent({ keepDraft: false }); state.editing = null; state.view = 'devices'; render(); flash(t('Preview reset to the public catalog.')); }
+    try { await adminApi.reset(); local.remove(draftKey); await loadContent({ keepDraft: false }); state.editing = null; state.addingCategory = null; state.view = 'devices'; render(); flash(t('Preview reset to the public catalog.')); }
     catch (error) { flash(errorText(error), 'error'); }
     return;
   }
-  if (hit('#discard')) { if (confirmed(t(IS_PAGES ? 'Discard changes since the last saved preview?' : 'Discard all unpublished changes?'))) { state.draft = clone(state.published); state.editing = null; saveDraft(); render(); } return; }
-  if (hit('[data-reload-published]')) { await loadContent({ keepDraft: false }); state.editing = null; render(); return; }
+  if (hit('#discard')) { if (confirmed(t(IS_PAGES ? 'Discard changes since the last saved preview?' : 'Discard all unpublished changes?'))) { state.draft = clone(state.published); state.editing = null; state.addingCategory = null; saveDraft(); render(); } return; }
+  if (hit('[data-reload-published]')) { await loadContent({ keepDraft: false }); state.editing = null; state.addingCategory = null; render(); return; }
   if (hit('#logout') && !IS_PAGES) { await guard(() => adminApi.logout()); state.signedIn = false; render(); return; }
   if (hit('[data-order-filter]')) { state.orderFilter = hit('[data-order-filter]').dataset.orderFilter; if (MODE !== 'demo') await loadOrders(); render(); return; }
   if (hit('[data-load-older-orders]')) { const button = hit('[data-load-older-orders]'); button.disabled = true; await loadOrders({ append: true }); render(); return; }
@@ -423,6 +479,34 @@ document.addEventListener('click', async (e) => {
   if (hit('[data-refresh-orders]')) { await loadOrders(); render(); return; }
   if (hit('[data-open-order]')) { state.orderOpen = hit('[data-open-order]').dataset.openOrder; render(); window.scrollTo(0, 0); return; }
   if (hit('[data-close-order]')) { state.orderOpen = null; await loadOrders(); render(); return; }
+  if (hit('[data-add-category]')) {
+    if (!state.signedIn || state.draft.categories.length >= MAX_CATEGORIES) return;
+    readCurrentForm(); state.addingCategory = { ar: '', en: '' }; render(); $('#add-category-form input')?.focus(); return;
+  }
+  if (hit('[data-cancel-category]')) { state.addingCategory = null; render(); return; }
+  if (hit('[data-category-move]')) {
+    readCurrentForm();
+    const button = hit('[data-category-move]'); const list = state.draft.categories;
+    const index = list.findIndex((category) => category.id === button.dataset.categoryMove); const next = index + Number(button.dataset.dir);
+    if (index >= 0 && next >= 0 && next < list.length) { [list[index], list[next]] = [list[next], list[index]]; saveDraft(); render(); }
+    return;
+  }
+  if (hit('[data-category-delete]')) {
+    const id = hit('[data-category-delete]').dataset.categoryDelete;
+    if (state.draft.products.some((product) => product.category === id)) { flash(t('Move its devices to another category before deleting it.'), 'warn'); return; }
+    if (state.draft.categories.length <= 1) { flash(t('Keep at least one category.'), 'warn'); return; }
+    if (confirmed(t('Delete this empty category?'))) {
+      readCurrentForm(); state.draft.categories = state.draft.categories.filter((category) => category.id !== id);
+      if (state.category === id) state.category = 'all';
+      saveDraft(); render();
+    }
+    return;
+  }
+  if (hit('[data-category-reset-photo]')) {
+    const category = state.draft.categories.find((item) => item.id === hit('[data-category-reset-photo]').dataset.categoryResetPhoto);
+    if (category) { readCurrentForm(); category.photo = ''; category.image = ''; saveDraft(); render(); }
+    return;
+  }
   if (hit('[data-cat]')) { state.category = hit('[data-cat]').dataset.cat; render(); return; }
   if (hit('[data-edit]')) { state.editing = { index: Number(hit('[data-edit]').dataset.edit) }; render(); window.scrollTo(0, 0); return; }
   if (hit('[data-close-edit]')) { state.editing = null; render(); return; }
@@ -447,6 +531,18 @@ document.addEventListener('click', async (e) => {
 function confirmed(text) { try { return window.confirm(text); } catch { return true; } }
 document.addEventListener('change', async (e) => {
   const form = e.target.closest && e.target.closest('form');
+  if (e.target.dataset?.categoryPhoto !== undefined && e.target.files?.[0]) {
+    const category = state.draft?.categories.find((item) => item.id === e.target.dataset.categoryPhoto);
+    if (!state.signedIn || !category) return;
+    const input = e.target; const file = input.files[0];
+    readCurrentForm(); input.disabled = true; flash(t('Uploading…'), 'warn');
+    try {
+      const blob = await resizeImage(file); const res = await adminApi.uploadPhoto(blob);
+      if (state.draft.categories.includes(category)) { category.photo = res.id; saveDraft(); render(); flash(t(IS_PAGES ? 'Photo uploaded. Save preview to show it.' : 'Photo uploaded. Publish to show it.')); }
+    } catch (error) { if (error instanceof ApiError && error.status === 401) { state.signedIn = false; render(); return; } flash(t('Could not upload the photo.'), 'error'); }
+    finally { if (input.isConnected) { input.disabled = false; input.value = ''; } }
+    return;
+  }
   if (e.target.dataset?.homeDevice !== undefined) {
     const product = state.draft?.products.find((item) => item.id === e.target.dataset.homeDevice);
     if (!state.signedIn || state.view !== 'devices' || state.editing || !product) return;
@@ -461,7 +557,7 @@ document.addEventListener('change', async (e) => {
       if (file.size > 20 * 1024 * 1024) { flash(t('This file is too large.'), 'error'); return; }
       const data = JSON.parse(await file.text());
       const content = await adminApi.importDraft(data);
-      state.draft = withDefaults(content); state.draft.settings.ordersOn = false; state.editing = null; state.view = 'devices'; state.category = 'all'; state.query = '';
+      state.draft = withDefaults(content); state.draft.settings.ordersOn = false; state.editing = null; state.addingCategory = null; state.view = 'devices'; state.category = 'all'; state.query = '';
       saveDraft(); render(); flash(t('Catalog imported. Save preview to view it.'));
     } catch (error) { flash(error instanceof ApiError ? errorText(error) : t('Could not import this file. Use a Trio catalog JSON export.'), 'error'); }
     finally { e.target.value = ''; }
@@ -476,6 +572,7 @@ document.addEventListener('change', async (e) => {
   }
   if (form && form.id === 'device-form') readDeviceForm(form);
   if (form && form.id === 'settings-form') readSettings(form);
+  if (form?.dataset?.categoryForm !== undefined) readCategoryForm(form);
 });
 document.addEventListener('input', (e) => {
   if (e.target.id === 'device-search') { state.query = e.target.value; const pos = e.target.selectionStart; render(); const box = $('#device-search'); box.focus(); box.setSelectionRange(pos, pos); }
@@ -483,10 +580,20 @@ document.addEventListener('input', (e) => {
   const form = e.target.closest && e.target.closest('form');
   if (form && form.id === 'device-form' && e.target.type !== 'file') readDeviceForm(form);
   if (form && form.id === 'settings-form') readSettings(form);
+  if (form?.dataset?.categoryForm !== undefined && e.target.type !== 'file') readCategoryForm(form);
+  if (form?.id === 'add-category-form' && state.addingCategory) state.addingCategory = { ar: form.elements['name.ar'].value, en: form.elements['name.en'].value };
 });
 document.addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = e.target;
+  if (f.id === 'add-category-form') {
+    if (!state.signedIn || state.draft.categories.length >= MAX_CATEGORIES) { flash(t('You can add up to {max} categories.', { max: MAX_CATEGORIES }), 'warn'); return; }
+    const name = { ar: f.elements['name.ar'].value.trim(), en: f.elements['name.en'].value.trim() };
+    if (!validCategoryName(name)) { flash(t('Category names are required in both languages.'), 'error'); return; }
+    const id = nextCategoryId(name.en); state.draft.categories.push({ id, name }); state.addingCategory = null;
+    saveDraft(); render(); $(`[data-category-card="${id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }); flash(t('Category added. Add its photo or assign devices to it.')); return;
+  }
+  if (f.dataset?.categoryForm !== undefined) { readCategoryForm(f); return; }
   if (f.id === 'sign-form') {
     const err = $('#sign-error'); err.hidden = true;
     const show = (m) => { err.textContent = m; err.hidden = false; };

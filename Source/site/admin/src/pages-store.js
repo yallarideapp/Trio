@@ -3,6 +3,7 @@ import seed from '../../../shared/catalog.js';
 import specifications from '../../../shared/device-specs.js';
 import { validPrice, validStockQuantity, validOfferPrice } from '../../../shared/pricing.js';
 import { validBatteryHealth, validBatteryCycles } from '../../../shared/battery.js';
+import { validCategories, mediaOwners } from '../../../shared/categories.js';
 import { conditions, notes, warranties } from '../../../shared/labels.js';
 import { ApiError, withDefaults } from '../../src/store.js';
 import { PREVIEW_KEY, PHOTO_KEY, EDITOR_KEY, readLocal, readPreview, validPhoto } from '../../src/pages-preview.js';
@@ -13,6 +14,7 @@ const save = (key, value) => {
 };
 const editable = (content) => {
   // Check before JSON cloning can turn non-finite numbers into null.
+  if (content.categories !== undefined && !validCategories(content.categories)) invalid();
   for (const product of content.products || []) for (const variant of product.variants || []) if (!validStockQuantity(variant.stockQuantity) || !validBatteryHealth(variant.batteryHealth) || !validBatteryCycles(variant.batteryCycles)) invalid();
   const result = withDefaults(clone(content));
   result.settings.ordersOn = false;
@@ -29,7 +31,7 @@ const editable = (content) => {
 const allPhotos = () => readLocal(PHOTO_KEY, {});
 function referencedPhotos(contents, bank = allPhotos()) {
   const photos = {};
-  for (const content of contents) for (const product of content?.products || []) if (product.photo && validPhoto(bank[product.photo])) photos[product.photo] = bank[product.photo];
+  for (const content of contents) for (const owner of mediaOwners(content)) if (owner.photo && validPhoto(bank[owner.photo])) photos[owner.photo] = bank[owner.photo];
   return photos;
 }
 const retainedPhotos = () => referencedPhotos([readPreview()?.content, readLocal(EDITOR_KEY)?.content]);
@@ -40,8 +42,9 @@ const pair = (value, limit) => value && text(value.ar, limit) && text(value.en, 
 // Validate before any import writes; keep backup size bounded and media local.
 function validate(content, photos) {
   if (!content || !Array.isArray(content.products) || content.products.length > 200 || !content.settings || !Array.isArray(content.categories)) invalid();
-  const categories = new Set(seed.categories.map((category) => category.id));
-  if (content.categories.length !== categories.size || new Set(content.categories.map((category) => category.id)).size !== categories.size || content.categories.some((category) => !categories.has(category.id) || !pair(category.name, 100))) invalid();
+  if (!validCategories(content.categories)) invalid();
+  const categories = new Set(content.categories.map((category) => category.id));
+  for (const category of content.categories) if (category.photo !== undefined && category.photo !== null && category.photo !== '' && (typeof category.photo !== 'string' || !/^p[a-z0-9-]{1,80}$/.test(category.photo) || !validPhoto(photos[category.photo]))) invalid();
   const ids = new Set();
   for (const product of content.products) {
     if (!product || !/^[a-z0-9][a-z0-9-]{0,79}$/.test(product.id) || ids.has(product.id) || !categories.has(product.category) || !pair(product.name, 200) || !product.name.ar.trim() || !product.name.en.trim() || !text(product.brand, 100)) invalid();
@@ -69,7 +72,7 @@ function packageDraft(content) {
   const current = editable(content);
   const bank = allPhotos();
   const photos = {};
-  for (const product of current.products) if (product.photo) photos[product.photo] = bank[product.photo];
+  for (const owner of mediaOwners(current)) if (owner.photo) photos[owner.photo] = bank[owner.photo];
   validate(current, photos);
   return { format: 'trio-catalog-draft', schemaVersion: 1, exportedAt: new Date().toISOString(), content: current, photos };
 }
@@ -111,12 +114,12 @@ export const pagesAdmin = {
     const content = editable(data.content);
     const photos = retainedPhotos();
     const remapped = new Map();
-    for (const product of content.products) if (product.photo) {
-      const original = product.photo;
+    for (const owner of mediaOwners(content)) if (owner.photo) {
+      const original = owner.photo;
       const value = data.photos[original];
       if (!remapped.has(original)) remapped.set(original, photos[original] && photos[original] !== value ? `p${crypto.randomUUID().replaceAll('-', '')}` : original);
-      product.photo = remapped.get(original);
-      photos[product.photo] = value;
+      owner.photo = remapped.get(original);
+      photos[owner.photo] = value;
     }
     save(PHOTO_KEY, photos);
     return content;

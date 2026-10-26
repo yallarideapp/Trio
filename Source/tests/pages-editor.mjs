@@ -14,6 +14,7 @@ import { ApiError, local, withDefaults } from '../site/src/store.js';
 import { pagesAdmin } from '../site/admin/src/pages-store.js';
 import { PREVIEW_KEY, PHOTO_KEY, EDITOR_KEY } from '../site/src/pages-preview.js';
 import { applyHomePlacement, nextHomePriority, validHomePriority } from '../shared/home-placement.js';
+import { MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage } from '../shared/categories.js';
 
 const copy = (value) => structuredClone(value);
 const errorIs = (code, status) => (error) => error.code === code && error.status === status;
@@ -276,6 +277,7 @@ export async function verifyPagesEditor() {
     const localOrders = await verifyLocalOrders(api, values, (full) => { storageFull = full; });
     const demoOrders = await verifyDemoCheckoutOrders(api, values);
     await verifyEditorViews((await pagesAdmin.content()).content, demoOrders, localOrders, api);
+    await verifyCategoryDrafts(api, values);
     assert.equal(network, 0, 'editing, previews, imports, exports, photos and local order records require no API calls');
     assert(![...values.keys()].some((key) => /session|password/.test(key)), 'the editor creates no simulated authentication records');
     console.log('Pages editor checks passed: isolated explicit previews, editable specs, version conflicts, portable photos, photo cleanup and collision isolation, validated imports, quota errors, reset, local orders, and bilingual editor views');
@@ -284,6 +286,111 @@ export async function verifyPagesEditor() {
       if (descriptor) Object.defineProperty(globalThis, key, descriptor);
       else delete globalThis[key];
     }
+  }
+}
+
+async function verifyCategoryDrafts(api, values) {
+  const previous = [...values];
+  try {
+    values.clear();
+    const content = (await pagesAdmin.content()).content;
+    content.categories.reverse();
+    content.categories[0].name = { ar: 'إكسسوارات وألعاب', en: 'Accessories and gaming' };
+    const category = { id: 'gaming', name: { ar: 'ألعاب', en: 'Gaming' }, image: 'assets/categories/airpods-pro.png' };
+    content.categories.unshift(category);
+    content.products[0].category = category.id;
+    const makePhoto = (label) => new Blob([`RIFF${label}WEBPVP8 `], { type: 'image/webp' });
+    category.photo = (await pagesAdmin.uploadPhoto(makePhoto('category'))).id;
+    values.set(EDITOR_KEY, JSON.stringify({ baseVersion: 0, content }));
+    content.products[0].photo = (await pagesAdmin.uploadPhoto(makePhoto('device'))).id;
+    values.set(EDITOR_KEY, JSON.stringify({ baseVersion: 0, content }));
+    await pagesAdmin.publish(content, 0);
+    const expectedCategories = copy(content.categories);
+    assert.deepEqual(withDefaults(copy(content)).categories, expectedCategories, 'defaults preserve added categories, their order, names and images');
+    assert.deepEqual((await pagesAdmin.content()).content.categories, expectedCategories, 'saving retains dynamic categories and their uploaded photo references');
+    globalThis.location.search = '?preview=draft';
+    const saved = await api.loadContent();
+    assert.deepEqual(saved.content.categories, expectedCategories, 'explicit storefront previews load the edited category order and media');
+    assert.equal(saved.content.products[0].category, category.id, 'devices retain their newly assigned category');
+    const backup = await pagesAdmin.exportDraft(content);
+    assert.deepEqual(Object.keys(backup.photos).sort(), [category.photo, content.products[0].photo].sort(), 'exports include both category and product photos');
+    const categoryData = backup.photos[category.photo];
+    assert.equal(api.photoUrl(category.photo), categoryData, 'category uploads use the same explicit-preview media resolver');
+    globalThis.location.search = '';
+    assert.deepEqual((await api.loadContent()).content.categories, seed.categories, 'public visits keep the shipped categories instead of local category edits');
+    assert.equal(api.photoUrl(category.photo), '', 'public visits do not load local category uploads');
+    globalThis.location.search = '?preview=draft';
+
+    const invalidCategoryChanges = [
+      (draft) => { draft.categories = []; },
+      (draft) => { draft.categories.push(copy(draft.categories[0])); },
+      (draft) => { draft.categories = Array.from({ length: MAX_CATEGORIES + 1 }, (_, index) => ({ id: `category-${index}`, name: { ar: 'فئة', en: 'Category' } })); },
+      (draft) => { draft.categories[0].id = 'all'; },
+      (draft) => { draft.categories[0].id = 'invalid/id'; },
+      (draft) => { draft.categories[0].id = 'a'.repeat(31); },
+      (draft) => { draft.categories[0].name.ar = '  '; },
+      (draft) => { draft.categories[0].name.en = 'a'.repeat(101); },
+      (draft) => { draft.categories[0].image = 'https://example.com/photo.webp'; },
+      (draft) => { draft.categories[0].image = 'assets/categories/../photo.webp'; },
+      (draft) => { draft.categories[0].image = 'assets/categories/picture.svg'; },
+      (draft) => { draft.categories[0].photo = 'punknown'; },
+      (draft) => { draft.categories[0].photo = false; },
+      (draft) => { draft.categories = draft.categories.filter((item) => item.id !== draft.products[0].category); },
+    ];
+    for (const mutate of invalidCategoryChanges) {
+      const invalid = copy(content);
+      mutate(invalid);
+      const before = [...values];
+      await assert.rejects(pagesAdmin.publish(invalid, 1), errorIs('invalid-draft', 400));
+      await assert.rejects(pagesAdmin.exportDraft(invalid), errorIs('invalid-draft', 400));
+      await assert.rejects(pagesAdmin.importDraft({ ...copy(backup), content: invalid }), errorIs('invalid-draft', 400));
+      assert.deepEqual([...values], before, 'invalid categories cannot replace the preview or photo bank');
+    }
+
+    // A category-only photo must survive upload cleanup and portable backups.
+    values.delete(EDITOR_KEY);
+    const unused = await pagesAdmin.uploadPhoto(makePhoto('unused'));
+    assert.equal(pagesAdmin.photoUrl(category.photo), categoryData, 'cleanup retains an uploaded picture referenced only by a category');
+    const current = await pagesAdmin.content();
+    await pagesAdmin.publish(current.content, current.version);
+    assert.equal(pagesAdmin.photoUrl(unused.id), '', 'unreferenced uploads are pruned without dropping category media');
+
+    // An unfinished category upload has the same lifetime as a device upload.
+    const pendingPhoto = await pagesAdmin.uploadPhoto(makePhoto('pending-category'));
+    const pendingDraft = copy(content);
+    pendingDraft.categories[1].photo = pendingPhoto.id;
+    values.set(EDITOR_KEY, JSON.stringify({ baseVersion: 2, content: pendingDraft }));
+    await pagesAdmin.uploadPhoto(makePhoto('temporary'));
+    assert(pagesAdmin.photoUrl(pendingPhoto.id), 'upload cleanup retains category media referenced only by an unfinished editor draft');
+    values.delete(EDITOR_KEY);
+
+    // Category and device references to one colliding ID must remap together.
+    const collision = copy(backup);
+    const replacement = `data:image/webp;base64,${Buffer.from('RIFFreplacement-categoryWEBPVP8 ').toString('base64')}`;
+    collision.photos[category.photo] = replacement;
+    collision.content.products[0].photo = category.photo;
+    const imported = await pagesAdmin.importDraft(collision);
+    const remapped = imported.categories[0].photo;
+    assert.notEqual(remapped, category.photo, 'import remaps a category photo ID when an active preview owns different bytes');
+    assert.equal(imported.products[0].photo, remapped, 'category and device references share the same remapped upload');
+    assert.equal(pagesAdmin.photoUrl(category.photo), categoryData, 'import leaves the active category picture intact until save');
+    assert.equal(pagesAdmin.photoUrl(remapped), replacement, 'the imported category resolves its distinct picture');
+    assert.deepEqual((await pagesAdmin.exportDraft(imported)).photos, { [remapped]: replacement }, 're-export includes exactly the remapped category and device picture');
+
+    await pagesAdmin.reset();
+    const restored = await pagesAdmin.importDraft(backup);
+    assert.deepEqual(restored.categories, expectedCategories, 'imports restore edited labels, category IDs, order and pictures in a cleared browser');
+    assert.equal(pagesAdmin.photoUrl(restored.categories[0].photo), categoryData, 'category photo bytes survive an export/import round trip');
+    await pagesAdmin.publish(restored, 0);
+    assert.deepEqual((await api.loadContent()).content.categories, expectedCategories, 'saving an imported draft restores its category preview');
+    while (restored.categories.length < MAX_CATEGORIES) restored.categories.push({ id: `extra-${restored.categories.length}`, name: { ar: 'فئة جديدة', en: 'Additional category' } });
+    const atLimit = await pagesAdmin.content();
+    await pagesAdmin.publish(restored, atLimit.version);
+    assert.equal((await pagesAdmin.content()).content.categories.length, MAX_CATEGORIES, 'the supported maximum category count is retained without truncation');
+  } finally {
+    values.clear();
+    for (const [key, value] of previous) values.set(key, value);
+    globalThis.location.search = '?preview=draft';
   }
 }
 
@@ -433,7 +540,7 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   const source = readFileSync(new URL('../site/admin/src/admin.js', import.meta.url), 'utf8')
     .replace(/^import[^\n]*\n/gm, '').replace(/\(async function start\(\) \{[\s\S]*$/, '');
   const context = vm.createContext({
-    ...pricing, validBatteryHealth, validBatteryCycles, conditions, conditionGroup, conditionOptions, forwardArrow, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications, applyHomePlacement,
+    ...pricing, validBatteryHealth, validBatteryCycles, conditions, conditionGroup, conditionOptions, forwardArrow, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications, applyHomePlacement, MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage,
     api, pagesAdmin, MODE: 'pages', ApiError, local, withDefaults, document,
     window: { addEventListener() {} }, console, setTimeout, clearTimeout, setInterval() {},
   });
@@ -445,7 +552,7 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   ui.state.legacyOrders = copy(legacyOrders);
   for (const language of ['ar', 'en']) {
     ui.setLanguage(language);
-    for (const view of ['orders', 'devices', 'settings']) {
+    for (const view of ['orders', 'devices', 'categories', 'settings']) {
       ui.state.view = view;
       ui.state.editing = null;
       ui.render();
@@ -463,6 +570,16 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
         assert.equal(switches.length, content.products.length, `${language}: each listed device has a home selection switch`);
         for (const [, id, attributes] of switches) assert.equal(attributes.includes(' checked'), content.products.find((product) => product.id === id).featured === true, `${language}: home switch reflects its saved selection`);
         assert(html.includes(language === 'ar' ? 'يظهر بالرئيسية' : 'Show on home page'), `${language}: list controls clearly label home selection`);
+      }
+      if (view === 'categories') {
+        assert(html.includes('data-add-category'), `${language}: categories can be added without editing a device`);
+        for (const category of content.categories) {
+          assert(html.includes(`data-category-form="${category.id}"`), `${language}: category names are directly editable`);
+          assert(html.includes(`data-category-photo="${category.id}"`), `${language}: each category has its own photo upload`);
+          const deletion = html.match(new RegExp(`<button[^>]*data-category-delete="${category.id}"[^>]*>`))?.[0] || '';
+          if (content.products.some((product) => product.category === category.id)) assert(deletion.includes(' disabled'), `${language}: deleting a populated category is blocked`);
+        }
+        assert(html.includes(language === 'ar' ? 'أضف قسماً' : 'Add category'), `${language}: category controls are translated`);
       }
       assert(html.includes('data-view="orders"'), `${language}: local orders are reachable from the editor tabs`);
       assert(!/id="(?:sign-form|password-form|logout)"|name="ordersOn"/.test(html), `${language}: no authentication or public checkout controls are shown`);
@@ -552,6 +669,9 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   await changeHome(second.id, false);
   assert(first.featured && !second.featured && !second.hidden, 'unchecking changes only this device selection and does not hide it');
   assert.deepEqual(second.variants, optionsBefore, 'quick selection preserves prices and device options');
+  ui.state.category = 'removed-category';
+  ui.render();
+  assert.equal(ui.state.category, 'all', 'replacing a category draft clears stale device filters before adding another device');
 }
 
 function verifyHomeSelections() {

@@ -214,3 +214,12 @@ This release replaces the source/date/disclaimer sections described above with r
 
 - Footer line: «متجر مستقل وغير تابع لـ Apple أو Samsung أو Huawei. الأسماء والعلامات التجارية لأصحابها.» / "Independent store, not affiliated with Apple, Samsung or Huawei. Names and trademarks belong to their owners."
 - Automated: all checks pass; all three builds succeed. Browser (Pages build): Arabic and English at 320, 390 and 1280px, no errors, no horizontal overflow.
+
+## Editable home categories and selected-device artwork — 26 October 2026
+
+- Added a bilingual Categories tab with Arabic/English names, independent category photos, add, reorder, reset photo, and deletion of empty categories. IDs stay stable; categories containing devices cannot be deleted. Up to 12 categories are supported. The home tiles and shop routes follow the saved names and order, including empty new categories.
+- Category uploads participate in the existing photo bank, export/import, conflict remapping and cleanup. Both the Pages editor and future Worker content validation accept the same category structure. Discarding or resetting a draft clears a category filter if that category no longer exists.
+- The selected iPhone 16 Pro Max uses a transparent hero asset against the existing green background. The original catalog/device photo is unchanged. Asset provenance and the image edit's limits are recorded in HERO_IPHONE_16_PRO_MAX_CUTOUT.md. The phone admin shortcut is a compact accessible icon to reduce overlap with the category tiles.
+- Automated: live and Pages builds succeed; the complete Pages checks pass, including added category validation, persistence, uploaded-photo portability, empty-category routes, custom artwork, ordering, and hero asset coverage. Existing pricing, checkout, accounts and Worker integration checks pass.
+- Browser (isolated localhost Pages build): added a test category, uploaded its photo, renamed Phones in both languages, reordered the new category, saved and reloaded, then confirmed the home tiles and empty-category link. Selected iPhone 16 Pro Max through the Devices list and checked its cutout on the 390px Arabic home. Checked category editing at 320px English, 390px Arabic and 1280px English: no horizontal document overflow, all four admin tabs fit at 320px, no broken images, no captured console warnings/errors.
+- Test content remains only on the local test origin. The owner's public-browser draft was not saved, reset or published. No shared backend deployment or physical iOS/Android testing was performed.

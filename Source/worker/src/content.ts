@@ -11,6 +11,8 @@ import { validBatteryHealth, validBatteryCycles } from '../../shared/battery.js'
 import deviceSpecifications from '../../shared/device-specs.js';
 // @ts-ignore shared home showcase ordering
 import { validHomePriority } from '../../shared/home-placement.js';
+// @ts-ignore category identifiers, bilingual labels and shipped image paths
+import { validCategories } from '../../shared/categories.js';
 
 export interface Published { version: number; content: any; fromSeed: boolean }
 
@@ -50,9 +52,13 @@ export function sanitizeContent(input: any): any {
     deliveryNote: pair(s.deliveryNote, 400), pricesNote: pair(s.pricesNote, 400), offersTitle: pair(s.offersTitle, 80),
   };
   if (Array.isArray(input)) throw new HttpError(400, 'bad-content');
-  const cats = Array.isArray(input.categories) ? input.categories.slice(0, 12) : [];
-  const categories = cats.map((c: any) => ({ id: str(c?.id, 30), name: pair(c?.name, 40) })).filter((c: any) => ID.test(c.id) && c.name.ar && c.name.en);
-  if (!categories.length) throw new HttpError(400, 'bad-content', { field: 'categories' });
+  // Reject malformed lists rather than silently dropping categories, shortening
+  // identifiers or changing the relation between a device and its category.
+  if (!validCategories(input.categories)) throw new HttpError(400, 'bad-content', { field: 'categories' });
+  const categories = input.categories.map((c: any) => {
+    if (c.photo !== undefined && c.photo !== null && c.photo !== '' && (!isStr(c.photo) || !PHOTO.test(c.photo))) throw new HttpError(400, 'bad-content', { field: 'category-photo', id: c.id });
+    return { id: c.id, name: pair(c.name, 100), image: c.image || '', photo: c.photo || '' };
+  });
   const catIds = new Set(categories.map((c: any) => c.id));
   const list = Array.isArray(input.products) ? input.products : [];
   if (list.length > 300) throw new HttpError(400, 'bad-content', { field: 'products' });

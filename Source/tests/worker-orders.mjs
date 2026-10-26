@@ -113,6 +113,31 @@ export async function verifyWorkerOrders() {
     published.products[1].variants[0].soldOut = false;
     published.products[2].variants[0].stockQuantity = MAX_STOCK_QUANTITY;
     published.products[2].variants[0].soldOut = true;
+    published.categories.reverse();
+    const customCategory = { id: 'gaming', name: { ar: 'أجهزة الألعاب', en: 'Gaming devices' }, image: 'assets/categories/airpods-pro.png', photo: randomBytes(16).toString('hex') };
+    published.categories.unshift(customCategory);
+    published.products[0].category = customCategory.id;
+    const invalidCategories = [
+      (draft) => { draft.categories = []; },
+      (draft) => { draft.categories.push(structuredClone(draft.categories[0])); },
+      (draft) => { draft.categories = Array.from({ length: 13 }, (_, index) => ({ id: `category-${index}`, name: { ar: 'فئة', en: 'Category' } })); },
+      (draft) => { draft.categories[0].id = 'all'; },
+      (draft) => { draft.categories[0].id = 'a'.repeat(31); },
+      (draft) => { draft.categories[0].name.ar = '  '; },
+      (draft) => { draft.categories[0].name.en = 'a'.repeat(101); },
+      (draft) => { draft.categories[0].image = 'https://example.com/photo.webp'; },
+      (draft) => { draft.categories[0].image = 'assets/categories/../photo.webp'; },
+      (draft) => { draft.categories[0].photo = 'p-browser-only-id'; },
+      (draft) => { draft.categories[0].photo = false; },
+      (draft) => { draft.categories = draft.categories.filter((category) => category.id !== draft.products[0].category); },
+    ];
+    for (const mutate of invalidCategories) {
+      const invalid = structuredClone(published);
+      mutate(invalid);
+      const result = await send('PUT', '/api/admin/content', { baseVersion: 0, content: invalid }, { cookie });
+      expectError(result, 400, 'bad-content');
+      assert.equal(count('content'), 0, 'malformed category lists cannot publish or advance the version');
+    }
     for (const quantity of [-1, 1.5, '2', MAX_STOCK_QUANTITY + 1]) {
       const invalidStock = structuredClone(published);
       invalidStock.products[0].variants[0].stockQuantity = quantity;
@@ -137,6 +162,9 @@ export async function verifyWorkerOrders() {
     const publicCatalog = await send('GET', '/api/content');
     assert.equal(publicCatalog.status, 200);
     assert.equal(publicCatalog.data.content.settings.ordersOn, true, 'online ordering becomes available only after publishing it');
+    assert.deepEqual(publicCatalog.data.content.categories.map((category) => category.id), published.categories.map((category) => category.id), 'publishing preserves dynamic category IDs and their chosen order');
+    assert.deepEqual(publicCatalog.data.content.categories[0], customCategory, 'published categories retain bilingual labels, shipped artwork and upload references');
+    assert.equal(publicCatalog.data.content.products[0].category, customCategory.id, 'products remain linked to added categories');
     assert.equal(publicCatalog.data.content.products.find((product) => product.id === 'airtag').variants[0].stockQuantity, 2, 'published content retains a numeric stock limit');
     assert.equal(publicCatalog.data.content.products[0].variants[0].stockQuantity, null, 'legacy options publish with an absent quantity');
     assert.equal(publicCatalog.data.content.products[0].variants[0].batteryHealth, 0, 'published content retains a supplied zero battery health');
