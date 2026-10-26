@@ -104,6 +104,8 @@ export async function verifyWorkerOrders() {
     const secondCookie = login.headers.get('Set-Cookie').split(';')[0];
     const published = structuredClone(seed);
     published.settings.ordersOn = true;
+    published.settings.siteText = { 'store.heroLine1': { ar: 'عنوان المتجر', en: 'Store headline' }, 'account.signin': { en: 'Log in' }, 'store.trust.0.1': { en: 'Edited array text' } };
+    published.settings.heroMode = 'default';
     published.products.find((product) => product.id === 'airtag').variants[0].stockQuantity = 2;
     published.products[0].variants[0].batteryHealth = 0;
     published.products[0].variants[0].batteryCycles = 0;
@@ -146,6 +148,17 @@ export async function verifyWorkerOrders() {
       assert.equal(invalidPublish.data.field, 'stock-quantity');
       assert.equal(count('content'), 0, 'invalid stock cannot publish or advance the catalog version');
     }
+    for (const [field, values, errorField] of [
+      ['siteText', [[], { unknown: { en: 'x' } }, { 'store.home': { en: 12 } }, { 'store.home': { en: 'x'.repeat(5001) } }, { 'store.home': { fr: 'Accueil' } }, JSON.parse('{"__proto__":{"en":"unsafe"}}')], 'site-text'],
+      ['heroMode', ['', false, 'custom', {}], 'hero-mode'],
+    ]) for (const value of values) {
+      const invalidText = structuredClone(published);
+      invalidText.settings[field] = value;
+      const invalidPublish = await send('PUT', '/api/admin/content', { baseVersion: 0, content: invalidText }, { cookie });
+      expectError(invalidPublish, 400, 'bad-content');
+      assert.equal(invalidPublish.data.field, errorField);
+      assert.equal(count('content'), 0, 'invalid text or animation settings cannot publish or advance the catalog version');
+    }
     for (const [field, errorField, value] of [
       ...[-1, 101, 99.5, '95'].map((value) => ['batteryHealth', 'battery-health', value]),
       ...[-1, 1.5, '12', Number.MAX_SAFE_INTEGER + 1].map((value) => ['batteryCycles', 'battery-cycles', value]),
@@ -162,6 +175,8 @@ export async function verifyWorkerOrders() {
     const publicCatalog = await send('GET', '/api/content');
     assert.equal(publicCatalog.status, 200);
     assert.equal(publicCatalog.data.content.settings.ordersOn, true, 'online ordering becomes available only after publishing it');
+    assert.deepEqual(publicCatalog.data.content.settings.siteText, published.settings.siteText, 'publishing preserves sparse bilingual public text and nested array entries');
+    assert.equal(publicCatalog.data.content.settings.heroMode, 'default', 'publishing preserves the default animation choice');
     assert.deepEqual(publicCatalog.data.content.categories.map((category) => category.id), published.categories.map((category) => category.id), 'publishing preserves dynamic category IDs and their chosen order');
     assert.deepEqual(publicCatalog.data.content.categories[0], customCategory, 'published categories retain bilingual labels, shipped artwork and upload references');
     assert.equal(publicCatalog.data.content.products[0].category, customCategory.id, 'products remain linked to added categories');

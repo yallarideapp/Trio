@@ -11,6 +11,8 @@ import { verifyPagesEditor } from './pages-editor.mjs';
 import { verifyWorkerOrders } from './worker-orders.mjs';
 import { verifyCustomerAccountUI } from './customer-account-ui.mjs';
 import { verifyBrowserShop } from './browser-shop.mjs';
+import { verifyBatteryEditorBehavior } from './battery-feature.mjs';
+import { verifySiteText } from './site-text.mjs';
 import { priceLines, normaliseMobile, fromPrice, toFils, validPrice, MAX_QTY, MAX_LINES, validStockQuantity, variantQuantityLimit, MAX_STOCK_QUANTITY } from '../shared/pricing.js';
 import { conditions, notes, warranties } from '../shared/labels.js';
 
@@ -175,6 +177,8 @@ if (process.argv.includes('--pages')) {
 try { console.log('image checks passed:', JSON.stringify(verifyCatalogImages())); } catch (error) { ok(false, error.message); }
 
 try { verifyStorefront(); } catch (error) { ok(false, `storefront: ${error.message}`); }
+try { verifyBatteryEditorBehavior(); } catch (error) { ok(false, `Battery editor: ${error.stack || error.message}`); }
+try { await verifySiteText(); } catch (error) { ok(false, `Site text: ${error.stack || error.message}`); }
 try { await verifyPagesEditor(); } catch (error) { ok(false, `Pages editor: ${error.stack || error.message}`); }
 try { await verifyWorkerOrders(); } catch (error) { ok(false, `Worker integration: ${error.stack || error.message}`); }
 try { await verifyCustomerAccountUI(); } catch (error) { ok(false, `Customer account UI: ${error.stack || error.message}`); }

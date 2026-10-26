@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { formatJD } from '../shared/pricing.js';
 import { forwardArrow } from '../shared/navigation.js';
+import { accountCopy, siteText } from '../shared/site-text.js';
 
 const alice = { id: 'a'.repeat(32), name: 'Alice', email: 'alice@example.test', mobile: '0791234567' };
 const bob = { id: 'b'.repeat(32), name: 'Bob', email: 'bob@example.test', mobile: '' };
@@ -31,8 +32,8 @@ function mount(overrides = {}) {
     ...overrides,
   };
   const source = readFileSync(new URL('../site/src/account.js', import.meta.url), 'utf8').replace(/^import[^\n]*\n/gm, '').replace(/^export /gm, '');
-  const context = vm.createContext({ api: { account }, formatJD, forwardArrow, Element, HTMLFormElement, document: { addEventListener: (name, handler) => handlers.set(name, handler) }, Intl, console });
-  vm.runInContext(source + '\nglobalThis.ui = { state, renderAccount, loadAccount, bindAccount, customerProfile, accountLabel };', context);
+  const context = vm.createContext({ api: { account }, formatJD, forwardArrow, accountCopy, siteText, Element, HTMLFormElement, document: { addEventListener: (name, handler) => handlers.set(name, handler) }, Intl, console });
+  vm.runInContext(source + '\nglobalThis.ui = { state, renderAccount, loadAccount, bindAccount, customerProfile, accountLabel, setAccountText };', context);
   const ui = context.ui;
   ui.bindAccount(() => {}); ui.renderAccount('en');
   return {
@@ -216,6 +217,13 @@ export async function verifyCustomerAccountUI() {
   assert.equal(passwordBody.current, 'old-test-password');
   assert.equal(passwordBody.password, 'a-new-valid-password');
   assert.equal(forms.state.busy, false);
+  const textUi = mount({ session: async () => session(null) });
+  await textUi.loadAccount();
+  textUi.setAccountText({ siteText: { 'account.signin': { ar: 'ادخل حسابك', en: 'Access <account>' }, 'account.demoText': { ar: 'شرح الحساب', en: 'Local account explanation' } } });
+  assert.equal(textUi.accountLabel('ar'), 'ادخل حسابك', 'header account label follows editable text');
+  assert(textUi.renderAccount('en').includes('Access &lt;account&gt;'), 'edited account text stays escaped');
+  textUi.setAccountText({});
+  assert.equal(textUi.accountLabel('en'), 'Sign in', 'reset restores default account text');
   console.log('Customer account UI passed: real Pages demo signup/signin/profile/password/checkout/history, account forms, request races,401 clearing, and connection retries');
 }
 

@@ -13,6 +13,8 @@ import deviceSpecifications from '../../shared/device-specs.js';
 import { validHomePriority } from '../../shared/home-placement.js';
 // @ts-ignore category identifiers, bilingual labels and shipped image paths
 import { validCategories } from '../../shared/categories.js';
+// @ts-ignore public plain-text overrides and home animation selection
+import { validSiteText, normalizeSiteText, validHeroMode } from '../../shared/site-text.js';
 
 export interface Published { version: number; content: any; fromSeed: boolean }
 
@@ -44,12 +46,16 @@ const IMAGE = /^assets\/devices\/[a-z0-9-]{1,60}\.(webp|png|jpg)$/;
 export function sanitizeContent(input: any): any {
   if (!input || typeof input !== 'object') throw new HttpError(400, 'bad-content');
   const s = input.settings && typeof input.settings === 'object' ? input.settings : {};
+  if (!validSiteText(s.siteText)) throw new HttpError(400, 'bad-content', { field: 'site-text' });
+  if (!validHeroMode(s.heroMode)) throw new HttpError(400, 'bad-content', { field: 'hero-mode' });
   const settings = {
     phone: str(s.phone, 20).replace(/[^\d+]/g, ''),
     whatsapp: str(s.whatsapp, 20).replace(/\D/g, ''),
     instagram: httpsUrl(s.instagram), facebook: httpsUrl(s.facebook), maps: httpsUrl(s.maps),
     address: pair(s.address, 200), ordersOn: s.ordersOn === true,
     deliveryNote: pair(s.deliveryNote, 400), pricesNote: pair(s.pricesNote, 400), offersTitle: pair(s.offersTitle, 80),
+    ...(s.siteText !== undefined && s.siteText !== null ? { siteText: normalizeSiteText(s.siteText) } : {}),
+    ...(s.heroMode !== undefined && s.heroMode !== null ? { heroMode: s.heroMode } : {}),
   };
   if (Array.isArray(input)) throw new HttpError(400, 'bad-content');
   // Reject malformed lists rather than silently dropping categories, shortening

@@ -10,23 +10,24 @@ import { conditions, conditionShort, conditionGroup, notes, warranties, governor
 import { forwardArrow } from '../shared/navigation.js';
 import { heroRigFor, heroMotionAssets } from '../site/src/hero-motion.js';
 import * as battery from '../shared/battery.js';
+import * as siteCopy from '../shared/site-text.js';
 import { existsSync, statSync } from 'node:fs';
 
 export function verifyStorefront() {
   const stored = new Map();
   const windowEvents = new Map();
-  const document = { querySelector: () => null, querySelectorAll: () => [], addEventListener() {} };
+  const document = { documentElement: {}, querySelector: () => null, querySelectorAll: () => [], addEventListener() {} };
   const location = { hash: '#/', replace(value) { this.hash = value; } };
   const context = vm.createContext({
-    ...pricing, ...battery, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates,
+    ...pricing, ...battery, ...siteCopy, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates,
     playHeroMotion: () => {},
-    renderAccount: () => '<h1>My account</h1>', loadAccount: async () => {}, bindAccount: () => {}, accountLabel: () => 'Sign in', customerProfile: () => null,
+    renderAccount: () => '<h1>My account</h1>', loadAccount: async () => {}, bindAccount: () => {}, accountLabel: () => 'Sign in', customerProfile: () => null, setAccountText: () => {},
     MODE: 'pages', api: { photoUrl: () => '' }, local: { read: (key, fallback = null) => stored.has(key) ? structuredClone(stored.get(key)) : fallback, write: (key, value) => { stored.set(key, structuredClone(value)); return true; } },
     document, location, crypto: webcrypto, window: { crypto: webcrypto, addEventListener: (name, listener) => windowEvents.set(name, listener) }, console, URLSearchParams, Intl, setTimeout, clearTimeout,
   });
   const source = readFileSync(new URL('../site/src/app.js', import.meta.url), 'utf8')
     .replace(/^import[^\n]*\n/gm, '').replace(/^start\(\);\s*$/m, '');
-  vm.runInContext(source + '\n globalThis.ui = { state, conditionChips, renderHome, renderCatalog, renderProductResults, filteredProducts, readRoute, renderDetail, renderService, renderContact, renderBag, renderCheckout, renderDone, instagramAllowed, loadBag, saveBag, cleanBag, addToBag, toggleSaved, phoneHref, phoneText };', context);
+  vm.runInContext(source + '\n globalThis.ui = { state, translateShell, batterySummary, conditionChips, renderHome, renderCatalog, renderProductResults, filteredProducts, readRoute, renderDetail, renderService, renderContact, renderBag, renderCheckout, renderDone, instagramAllowed, loadBag, saveBag, cleanBag, addToBag, toggleSaved, phoneHref, phoneText };', context);
   const ui = context.ui;
   ui.state.content = structuredClone(seed);
   // Editing a local preview must not remove a public shopping bag item or
@@ -89,6 +90,8 @@ export function verifyStorefront() {
   let productViews = 0;
   for (const language of ['ar', 'en']) {
     ui.state.language = language;
+    ui.translateShell();
+    assert.equal(document.documentElement.lang, language, `${language}: shell initializes without DOM errors`);
     const conditionFixture = structuredClone(seed.products[0]);
     conditionFixture.variants = ['new-sealed', 'new', 'like-new', 'used-agency', 'used'].map((condition, index) => ({ ...conditionFixture.variants[0], key: 'condition-' + index, price: [100, 200, 90, 95, 110][index], condition, soldOut: false }));
     ui.state.selected[conditionFixture.id] = 'condition-1';
@@ -326,6 +329,10 @@ export function verifyStorefront() {
       const fresh = device.variants.find((variant) => conditionGroup(variant.condition) === 'new');
       used[0].batteryHealth = 87; used[0].batteryCycles = 0;
       used[1].batteryHealth = 95; used[1].batteryCycles = 42;
+      const cardBattery = ui.batterySummary({ ...device, variants: [used[0]] });
+      assert(cardBattery.includes('87') || cardBattery.includes('٨٧'), `${language}: used-device cards show supplied battery health`);
+      assert(cardBattery.includes('>0<') || cardBattery.includes('>٠<'), `${language}: used-device cards preserve zero cycles`);
+      assert.equal(ui.batterySummary({ ...device, variants: [fresh] }), '', `${language}: new-device cards have no battery measurements`);
       const healthLabel = language === 'ar' ? 'صحة البطارية' : 'Battery health';
       const cycleLabel = language === 'ar' ? 'عدد دورات شحن البطارية' : 'Battery cycle count';
       const number = (value) => new Intl.NumberFormat(language === 'ar' ? 'ar-JO' : 'en').format(value);
@@ -461,6 +468,66 @@ export function verifyStorefront() {
     for (const empty of [null, undefined]) { variant.offerPrice = empty; assert(pricing.validOfferPrice(variant) && !pricing.variantHasOffer(variant), `no offer for ${empty}`); }
     for (const bad of ['', 'x', -1, 0, Infinity, variant.price + 1]) { variant.offerPrice = bad; assert(!pricing.validOfferPrice(variant), `offer ${String(bad)} refused`); }
     ui.state.bag = []; ui.state.selected = {}; ui.state.content = structuredClone(seed);
+  }
+  // Text overrides reach real templates and remain plain text in both languages.
+  for (const language of ['ar', 'en']) {
+    ui.state.content = structuredClone(seed); ui.state.language = language; ui.state.heroCategory = 'phones';
+    const marker = `${language} <edited & text>`;
+    ui.state.content.settings.siteText = Object.fromEntries(['store.heroLine1', 'store.add', 'store.serviceText', 'store.serviceSteps.0.0', 'extra.storyEyebrow', 'store.trust.0.0'].map((key) => [key, { [language]: marker }]));
+    const escaped = `${language} &lt;edited &amp; text&gt;`;
+    assert(ui.renderHome().includes(escaped), `${language}: editable home copy is escaped`);
+    assert(ui.renderService().includes(escaped), `${language}: service text and step overrides render`);
+    ui.state.route = { name: 'p', params: new URLSearchParams('cond=new') };
+    assert(ui.renderDetail('iphone-17-pro').includes(escaped), `${language}: purchase button text override renders`);
+    assert(!ui.renderHome().includes(marker), `${language}: edits cannot inject HTML`);
+    ui.state.content.settings.siteText = {};
+    assert(!ui.renderHome().includes(escaped), `${language}: reset restores default copy`);
+  }
+  // Shell text, placeholders and labels use the same escaped text registry.
+  {
+    const node = (attributes = {}, dataset = {}) => ({ dataset, textContent: '', getAttribute: (key) => attributes[key] ?? null, setAttribute: (key, value) => { attributes[key] = value; } });
+    const home = node({ 'data-ar': 'الرئيسية', 'data-en': 'Home' });
+    const placeholder = node({ 'data-ar-placeholder': 'ابحث عن جهاز…', 'data-en-placeholder': 'Search devices…' });
+    const corner = node({ 'data-ar-label': 'لوحة التحكم', 'data-en-label': 'Admin panel' });
+    const brand = node({}, { siteText: 'brandName' });
+    const queryAll = document.querySelectorAll;
+    document.querySelectorAll = (selector) => ({ '[data-ar][data-en]': [home], '[data-ar-placeholder][data-en-placeholder]': [placeholder], '[data-ar-label][data-en-label]': [corner], '[data-site-text]': [brand] })[selector] || [];
+    ui.state.content = structuredClone(seed);
+    for (const language of ['ar', 'en']) {
+      ui.state.language = language;
+      ui.state.content.settings.siteText = {
+        'store.home': { [language]: 'Edited home' },
+        'extra.brandName': { [language]: 'Edited brand' },
+        [siteCopy.shellTextId('ابحث عن جهاز…', 'Search devices…', 'placeholder')]: { [language]: 'Edited search' },
+        [siteCopy.shellTextId('لوحة التحكم', 'Admin panel', 'label')]: { [language]: 'Edited admin label' },
+      };
+      ui.translateShell();
+      assert.equal(home.textContent, 'Edited home', `${language}: navigation reflects edited text`);
+      assert.equal(brand.textContent, 'Edited brand', `${language}: nested brand text is editable`);
+      assert.equal(placeholder.getAttribute('placeholder'), 'Edited search', `${language}: search placeholder is editable`);
+      assert.equal(corner.getAttribute('aria-label'), 'Edited admin label', `${language}: accessibility labels are editable`);
+    }
+    document.querySelectorAll = queryAll;
+  }
+  // Restore the four shipped animated images without changing selected devices.
+  {
+    ui.state.content = structuredClone(seed); ui.state.language = 'en';
+    const selected = ui.state.content.products.find((p) => p.id === 'iphone-16-pro-max');
+    selected.featured = true; selected.homePriority = 900000; selected.photo = 'custom-photo';
+    const snapshot = JSON.stringify(ui.state.content.products);
+    ui.state.content.settings.heroMode = 'default';
+    for (const category of ['phones', 'laptops', 'watches', 'audio']) {
+      ui.state.heroCategory = category;
+      const html = ui.renderHome();
+      const showcase = html.slice(html.indexOf('id="hero-showcase"'), html.indexOf('<div class="home-content"'));
+      const src = showcase.match(/<img src="([^"]+)"/)[1];
+      assert(heroRigFor(src), `${category}: default mode restores matching animated image`);
+      assert(showcase.includes(`href="#/shop/${category}"`), `${category}: default artwork links to its category`);
+      assert(!showcase.includes('JD '), `${category}: illustration does not claim a selected-device price`);
+    }
+    assert.equal(JSON.stringify(ui.state.content.products), snapshot, 'restoring default artwork leaves selections and photos intact');
+    ui.state.content.settings.heroMode = 'selected'; ui.state.heroCategory = 'phones';
+    assert(ui.renderHome().includes('iPhone 16 Pro Max'), 'selected devices remain available after default mode');
   }
   // Hero motion: each default hero photo (phones, laptops, watches, audio) has its animation layers.
   {

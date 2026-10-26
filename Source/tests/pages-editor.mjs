@@ -15,6 +15,7 @@ import { pagesAdmin } from '../site/admin/src/pages-store.js';
 import { PREVIEW_KEY, PHOTO_KEY, EDITOR_KEY } from '../site/src/pages-preview.js';
 import { applyHomePlacement, nextHomePriority, validHomePriority } from '../shared/home-placement.js';
 import { MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage } from '../shared/categories.js';
+import { siteTextEntries, siteText, SITE_TEXT_LIMIT, validSiteText, validHeroMode } from '../shared/site-text.js';
 
 const copy = (value) => structuredClone(value);
 const errorIs = (code, status) => (error) => error.code === code && error.status === status;
@@ -540,11 +541,11 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   const source = readFileSync(new URL('../site/admin/src/admin.js', import.meta.url), 'utf8')
     .replace(/^import[^\n]*\n/gm, '').replace(/\(async function start\(\) \{[\s\S]*$/, '');
   const context = vm.createContext({
-    ...pricing, validBatteryHealth, validBatteryCycles, conditions, conditionGroup, conditionOptions, forwardArrow, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications, applyHomePlacement, MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage,
+    ...pricing, validBatteryHealth, validBatteryCycles, conditions, conditionGroup, conditionOptions, forwardArrow, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications, applyHomePlacement, MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage, siteTextEntries, siteText, SITE_TEXT_LIMIT, validSiteText, validHeroMode,
     api, pagesAdmin, MODE: 'pages', ApiError, local, withDefaults, document,
-    window: { addEventListener() {} }, console, setTimeout, clearTimeout, setInterval() {},
+    window: { addEventListener() {} }, Element: class {}, console, setTimeout, clearTimeout, setInterval() {},
   });
-  vm.runInContext(source + '\n globalThis.ui = { state, render, setLanguage: (value) => { lang = value; } };', context);
+  vm.runInContext(source + '\n globalThis.ui = { state, render, readWebsiteTexts, textValue, validate, setLanguage: (value) => { lang = value; } };', context);
   const { ui } = context;
   ui.state.draft = copy(content);
   ui.state.published = copy(content);
@@ -570,6 +571,15 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
         assert.equal(switches.length, content.products.length, `${language}: each listed device has a home selection switch`);
         for (const [, id, attributes] of switches) assert.equal(attributes.includes(' checked'), content.products.find((product) => product.id === id).featured === true, `${language}: home switch reflects its saved selection`);
         assert(html.includes(language === 'ar' ? 'يظهر بالرئيسية' : 'Show on home page'), `${language}: list controls clearly label home selection`);
+        for (const [index, product] of content.products.entries()) if (product.variants.some((variant) => conditionGroup(variant.condition) === 'like-new')) assert(html.includes(`data-battery-edit="${index}"`), `${language}: used devices expose battery editing directly from the list`);
+      }
+      if (view === 'settings') {
+        assert(html.includes('id="site-text-search"'), `${language}: website copy can be searched`);
+        for (const entry of siteTextEntries) for (const locale of ['ar', 'en']) assert(html.includes(`name="siteText.${entry.id}.${locale}"`), `${language}: ${entry.id} is editable in ${locale}`);
+        assert(html.includes('data-reset-all-text') && html.includes('data-reset-text="store.offersTitle"'), `${language}: default text can be restored per item or all at once`);
+        assert(html.includes('data-hero-mode="default"') && html.includes('data-hero-mode="selected"'), `${language}: default animation and device selections are reversible choices`);
+        assert(!html.includes('name="offersTitle.ar"'), `${language}: offers heading has one editor rather than conflicting duplicate controls`);
+        assert(html.includes(language === 'ar' ? 'نصوص الموقع' : 'Website texts'), `${language}: text editor title is translated`);
       }
       if (view === 'categories') {
         assert(html.includes('data-add-category'), `${language}: categories can be added without editing a device`);
@@ -656,7 +666,9 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   const optionsBefore = copy(second.variants);
   const previewBefore = copy((await pagesAdmin.content()).content);
   const changeHome = (id, checked) => listeners.change({ target: { dataset: { homeDevice: id }, checked, closest: () => null } });
+  ui.state.draft.settings.heroMode = 'default';
   await changeHome(second.id, true);
+  assert.equal(ui.state.draft.settings.heroMode, 'selected', 'selecting a home device activates custom device presentation');
   assert(first.featured && second.featured, 'quick home selection preserves earlier selected devices');
   assert(second.homePriority > first.homePriority && !second.hidden, 'quick home selection promotes and unhides the actual product after filtering/reordering');
   assert.equal(ui.state.query, second.name.en, 'quick selections preserve search');
@@ -669,6 +681,33 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   await changeHome(second.id, false);
   assert(first.featured && !second.featured && !second.hidden, 'unchecking changes only this device selection and does not hide it');
   assert.deepEqual(second.variants, optionsBefore, 'quick selection preserves prices and device options');
+  const textFields = Object.fromEntries(siteTextEntries.flatMap((entry) => ['ar', 'en'].map((language) => [`siteText.${entry.id}.${language}`, { value: ui.textValue(entry, language) }])));
+  textFields['siteText.store.home.ar'].value = '<strong>واجهة جديدة</strong>';
+  textFields['siteText.store.home.en'].value = 'A new home';
+  ui.readWebsiteTexts({ elements: textFields });
+  assert.equal(ui.state.draft.settings.siteText['store.home'].ar, '<strong>واجهة جديدة</strong>', 'the text editor stores literal text for escaped storefront rendering');
+  assert.equal(ui.state.draft.settings.siteText['store.home'].en, 'A new home', 'the text editor preserves independent bilingual edits');
+  assert.equal(Object.keys(ui.state.draft.settings.siteText).length, 1, 'unchanged defaults are not expanded into hundreds of overrides');
+  const preservedProducts = copy(ui.state.draft.products);
+  const preservedCategories = copy(ui.state.draft.categories);
+  const preservedPhone = ui.state.draft.settings.phone;
+  const clickControl = async (selector, dataset = {}) => {
+    const target = new context.Element();
+    target.closest = (value) => value === selector ? { dataset } : null;
+    await listeners.click({ target });
+  };
+  await clickControl('[data-hero-mode]', { heroMode: 'default' });
+  assert.equal(ui.state.draft.settings.heroMode, 'default', 'the default-animation control changes only the presentation mode');
+  assert.deepEqual(ui.state.draft.products, preservedProducts, 'restoring default animation keeps products, uploaded photo references and home selections');
+  assert.deepEqual(ui.state.draft.categories, preservedCategories, 'restoring default animation keeps category names, photos and order');
+  await clickControl('[data-reset-text]', { resetText: 'store.home' });
+  assert(!ui.state.draft.settings.siteText?.['store.home'], 'per-text reset removes just that text override');
+  ui.state.draft.settings.siteText = { 'store.home': { en: 'Edited home' }, 'store.offersTitle': { ar: 'عرض معدل' } };
+  await clickControl('[data-reset-all-text]');
+  assert(!ui.state.draft.settings.siteText, 'reset all removes the sparse text overrides');
+  assert(!ui.state.draft.settings.offersTitle, 'reset all also clears the legacy offers heading fallback');
+  assert.equal(ui.state.draft.settings.phone, preservedPhone, 'text reset keeps public contact details');
+  assert.deepEqual(ui.state.draft.products, preservedProducts, 'text reset never removes device content or prices');
   ui.state.category = 'removed-category';
   ui.render();
   assert.equal(ui.state.category, 'all', 'replacing a category draft clears stale device filters before adding another device');

@@ -7,6 +7,7 @@ import deviceSpecifications from '../../../shared/device-specs.js';
 import { applyHomePlacement } from '../../../shared/home-placement.js';
 import { validBatteryHealth, validBatteryCycles } from '../../../shared/battery.js';
 import { MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage } from '../../../shared/categories.js';
+import { siteTextEntries, siteText, SITE_TEXT_LIMIT, validSiteText, validHeroMode } from '../../../shared/site-text.js';
 
 const IS_PAGES = MODE === 'pages';
 const USE_TECHNICAL = MODE !== 'demo';
@@ -96,6 +97,12 @@ const AR = {
   'devices in this category': 'جهاز في هذا القسم', 'Move its devices to another category before deleting it.': 'انقل أجهزة هذا القسم إلى قسم آخر قبل حذفه.', 'Keep at least one category.': 'يجب إبقاء قسم واحد على الأقل.',
   'Delete this empty category?': 'هل تريد حذف هذا القسم الفارغ؟', 'Category added. Add its photo or assign devices to it.': 'أُضيف القسم. ارفع صورته أو انقل أجهزة إليه.',
   'Category names are required in both languages.': 'اسم القسم مطلوب بالعربي والإنجليزي.', 'Check category names, ids and photos. Keep between 1 and {max} categories.': 'تحقق من أسماء الأقسام ورموزها وصورها. يجب أن يكون عدد الأقسام بين 1 و{max}.',
+  'Website texts': 'نصوص الموقع', 'Search website texts': 'ابحث في نصوص الموقع', 'Edit the public website in Arabic and English. Device names, descriptions and category names are edited in their own tabs.': 'عدّل نصوص واجهة الموقع بالعربي والإنجليزي. أسماء الأجهزة ومواصفاتها وأسماء الأقسام تُعدّل من تبويباتها.',
+  'Navigation and footer': 'التنقل وتذييل الموقع', 'Storefront': 'واجهة المتجر', 'Customer accounts': 'حسابات العملاء', 'Device and order labels': 'تسميات الأجهزة والطلبات', 'Page content': 'محتوى الصفحات',
+  'Restore default text': 'استعادة النص الافتراضي', 'Restore all default texts': 'استعادة كل النصوص الافتراضية', 'Restore all website texts? Contact details, devices, prices and photos are kept.': 'هل تريد استعادة نصوص الموقع الافتراضية؟ تبقى معلومات التواصل والأجهزة والأسعار والصور محفوظة.',
+  'Text restored. Save your changes to apply it.': 'استُعيد النص الافتراضي. احفظ التعديلات لتطبيقه.', 'Default website texts restored. Save your changes to apply them.': 'استُعيدت نصوص الموقع الافتراضية. احفظ التعديلات لتطبيقها.', 'Edited': 'معدّل', 'Default': 'افتراضي', 'texts': 'نص', 'No matching texts.': 'لا توجد نصوص مطابقة.', 'Keep the placeholders unchanged: {tokens}': 'أبقِ الرموز كما هي: {tokens}',
+  'Home presentation': 'عرض الصفحة الرئيسية', 'Restore default animations and pictures': 'استعادة الحركة والصور الافتراضية', 'Use selected devices': 'عرض الأجهزة المحددة', 'Default animations and pictures are active.': 'الحركة والصور الافتراضية مفعّلة.', 'Your selected devices are active.': 'الأجهزة التي حددتها مفعّلة.', 'Restore the original animated showcase without deleting devices, uploaded pictures or home selections. Selecting a device again switches back to your selected devices.': 'استعد العرض المتحرك الأصلي بدون حذف الأجهزة أو الصور المرفوعة أو اختيارات الرئيسية. اختيار جهاز مرة أخرى يفعّل عرض الأجهزة المحددة.', 'Home presentation updated. Save your changes to apply it.': 'حُدّث عرض الرئيسية. احفظ التعديلات لتطبيقه.', 'Check website text lengths and home presentation.': 'تحقق من طول نصوص الموقع واختيار عرض الرئيسية.',
+  'Battery details': 'بيانات البطارية', 'Choose Used like new to enter battery health and cycles.': 'اختر مستعمل بحالة الجديد لإدخال صحة البطارية وعدد دورات الشحن.', 'Used options include optional battery health and cycle readings below.': 'تتضمن خيارات الأجهزة المستعملة حقولاً اختيارية لصحة البطارية وعدد دورات الشحن أدناه.',
 };
 let lang = local.read('trio-admin-lang') === 'en' ? 'en' : 'ar';
 const t = (s, vars = {}) => (lang === 'ar' ? AR[s] || s : ({ new: 'New', confirmed: 'Confirmed', out: 'Out for delivery', delivered: 'Delivered', cancelled: 'Cancelled' }[s] || s)).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
@@ -103,7 +110,7 @@ const L = (o) => (o && typeof o === 'object' ? o[lang] || o.ar || o.en || '' : S
 const money = (jd) => formatJD(toFils(jd), lang);
 
 const initialView = IS_PAGES ? ({ '#orders': 'orders', '#categories': 'categories', '#settings': 'settings' }[globalThis.location?.hash] || 'devices') : 'orders';
-const state = { view: initialView, signedIn: IS_PAGES, setup: true, published: null, version: 0, draft: null, dirty: false, orders: [], legacyOrders: [], orderFilter: '', orderOpen: null, orderQuery: '', orderBefore: null, editing: null, category: 'all', query: '', addingCategory: null, message: '' };
+const state = { view: initialView, signedIn: IS_PAGES, setup: true, published: null, version: 0, draft: null, dirty: false, orders: [], legacyOrders: [], orderFilter: '', orderOpen: null, orderQuery: '', orderBefore: null, editing: null, category: 'all', query: '', addingCategory: null, message: '', textQuery: '' };
 
 function saveDraft() {
   state.dirty = JSON.stringify(state.draft) !== JSON.stringify(state.published);
@@ -156,6 +163,7 @@ function render() {
   if (!state.signedIn) { root.innerHTML = signInView(); return; }
   root.innerHTML = `${topBar()}<main class="wrap">${IS_PAGES && state.view !== 'orders' ? previewTools() : ''}${state.view === 'orders' ? ordersView() : state.view === 'devices' ? (state.editing ? editView() : devicesView()) : state.view === 'categories' ? categoriesView() : settingsView()}</main><p id="flash" class="flash" role="status" hidden></p>`;
   updateBar();
+  if (state.view === 'settings') filterWebsiteTexts();
 }
 function signInView() {
   const setup = !state.setup;
@@ -229,7 +237,7 @@ function devicesView() {
   <div class="chips">${[['all', t('All')], ...c.categories.map((x) => [x.id, L(x.name)])].map(([id, label]) => `<button type="button" class="chip" data-cat="${esc(id)}" aria-pressed="${state.category === id}">${esc(label)} <span>${c.products.filter((p) => id === 'all' || p.category === id).length}</span></button>`).join('')}</div>
   <label class="f search"><span class="sr">${esc(t('Search devices'))}</span><input id="device-search" type="search" placeholder="${esc(t('Search devices'))}" value="${esc(state.query)}"></label>
   <p class="muted home-list-help">${esc(t('Choose home devices directly from this list. The latest selection leads its category.'))} ${esc(t(IS_PAGES ? 'Save preview to see your home selections.' : 'Publish to show your home selections.'))}</p>
-  <ul class="rows">${list.map((p) => { const low = fromPrice(p); const i = c.products.indexOf(p); return `<li class="row device-row"><span class="thumb">${thumb(p)}</span><span class="d-main"><strong dir="auto">${esc(L(p.name))}</strong><small>${esc(p.brand)} · ${p.variants.length} ${esc(t('options'))}${low !== null ? ` · ${esc(t('from'))} ${esc(formatJD(low, lang))}` : ''}</small><span class="flags">${p.hidden ? `<em class="flag off">${esc(t('Hidden'))}</em>` : ''}${inOffers(p) ? `<em class="flag">${esc(t('Offer'))}</em>` : ''}</span></span><span class="d-actions"><label class="home-toggle"><input type="checkbox" role="switch" data-home-device="${esc(p.id)}"${p.featured ? ' checked' : ''}><span>${esc(t('Show on home page'))}<span class="sr">: ${esc(L(p.name))}</span></span></label><button type="button" class="btn small" data-edit="${i}">${esc(t('Edit'))}</button><button type="button" class="btn ghost small icon" data-move="${i}" data-dir="-1" aria-label="${esc(t('Move up'))}"${i === 0 ? ' disabled' : ''}>↑</button><button type="button" class="btn ghost small icon" data-move="${i}" data-dir="1" aria-label="${esc(t('Move down'))}"${i === c.products.length - 1 ? ' disabled' : ''}>↓</button></span></li>`; }).join('')}</ul>`;
+  <ul class="rows">${list.map((p) => { const low = fromPrice(p); const i = c.products.indexOf(p); return `<li class="row device-row"><span class="thumb">${thumb(p)}</span><span class="d-main"><strong dir="auto">${esc(L(p.name))}</strong><small>${esc(p.brand)} · ${p.variants.length} ${esc(t('options'))}${low !== null ? ` · ${esc(t('from'))} ${esc(formatJD(low, lang))}` : ''}</small><span class="flags">${p.hidden ? `<em class="flag off">${esc(t('Hidden'))}</em>` : ''}${inOffers(p) ? `<em class="flag">${esc(t('Offer'))}</em>` : ''}</span></span><span class="d-actions"><label class="home-toggle"><input type="checkbox" role="switch" data-home-device="${esc(p.id)}"${p.featured ? ' checked' : ''}><span>${esc(t('Show on home page'))}<span class="sr">: ${esc(L(p.name))}</span></span></label><button type="button" class="btn small" data-edit="${i}">${esc(t('Edit'))}</button>${p.variants.some((v) => conditionGroup(v.condition) === 'like-new') ? `<button type="button" class="btn ghost small battery-shortcut" data-battery-edit="${i}">${esc(t('Battery details'))}</button>` : ''}<button type="button" class="btn ghost small icon" data-move="${i}" data-dir="-1" aria-label="${esc(t('Move up'))}"${i === 0 ? ' disabled' : ''}>↑</button><button type="button" class="btn ghost small icon" data-move="${i}" data-dir="1" aria-label="${esc(t('Move down'))}"${i === c.products.length - 1 ? ' disabled' : ''}>↓</button></span></li>`; }).join('')}</ul>`;
 }
 function photoSrc(p) { if (p.photo) { const u = IS_PAGES ? adminApi.photoUrl(p.photo) : api.photoUrl(p.photo); if (u) return u; } return p.image ? `../${p.image}` : ''; }
 function thumb(p) { const s = photoSrc(p); return s ? `<img src="${esc(s)}" alt="" loading="lazy">` : `<span class="noimg">${esc(p.brand.slice(0, 1))}</span>`; }
@@ -245,10 +253,11 @@ function editView() {
   const sel = (name, value, options) => `<select name="${name}">${options.map(([v, l]) => `<option value="${esc(v)}"${v === value ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   const warOpts = Object.keys(warranties).map((k) => [k, k ? L(warranties[k]) : t('none')]);
   const batteryFields = (v, i) => `<fieldset class="battery-fields" data-battery-fields="${i}"${conditionGroup(v.condition) === 'like-new' ? '' : ' hidden disabled'}><legend>${esc(t('Battery condition'))}</legend><label class="f"><span>${esc(t('Battery health (%) (optional)'))}</span><input name="v.${i}.batteryHealth" type="number" inputmode="numeric" min="0" max="100" step="1" placeholder="${esc(t('Not provided'))}" value="${esc(v.batteryHealth ?? '')}" dir="ltr"${validBatteryHealth(v.batteryHealth) ? '' : ' aria-invalid="true"'}></label><label class="f"><span>${esc(t('Battery cycles (optional)'))}</span><input name="v.${i}.batteryCycles" type="number" inputmode="numeric" min="0" max="${Number.MAX_SAFE_INTEGER}" step="1" placeholder="${esc(t('Not provided'))}" value="${esc(v.batteryCycles ?? '')}" dir="ltr"${validBatteryCycles(v.batteryCycles) ? '' : ' aria-invalid="true"'}></label><p class="muted small">${esc(t('Leave blank if unknown. Enter the readings from this device.'))}</p></fieldset>`;
-  const optionsSection = `<section class="card device-options"><h2>${esc(t('Options and prices'))}</h2><p class="muted condition-help">${esc(t('Choose New or Used like new for each option.'))}</p><div class="variants">${p.variants.map((v, i) => `<div class="variant"><fieldset class="condition-choice"><legend>${esc(t('Condition'))} · ${esc(t('Option'))} ${i + 1}</legend><div class="condition-options">${Object.entries(conditionOptions).map(([key, label]) => `<label class="condition-option"><input type="radio" name="v.${i}.condition" value="${key}"${conditionGroup(v.condition) === key ? ' checked' : ''}><span>${esc(L(label))}</span></label>`).join('')}</div></fieldset><label class="f"><span>${esc(t('Storage / size'))}</span><input name="v.${i}.storage" value="${esc(v.storage)}" dir="ltr"></label><label class="f"><span>${esc(t('Warranty'))}</span>${sel(`v.${i}.warranty`, v.warranty || '', warOpts)}</label><label class="f price"><span>${esc(t('Price (JD)'))}</span><input name="v.${i}.price" type="number" inputmode="decimal" min="0.001" step="0.001" value="${esc(v.price ?? '')}" dir="ltr"${validPrice(v.price) ? '' : ' aria-invalid="true"'}></label><label class="f price offer-price"><span>${esc(t('Offer price (JD, optional)'))}</span><input name="v.${i}.offerPrice" type="number" inputmode="decimal" min="0.001" step="0.001" value="${esc(v.offerPrice ?? '')}" dir="ltr"${validOfferPrice(v) ? '' : ' aria-invalid="true"'}><small>${esc(t('Leave blank for no offer. It must be lower than the price; the old price shows crossed out.'))}</small></label>
+  const optionsSection = `<section class="card device-options"><h2>${esc(t('Options and prices'))}</h2><p class="muted condition-help">${esc(t('Choose New or Used like new for each option.'))} ${esc(t('Choose Used like new to enter battery health and cycles.'))}</p><div class="variants">${p.variants.map((v, i) => `<div class="variant"><fieldset class="condition-choice"><legend>${esc(t('Condition'))} · ${esc(t('Option'))} ${i + 1}</legend><div class="condition-options">${Object.entries(conditionOptions).map(([key, label]) => `<label class="condition-option"><input type="radio" name="v.${i}.condition" value="${key}"${conditionGroup(v.condition) === key ? ' checked' : ''}><span>${esc(L(label))}</span></label>`).join('')}</div></fieldset><label class="f"><span>${esc(t('Storage / size'))}</span><input name="v.${i}.storage" value="${esc(v.storage)}" dir="ltr"></label><label class="f"><span>${esc(t('Warranty'))}</span>${sel(`v.${i}.warranty`, v.warranty || '', warOpts)}</label><label class="f price"><span>${esc(t('Price (JD)'))}</span><input name="v.${i}.price" type="number" inputmode="decimal" min="0.001" step="0.001" value="${esc(v.price ?? '')}" dir="ltr"${validPrice(v.price) ? '' : ' aria-invalid="true"'}></label><label class="f price offer-price"><span>${esc(t('Offer price (JD, optional)'))}</span><input name="v.${i}.offerPrice" type="number" inputmode="decimal" min="0.001" step="0.001" value="${esc(v.offerPrice ?? '')}" dir="ltr"${validOfferPrice(v) ? '' : ' aria-invalid="true"'}><small>${esc(t('Leave blank for no offer. It must be lower than the price; the old price shows crossed out.'))}</small></label>
   ${batteryFields(v, i)}<div class="stock-fields"><fieldset class="stock-status"><legend>${esc(t('Availability'))}</legend><label class="stock-toggle"><input type="checkbox" name="v.${i}.soldOut"${v.soldOut ? ' checked' : ''}><span>${esc(t('Out of stock'))}</span></label></fieldset><label class="f stock-quantity"><span>${esc(t('Stock quantity (optional)'))}</span><input name="v.${i}.stockQuantity" type="number" inputmode="numeric" min="0" max="${MAX_STOCK_QUANTITY}" step="1" placeholder="${esc(t('Not tracked'))}" value="${esc(v.stockQuantity ?? '')}" dir="ltr"${validStockQuantity(v.stockQuantity) ? '' : ' aria-invalid="true"'}><small>${esc(t('Leave blank for no stock limit. Enter 0 for out of stock.'))} ${esc(t('Update this quantity when your stock changes.'))}</small></label></div>
   <div class="checks small">${Object.keys(noteLabels).map((n) => `<label><input type="checkbox" name="v.${i}.note.${n}"${(v.notes || []).includes(n) ? ' checked' : ''}> ${esc(L(noteLabels[n]))}</label>`).join('')}</div><button type="button" class="btn ghost small" data-remove-variant="${i}"${p.variants.length < 2 ? ' disabled' : ''}>${esc(t('Remove'))}</button></div>`).join('')}</div><button type="button" class="btn small" data-add-variant>${esc(t('Add option'))}</button></section>`;
   return `<div class="head"><button type="button" class="btn ghost small" data-close-edit>← ${esc(t('Done'))}</button><h1 dir="auto">${esc(L(p.name) || t('Add device'))}</h1><div class="btns"><button type="button" class="btn ghost small" data-duplicate>${esc(t('Duplicate'))}</button><button type="button" class="btn danger small" data-delete>${esc(t('Delete'))}</button></div></div>
+  ${p.variants.some((v) => conditionGroup(v.condition) === 'like-new') ? `<aside class="battery-edit-hint"><p>${esc(t('Used options include optional battery health and cycle readings below.'))}</p><button type="button" class="btn ghost small" data-focus-battery>${esc(t('Battery details'))}</button></aside>` : ''}
   <form id="device-form" class="edit" autocomplete="off">${optionsSection}<div class="grid2"><section class="card"><div class="grid2 tight">${field('Name (Arabic)', 'name.ar', p.name.ar, { dir: 'auto' })}${field('Name (English)', 'name.en', p.name.en, { dir: 'ltr' })}${field('Brand', 'brand', p.brand, { dir: 'ltr' })}<label class="f"><span>${esc(t('Category'))}</span>${sel('category', p.category, state.draft.categories.map((c) => [c.id, L(c.name)]))}</label></div>
   ${USE_TECHNICAL ? `${field('Summary (Arabic)', 'technical.summary.ar', p.technical?.summary?.ar || '', { type: 'textarea', dir: 'rtl', attrs: 'maxlength="1200"' })}${field('Summary (English)', 'technical.summary.en', p.technical?.summary?.en || '', { type: 'textarea', dir: 'ltr', attrs: 'maxlength="1200"' })}` : `${field('Short line (Arabic)', 'tagline.ar', p.tagline?.ar || '')}${field('Short line (English)', 'tagline.en', p.tagline?.en || '', { dir: 'ltr' })}${field('About (Arabic)', 'about.ar', p.about?.ar || '', { type: 'textarea' })}${field('About (English)', 'about.en', p.about?.en || '', { type: 'textarea', dir: 'ltr' })}`}
   <div class="checks"><label><input type="checkbox" name="offer"${p.offer ? ' checked' : ''}> ${esc(t('Show in offers'))}</label><label><input type="checkbox" name="featured"${p.featured ? ' checked' : ''}> ${esc(t('Show on home page'))}</label><label><input type="checkbox" name="hidden"${p.hidden ? ' checked' : ''}> ${esc(t('Hide from the site'))}</label></div>
@@ -266,7 +275,9 @@ function readDeviceForm(form) {
   const get = (n) => form.elements[n];
   p.name = { ar: get('name.ar').value.trim(), en: get('name.en').value.trim() };
   p.brand = get('brand').value.trim();
+  const newlySelected = get('featured').checked && (!p.featured || p.category !== get('category').value);
   applyHomePlacement(p, state.draft.products, { category: get('category').value, featured: get('featured').checked, hidden: get('hidden').checked });
+  if (newlySelected) state.draft.settings.heroMode = 'selected';
   get('hidden').checked = p.hidden;
   if (USE_TECHNICAL) {
     p.technical ||= { summary: { ar: '', en: '' }, specs: [] };
@@ -370,25 +381,89 @@ function nextCategoryId(name) {
 }
 
 // ---------- settings ----------
+const textSections = { shell: 'Navigation and footer', store: 'Storefront', account: 'Customer accounts', labels: 'Device and order labels', extra: 'Page content' };
+function textValue(entry, language) {
+  const fallback = entry.id === 'store.offersTitle' ? state.draft.settings.offersTitle?.[language] || entry.defaults[language] : entry.defaults[language];
+  return siteText(state.draft.settings, entry.id, language, fallback);
+}
+function textEntryEdited(entry) {
+  return !!state.draft.settings.siteText?.[entry.id] || (entry.id === 'store.offersTitle' && ['ar', 'en'].some((language) => state.draft.settings.offersTitle?.[language] && state.draft.settings.offersTitle[language] !== entry.defaults[language]));
+}
+function websiteTextsView() {
+  const sections = [...new Set(siteTextEntries.map((entry) => entry.section))];
+  return `<section class="card website-texts" aria-labelledby="website-text-title"><div class="head"><h2 id="website-text-title">${esc(t('Website texts'))}</h2><button type="button" class="btn ghost small" data-reset-all-text>${esc(t('Restore all default texts'))}</button></div><p class="muted">${esc(t('Edit the public website in Arabic and English. Device names, descriptions and category names are edited in their own tabs.'))}</p><label class="f text-search"><span>${esc(t('Search website texts'))}</span><input type="search" id="site-text-search" value="${esc(state.textQuery)}" placeholder="${esc(t('Search website texts'))}"></label><p class="muted small" data-text-results role="status"></p><p class="empty" data-text-empty hidden>${esc(t('No matching texts.'))}</p><div class="text-sections">${sections.map((section) => {
+    const entries = siteTextEntries.filter((entry) => entry.section === section);
+    return `<details class="text-section" data-text-section="${esc(section)}"><summary>${esc(t(textSections[section] || section))}<span>${entries.length} ${esc(t('texts'))}</span></summary><div class="text-section-entries">${entries.map((entry) => {
+      const edited = textEntryEdited(entry);
+      const tokens = [...new Set(Object.values(entry.defaults).join(' ').match(/\{[\w]+\}/g) || [])];
+      const search = [entry.id, ...Object.values(entry.defaults)].join(' ').toLowerCase();
+      return `<article class="text-entry" data-text-entry="${esc(entry.id)}" data-text-search="${esc(search)}"><div class="text-entry-head"><strong dir="auto">${esc(entry.defaults[lang] || entry.id)}</strong><span class="text-custom-state${edited ? ' is-edited' : ''}">${esc(t(edited ? 'Edited' : 'Default'))}</span><button type="button" class="btn ghost small" data-reset-text="${esc(entry.id)}">${esc(t('Restore default text'))}</button></div><div class="grid2 tight">${field('Arabic', `siteText.${entry.id}.ar`, textValue(entry, 'ar'), { type: 'textarea', dir: 'rtl', attrs: `maxlength="${SITE_TEXT_LIMIT}" data-site-text="${esc(entry.id)}" data-text-language="ar"` })}${field('English', `siteText.${entry.id}.en`, textValue(entry, 'en'), { type: 'textarea', dir: 'ltr', attrs: `maxlength="${SITE_TEXT_LIMIT}" data-site-text="${esc(entry.id)}" data-text-language="en"` })}</div>${tokens.length ? `<p class="muted small" dir="auto">${esc(t('Keep the placeholders unchanged: {tokens}', { tokens: tokens.join(' · ') }))}</p>` : ''}</article>`;
+    }).join('')}</div></details>`;
+  }).join('')}</div></section>`;
+}
+function filterWebsiteTexts() {
+  const query = state.textQuery.trim().toLowerCase();
+  let matches = 0;
+  for (const group of $$('[data-text-section]')) {
+    let groupMatches = 0;
+    for (const row of $$('[data-text-entry]', group)) {
+      const fields = $$('[data-site-text]', row).map((field) => field.value).join(' ').toLowerCase();
+      row.hidden = !!query && !`${row.dataset.textSearch} ${fields}`.includes(query);
+      if (!row.hidden) groupMatches++;
+    }
+    group.hidden = groupMatches === 0;
+    if (query && groupMatches) group.open = true;
+    matches += groupMatches;
+  }
+  const result = $('[data-text-results]');
+  if (result) result.textContent = `${matches} / ${siteTextEntries.length} ${t('texts')}`;
+  const empty = $('[data-text-empty]');
+  if (empty) empty.hidden = matches > 0;
+}
 function settingsView() {
   const s = state.draft.settings;
   const pair = (label, key, sub) => field(`${label} (Arabic)`, `${key}.ar`, s[key]?.ar || '', { type: sub }) + field(`${label} (English)`, `${key}.en`, s[key]?.en || '', { type: sub, dir: 'ltr' });
-  return `<div class="head"><h1>${esc(t('Settings'))}</h1></div><form id="settings-form" class="edit"><div class="grid2"><section class="card"><h2>${esc(t('Contact'))}</h2>${field('Shop phone', 'phone', s.phone, { type: 'tel', dir: 'ltr' })}${field('WhatsApp number (with 962)', 'whatsapp', s.whatsapp, { type: 'tel', dir: 'ltr' })}${field(IS_PAGES ? 'Social link for the Repair and Visit us pages' : 'Instagram link', 'instagram', s.instagram, { type: 'url', dir: 'ltr' })}${field('Facebook link', 'facebook', s.facebook, { type: 'url', dir: 'ltr' })}${field('Map link', 'maps', s.maps, { type: 'url', dir: 'ltr' })}${field('Address (Arabic)', 'address.ar', s.address.ar)}${field('Address (English)', 'address.en', s.address.en, { dir: 'ltr' })}</section>
-  <section class="card">${IS_PAGES ? '' : `<h2>${esc(t('Ordering'))}</h2><div class="checks"><label><input type="checkbox" name="ordersOn"${s.ordersOn !== false ? ' checked' : ''}> ${esc(t('Take orders on the site'))}</label></div>${pair('Delivery note', 'deliveryNote', 'textarea')}`}<h2>${esc(t('Texts'))}</h2>${pair('Offers title', 'offersTitle')}${IS_PAGES ? '' : pair('Prices note', 'pricesNote', 'textarea')}</section></div></form>
+  const defaultHero = s.heroMode === 'default';
+  return `<div class="head"><h1>${esc(t('Settings'))}</h1></div><form id="settings-form" class="edit"><section class="card home-presentation"><h2>${esc(t('Home presentation'))}</h2><p class="muted">${esc(t('Restore the original animated showcase without deleting devices, uploaded pictures or home selections. Selecting a device again switches back to your selected devices.'))}</p><div class="btns"><button type="button" class="btn${defaultHero ? ' primary' : ' ghost'}" data-hero-mode="default" aria-pressed="${defaultHero}">${esc(t('Restore default animations and pictures'))}</button><button type="button" class="btn${!defaultHero ? ' primary' : ' ghost'}" data-hero-mode="selected" aria-pressed="${!defaultHero}">${esc(t('Use selected devices'))}</button></div><p class="muted small" role="status">${esc(t(defaultHero ? 'Default animations and pictures are active.' : 'Your selected devices are active.'))}</p></section><div class="grid2"><section class="card"><h2>${esc(t('Contact'))}</h2>${field('Shop phone', 'phone', s.phone, { type: 'tel', dir: 'ltr' })}${field('WhatsApp number (with 962)', 'whatsapp', s.whatsapp, { type: 'tel', dir: 'ltr' })}${field(IS_PAGES ? 'Social link for the Repair and Visit us pages' : 'Instagram link', 'instagram', s.instagram, { type: 'url', dir: 'ltr' })}${field('Facebook link', 'facebook', s.facebook, { type: 'url', dir: 'ltr' })}${field('Map link', 'maps', s.maps, { type: 'url', dir: 'ltr' })}${field('Address (Arabic)', 'address.ar', s.address.ar)}${field('Address (English)', 'address.en', s.address.en, { dir: 'ltr' })}</section>
+  ${IS_PAGES ? '' : `<section class="card"><h2>${esc(t('Ordering'))}</h2><div class="checks"><label><input type="checkbox" name="ordersOn"${s.ordersOn !== false ? ' checked' : ''}> ${esc(t('Take orders on the site'))}</label></div>${pair('Delivery note', 'deliveryNote', 'textarea')}${pair('Prices note', 'pricesNote', 'textarea')}</section>`}</div>${websiteTextsView()}</form>
   ${MODE === 'demo' || IS_PAGES ? '' : `<form id="password-form" class="card narrow"><h2>${esc(t('Change password'))}</h2><label class="f"><span>${esc(t('Current password'))}</span><input name="current" type="password" autocomplete="current-password" required></label><label class="f"><span>${esc(t('New password'))}</span><input name="password" type="password" autocomplete="new-password" minlength="16" required><small>${esc(t('At least 16 characters.'))}</small></label><button class="btn" type="submit">${esc(t('Change password'))}</button></form>`}`;
+}
+function readWebsiteTexts(form) {
+  const s = state.draft.settings;
+  const overrides = {};
+  for (const entry of siteTextEntries) {
+    const pair = {};
+    for (const language of ['ar', 'en']) {
+      const input = form.elements[`siteText.${entry.id}.${language}`];
+      if (!input) continue;
+      const value = input.value.trim();
+      const fallback = entry.id === 'store.offersTitle' ? s.offersTitle?.[language] || entry.defaults[language] : entry.defaults[language];
+      if (value && value !== fallback) pair[language] = value;
+    }
+    if (Object.keys(pair).length) overrides[entry.id] = pair;
+  }
+  if (Object.keys(overrides).length) s.siteText = overrides;
+  else delete s.siteText;
 }
 function readSettings(form) {
   const s = state.draft.settings; const g = (n) => form.elements[n];
   for (const k of ['phone', 'whatsapp', 'instagram', 'facebook', 'maps']) s[k] = g(k).value.trim();
   s.whatsapp = s.whatsapp.replace(/\D/g, '');
-  for (const k of IS_PAGES ? ['address', 'offersTitle'] : ['address', 'deliveryNote', 'offersTitle', 'pricesNote']) s[k] = { ar: g(`${k}.ar`).value.trim(), en: g(`${k}.en`).value.trim() };
+  for (const k of IS_PAGES ? ['address'] : ['address', 'deliveryNote', 'pricesNote']) s[k] = { ar: g(`${k}.ar`).value.trim(), en: g(`${k}.en`).value.trim() };
   s.ordersOn = IS_PAGES ? false : g('ordersOn').checked;
+  readWebsiteTexts(form);
   saveDraft();
+}
+function focusBatteryFields() {
+  const input = $('.battery-fields:not([hidden]) input');
+  input?.closest('fieldset')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  input?.focus({ preventScroll: true });
 }
 
 // ---------- publish ----------
 function validate(c) {
   const problems = []; const cats = new Set(c.categories.map((x) => x.id));
+  if (!validSiteText(c.settings?.siteText) || !validHeroMode(c.settings?.heroMode)) problems.push(t('Check website text lengths and home presentation.'));
   if (!c.categories.length || c.categories.length > MAX_CATEGORIES || cats.size !== c.categories.length || c.categories.some((category) => !validCategoryId(category.id) || !validCategoryName(category.name) || !validCategoryImage(category.image))) problems.push(t('Check category names, ids and photos. Keep between 1 and {max} categories.', { max: MAX_CATEGORIES }));
   for (const p of c.products) {
     const name = L(p.name) || p.id;
@@ -462,6 +537,30 @@ document.addEventListener('click', async (e) => {
   if (hit('#lang')) { readCurrentForm(); lang = lang === 'ar' ? 'en' : 'ar'; local.write('trio-admin-lang', lang); render(); return; }
   if (hit('[data-view]')) { const view = hit('[data-view]').dataset.view; if (!['devices', 'categories', 'orders', 'settings'].includes(view)) return; readCurrentForm(); state.view = view; state.editing = null; state.orderOpen = null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); if (state.view === 'orders') await loadOrders(); render(); return; }
   if (hit('#publish')) { publish(); return; }
+  if (hit('[data-hero-mode]')) {
+    readCurrentForm();
+    const mode = hit('[data-hero-mode]').dataset.heroMode;
+    if (!['default', 'selected'].includes(mode)) return;
+    state.draft.settings.heroMode = mode; saveDraft(); render(); flash(t('Home presentation updated. Save your changes to apply it.')); return;
+  }
+  if (hit('[data-reset-text]') || hit('[data-reset-all-text]')) {
+    const all = !!hit('[data-reset-all-text]');
+    if (all && !confirmed(t('Restore all website texts? Contact details, devices, prices and photos are kept.'))) return;
+    readCurrentForm();
+    const ids = all ? siteTextEntries.map((entry) => entry.id) : [hit('[data-reset-text]').dataset.resetText];
+    for (const entry of siteTextEntries.filter((entry) => ids.includes(entry.id))) {
+      if (state.draft.settings.siteText) delete state.draft.settings.siteText[entry.id];
+      if (entry.id === 'store.offersTitle') delete state.draft.settings.offersTitle;
+      for (const language of ['ar', 'en']) {
+        const input = $(`[data-site-text="${entry.id}"][data-text-language="${language}"]`);
+        if (input) input.value = entry.defaults[language];
+      }
+      const label = $(`[data-text-entry="${entry.id}"] .text-custom-state`);
+      if (label) { label.textContent = t('Default'); label.classList.remove('is-edited'); }
+    }
+    if (state.draft.settings.siteText && !Object.keys(state.draft.settings.siteText).length) delete state.draft.settings.siteText;
+    saveDraft(); filterWebsiteTexts(); flash(t(all ? 'Default website texts restored. Save your changes to apply them.' : 'Text restored. Save your changes to apply it.')); return;
+  }
   if (IS_PAGES && hit('#export-draft')) { await exportDraft(); return; }
   if (IS_PAGES && hit('#reset-preview')) {
     if (!confirmed(t('Reset this browser preview to the public catalog? Your exported files are kept.'))) return;
@@ -508,6 +607,8 @@ document.addEventListener('click', async (e) => {
     return;
   }
   if (hit('[data-cat]')) { state.category = hit('[data-cat]').dataset.cat; render(); return; }
+  if (hit('[data-battery-edit]')) { state.editing = { index: Number(hit('[data-battery-edit]').dataset.batteryEdit) }; render(); focusBatteryFields(); return; }
+  if (hit('[data-focus-battery]')) { focusBatteryFields(); return; }
   if (hit('[data-edit]')) { state.editing = { index: Number(hit('[data-edit]').dataset.edit) }; render(); window.scrollTo(0, 0); return; }
   if (hit('[data-close-edit]')) { state.editing = null; render(); return; }
   if (hit('[data-move]')) { const b = hit('[data-move]'); const i = Number(b.dataset.move); const j = i + Number(b.dataset.dir); const list = state.draft.products; if (j >= 0 && j < list.length) { [list[i], list[j]] = [list[j], list[i]]; saveDraft(); render(); } return; }
@@ -547,6 +648,7 @@ document.addEventListener('change', async (e) => {
     const product = state.draft?.products.find((item) => item.id === e.target.dataset.homeDevice);
     if (!state.signedIn || state.view !== 'devices' || state.editing || !product) return;
     applyHomePlacement(product, state.draft.products, { featured: e.target.checked, category: product.category, hidden: product.hidden });
+    if (e.target.checked) state.draft.settings.heroMode = 'selected';
     saveDraft();
     if (!product.hidden) e.target.closest('.device-row')?.querySelector('.flag.off')?.remove();
     return;
@@ -575,11 +677,20 @@ document.addEventListener('change', async (e) => {
   if (form?.dataset?.categoryForm !== undefined) readCategoryForm(form);
 });
 document.addEventListener('input', (e) => {
+  if (e.target.id === 'site-text-search') { state.textQuery = e.target.value; filterWebsiteTexts(); return; }
   if (e.target.id === 'device-search') { state.query = e.target.value; const pos = e.target.selectionStart; render(); const box = $('#device-search'); box.focus(); box.setSelectionRange(pos, pos); }
   if (e.target.id === 'order-search') { state.orderQuery = e.target.value; const pos = e.target.selectionStart; render(); const box = $('#order-search'); box.focus(); if (pos !== null) box.setSelectionRange(pos, pos); }
   const form = e.target.closest && e.target.closest('form');
   if (form && form.id === 'device-form' && e.target.type !== 'file') readDeviceForm(form);
-  if (form && form.id === 'settings-form') readSettings(form);
+  if (form && form.id === 'settings-form') {
+    readSettings(form);
+    if (e.target.dataset?.siteText) {
+      const entry = siteTextEntries.find((item) => item.id === e.target.dataset.siteText);
+      const edited = entry && textEntryEdited(entry);
+      const label = e.target.closest('[data-text-entry]')?.querySelector('.text-custom-state');
+      if (label) { label.textContent = t(edited ? 'Edited' : 'Default'); label.classList.toggle('is-edited', edited); }
+    }
+  }
   if (form?.dataset?.categoryForm !== undefined && e.target.type !== 'file') readCategoryForm(form);
   if (form?.id === 'add-category-form' && state.addingCategory) state.addingCategory = { ar: form.elements['name.ar'].value, en: form.elements['name.en'].value };
 });
