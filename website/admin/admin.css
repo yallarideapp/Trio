@@ -130,3 +130,23 @@ code{font-size:12px;background:var(--ink);padding:2px 6px;border-radius:6px}
 .ov-tick{flex:none;width:17px;height:17px;margin-top:2px;border:1.5px solid var(--muted);border-radius:50%;display:grid;place-items:center;font-size:11px}
 .ov-checks li.is-done{color:var(--muted);text-decoration:line-through}.ov-checks li.is-done .ov-tick{border-color:var(--accent);color:var(--accent)}
 @media(max-width:900px){.ov-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.ov-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Device list as cards (like the Flick admin): details on top, actions below. */
+.device-cards{gap:12px}
+.device-card{border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:14px 16px 10px;min-width:0}
+.device-card.is-hidden{opacity:.72}
+.dc-top{display:flex;align-items:center;gap:14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.dc-top .thumb{width:64px;height:64px}
+.dc-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px}
+.dc-meta small{color:var(--muted);font-size:13px}
+.dc-stock{background:none;border:0;padding:0;cursor:pointer;font:inherit}
+.flag.is-offer{background:#ff6b8a26;color:#ff9db2}.flag.is-home{background:#ffd27526;color:#ffd275}
+.dc-actions{display:flex;align-items:center;gap:6px;padding-top:10px}
+.dc-visible{min-height:40px;padding:6px 18px;border-radius:12px;border:0;background:var(--accent);color:var(--ink);font:inherit;font-weight:700;cursor:pointer}
+.dc-visible.is-off{background:var(--surface-2);color:var(--muted)}
+.dc-icon{width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:10px;background:none;color:inherit;font:inherit;cursor:pointer}
+.dc-icon:hover,.dc-icon:focus-visible{background:var(--surface-2)}
+.dc-icon:disabled{opacity:.3;cursor:default;background:none}
+.dc-icon svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.dc-icon.is-danger:hover{color:var(--danger)}
+.dc-move{display:flex;margin-inline-start:auto}

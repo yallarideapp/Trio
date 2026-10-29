@@ -254,3 +254,8 @@ This release replaces the source/date/disclaimer sections described above with r
 
 - New first admin tab «نظرة عامة / Overview», opened by default (like the Flick admin): cards for new orders, devices shown, devices on offer and out-of-stock devices (each opens its tab); the latest 5 orders with All orders (a row opens that order); and a «قبل ما يصير الموقع رسمي» checklist (ordering and hosting tick themselves on the live site).
 - Automated: all checks pass; all three builds succeed. Browser (Pages build): a demo order shows in the cards and latest orders and opens from there; 1280px and 390px without horizontal overflow or errors.
+
+## Device list cards — 29 October 2026
+
+- Admin device list now uses Flick-style cards: photo, name, brand and starting price on top with badges (stock, «عليه عرض», «بالرئيسية»); below, a «ظاهر / مخفي» button and icon buttons for edit, duplicate (adds a hidden copy) and delete (asks first), plus move up/down. The «يظهر بالرئيسية» switch left the list; it stays in the device form.
+- Automated: all checks pass (the editor test now checks the new list actions). Browser (Pages build): show/hide, duplicate, delete and edit work at 1280px and 390px; the form still has the home-page choice; no errors or horizontal overflow.

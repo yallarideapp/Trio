@@ -571,11 +571,9 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
       if (view === 'devices') {
         for (let index = 0; index < content.products.length; index++) assert(html.includes(`data-stock-edit="${index}"`), `${language}: stock is reachable directly from the device list`);
         assert(html.includes('stock-flag'), `${language}: the device overview shows availability`);
-        const switches = [...html.matchAll(/<input type="checkbox" role="switch" data-home-device="([^"]+)"([^>]*)>/g)];
-        assert.equal(switches.length, content.products.length, `${language}: each listed device has a home selection switch`);
-        for (const [, id, attributes] of switches) assert.equal(attributes.includes(' checked'), content.products.find((product) => product.id === id).featured === true, `${language}: home switch reflects its saved selection`);
-        assert(html.includes(language === 'ar' ? 'يظهر بالرئيسية' : 'Show on home page'), `${language}: list controls clearly label home selection`);
-        for (const [index, product] of content.products.entries()) if (product.variants.some((variant) => conditionGroup(variant.condition) === 'like-new')) assert(html.includes(`data-battery-edit="${index}"`), `${language}: used devices expose battery editing directly from the list`);
+        assert(!html.includes('data-home-device'), `${language}: home selection lives in the device form, not the list`);
+        for (let index = 0; index < content.products.length; index++) for (const action of ['data-toggle-visible', 'data-edit', 'data-list-duplicate', 'data-list-delete']) assert(html.includes(`${action}="${index}"`), `${language}: ${action} is on every listed device`);
+        assert(html.includes(language === 'ar' ? 'ظاهر' : 'Shown'), `${language}: visibility is labelled`);
       }
       if (view === 'settings') {
         assert(!html.includes('id="site-text-search"') && !html.includes('id="site-text-area"') && !html.includes('data-text-advanced'), `${language}: the first screen does not require a page or message selector`);
