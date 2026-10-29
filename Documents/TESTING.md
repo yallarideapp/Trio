@@ -287,3 +287,9 @@ This release replaces the source/date/disclaimer sections described above with r
 
 - Each category card in Categories has "Category picture from a device": tiles of that category's own devices; tapping one uses its picture (its uploaded photo, otherwise its catalog image) for the home category tile. Upload and "Reset photo" still work.
 - Checked: `npm test` (new check: each category offers only its own devices with pictures), all three builds with no warnings; browser at 390 and 1280 px: picked MacBook Air for Laptops, the card and home tile showed it after saving the preview; no console errors.
+
+## 2026-10-29 — Any device for a category picture, also when adding a category
+
+- The category picture picker now offers every device with a picture, grouped by category (the category's own devices first).
+- The "New category" form has the same picker with a preview and "Remove picture"; the chosen picture is saved with the new category.
+- Checked: `npm test` (category cards offer every pictured device), all three builds with no warnings; browser at 390 and 1280 px: used iPhone 17 for Accessories, added "Gaming" with AirPods Max as its picture, names kept while picking, saved the preview; no console errors.

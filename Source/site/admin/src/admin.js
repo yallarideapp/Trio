@@ -25,7 +25,7 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
 const AR = {
-  'Category picture from a device': 'صورة القسم من جهاز بالقسم', 'Pick a device to use its picture for this category.': 'اختار جهاز من القسم عشان تنحط صورته صورة للقسم.', 'No device pictures in this category yet.': 'ما في صور أجهزة بهالقسم لسا.', 'Category picture updated.': 'تغيّرت صورة القسم.',
+  'Pick any device to use its picture for this category.': 'اختار أي جهاز عشان تنحط صورته صورة للقسم.', 'No device pictures yet.': 'ما في صور أجهزة لسا.', 'Category picture from a device': 'صورة القسم من جهاز', 'Category picture updated.': 'تغيّرت صورة القسم.',
   'Devices & prices': 'الأجهزة والأسعار', 'Banner devices': 'أجهزة البانر', 'Admin sections': 'أقسام اللوحة',
   'Banner': 'البانر', 'Home banner': 'بانر الرئيسية', 'Choose what each tab of the home banner shows: a device from your list, or a picture you upload. Automatic keeps the current choice.': 'اختار شو يبيّن بكل تبويب ببانر الرئيسية: جهاز من القائمة، أو صورة بتحمّلها. «تلقائي» بيخلي الاختيار الحالي.', 'Automatic': 'تلقائي', 'Device to show': 'الجهاز اللي يبيّن', 'Upload a picture': 'حمّل صورة', 'Replace picture': 'غيّر الصورة', 'Remove picture': 'شيل الصورة', 'Uploaded picture': 'صورة محمّلة', 'Shows now': 'بيبيّن هلّق', 'No devices in this category yet.': 'ما في أجهزة بهالقسم لسا.', 'Banner updated. Save your changes to apply it.': 'تغيّر البانر. احفظ التعديلات عشان يبيّن.',
   'Shown': 'ظاهر', 'On offer': 'عليه عرض', 'On home page': 'بالرئيسية', 'Copy added (hidden). Edit it, then show it.': 'انضافت نسخة مخفية. عدّلها وبعدين خليها ظاهرة.',
@@ -456,11 +456,14 @@ function categoryPhoto(category) {
   return categoryArtworkSource(category, { photoUrl: (photo) => IS_PAGES ? adminApi.photoUrl(photo) : api.photoUrl(photo), assetUrl: (image) => `../${image}` });
 }
 // A category's picture can come from one of its own devices (its uploaded photo or catalog image).
-function categoryDevicePicker(category) {
-  const devices = state.draft.products.filter((p) => p.category === category.id && photoSrc(p));
+function categoryDevicePicker(category, key = category.id, { open = false } = {}) {
+  // Any device with a picture can be used, grouped by category with this category's own devices first.
+  const devices = state.draft.products.filter((p) => photoSrc(p));
   const current = (p) => (p.photo && adminPhotoUrl(p.photo) ? category.photo === p.photo : !category.photo && Boolean(p.image) && category.image === p.image);
-  const open = devices.some(current);
-  return `<details class="category-device-pick"${open ? ' open' : ''}><summary>${esc(t('Category picture from a device'))}</summary><p class="muted small">${esc(t(devices.length ? 'Pick a device to use its picture for this category.' : 'No device pictures in this category yet.'))}</p>${devices.length ? `<div class="banner-pick" role="radiogroup" aria-label="${esc(`${t('Category picture from a device')}: ${L(category.name)}`)}">${devices.map((p) => `<button type="button" class="pick-tile" role="radio" aria-checked="${Boolean(current(p))}" data-category-device="${esc(category.id)}" data-device="${esc(p.id)}"><span class="pick-img">${thumb(p)}</span><span class="pick-name" dir="auto">${esc(L(p.name))}</span></button>`).join('')}</div>` : ''}</details>`;
+  const groups = [...state.draft.categories].sort((a, b) => Number(b.id === key) - Number(a.id === key)).map((group) => [group, devices.filter((p) => p.category === group.id)]).filter(([, list]) => list.length);
+  const tile = (p) => `<button type="button" class="pick-tile" role="radio" aria-checked="${Boolean(current(p))}" data-category-device="${esc(key)}" data-device="${esc(p.id)}"><span class="pick-img">${thumb(p)}</span><span class="pick-name" dir="auto">${esc(L(p.name))}</span></button>`;
+  const name = L(category.name) || t('New category');
+  return `<details class="category-device-pick"${open || devices.some(current) ? ' open' : ''}><summary>${esc(t('Category picture from a device'))}</summary><p class="muted small">${esc(t(devices.length ? 'Pick any device to use its picture for this category.' : 'No device pictures yet.'))}</p>${groups.length ? `<div class="pick-groups" role="radiogroup" aria-label="${esc(`${t('Category picture from a device')}: ${name}`)}">${groups.map(([group, list]) => `<p class="pick-group" dir="auto">${esc(L(group.name))}</p><div class="banner-pick">${list.map(tile).join('')}</div>`).join('')}</div>` : ''}</details>`;
 }
 const adminPhotoUrl = (id) => (IS_PAGES ? adminApi.photoUrl(id) : api.photoUrl(id)) || '';
 function categoriesView() {
@@ -469,7 +472,7 @@ function categoriesView() {
   return `<div class="head"><h1>${esc(t('Categories'))}</h1><button type="button" class="btn primary" data-add-category${list.length >= MAX_CATEGORIES || adding ? ' disabled' : ''}>${esc(t('Add category'))}</button></div>
   <p class="muted category-intro">${esc(t('Edit the home category names, pictures and order here. Device categories use the same names.'))} ${esc(t(IS_PAGES ? 'Save preview to see your category changes.' : 'Publish to show your category changes.'))}</p>
   <p class="muted small category-limit">${esc(t('You can add up to {max} categories.', { max: MAX_CATEGORIES }))}</p>
-  ${adding ? `<form id="add-category-form" class="card add-category" autocomplete="off"><div class="head"><h2>${esc(t('New category'))}</h2><button type="button" class="btn ghost small" data-cancel-category>${esc(t('Cancel'))}</button></div><div class="grid2 tight">${field('Name (Arabic)', 'name.ar', adding.ar, { dir: 'rtl', attrs: `required maxlength="${CATEGORY_NAME_LIMIT}"` })}${field('Name (English)', 'name.en', adding.en, { dir: 'ltr', attrs: `required maxlength="${CATEGORY_NAME_LIMIT}"` })}</div><p class="muted small">${esc(t('Choose names in Arabic and English, up to {max} characters each.', { max: CATEGORY_NAME_LIMIT }))}</p><div class="btns"><button type="submit" class="btn primary">${esc(t('Add category'))}</button></div></form>` : ''}
+  ${adding ? `<form id="add-category-form" class="card add-category" autocomplete="off"><div class="head"><h2>${esc(t('New category'))}</h2><button type="button" class="btn ghost small" data-cancel-category>${esc(t('Cancel'))}</button></div><div class="grid2 tight">${field('Name (Arabic)', 'name.ar', adding.ar, { dir: 'rtl', attrs: `required maxlength="${CATEGORY_NAME_LIMIT}"` })}${field('Name (English)', 'name.en', adding.en, { dir: 'ltr', attrs: `required maxlength="${CATEGORY_NAME_LIMIT}"` })}</div><p class="muted small">${esc(t('Choose names in Arabic and English, up to {max} characters each.', { max: CATEGORY_NAME_LIMIT }))}</p>${(() => { const src = adding.photo ? adminPhotoUrl(adding.photo) : adding.image ? `../${adding.image}` : ''; return src ? `<div class="add-category-photo"><div class="category-photo"><img src="${esc(src)}" alt="" loading="lazy"></div><button type="button" class="btn ghost small" data-category-device="__new" data-device="">${esc(t('Remove picture'))}</button></div>` : ''; })()}${categoryDevicePicker({ name: { ar: adding.ar, en: adding.en }, photo: adding.photo || '', image: adding.image || '' }, '__new', { open: true })}<div class="btns"><button type="submit" class="btn primary">${esc(t('Add category'))}</button></div></form>` : ''}
   <ol class="category-editor-list">${list.map((category, index) => {
     const photo = categoryPhoto(category);
     const deviceCount = state.draft.products.filter((product) => product.category === category.id).length;
@@ -800,13 +803,17 @@ document.addEventListener('click', async (e) => {
   }
   if (hit('[data-category-device]')) {
     const el = hit('[data-category-device]');
-    const category = state.draft.categories.find((item) => item.id === el.dataset.categoryDevice);
-    const product = state.draft.products.find((item) => item.id === el.dataset.device && item.category === el.dataset.categoryDevice);
-    if (!category || !product) return;
+    const isNew = el.dataset.categoryDevice === '__new';
+    const category = isNew ? state.addingCategory : state.draft.categories.find((item) => item.id === el.dataset.categoryDevice);
+    const product = state.draft.products.find((item) => item.id === el.dataset.device);
+    if (!category) return;
     readCurrentForm();
+    if (isNew && !product) { category.photo = ''; category.image = ''; render(); return; }
+    if (!product) return;
     if (product.photo && adminPhotoUrl(product.photo)) { category.photo = product.photo; category.image = ''; }
     else if (product.image) { category.photo = ''; category.image = product.image; }
     else return;
+    if (isNew) { render(); return; }
     saveDraft(); render(); flash(t('Category picture updated.'));
     return;
   }
@@ -921,7 +928,7 @@ document.addEventListener('input', (e) => {
     }
   }
   if (form?.dataset?.categoryForm !== undefined && e.target.type !== 'file') readCategoryForm(form);
-  if (form?.id === 'add-category-form' && state.addingCategory) state.addingCategory = { ar: form.elements['name.ar'].value, en: form.elements['name.en'].value };
+  if (form?.id === 'add-category-form' && state.addingCategory) state.addingCategory = { ...state.addingCategory, ar: form.elements['name.ar'].value, en: form.elements['name.en'].value };
 });
 document.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -930,7 +937,7 @@ document.addEventListener('submit', async (e) => {
     if (!state.signedIn || state.draft.categories.length >= MAX_CATEGORIES) { flash(t('You can add up to {max} categories.', { max: MAX_CATEGORIES }), 'warn'); return; }
     const name = { ar: f.elements['name.ar'].value.trim(), en: f.elements['name.en'].value.trim() };
     if (!validCategoryName(name)) { flash(t('Category names are required in both languages.'), 'error'); return; }
-    const id = nextCategoryId(name.en); state.draft.categories.push({ id, name }); state.addingCategory = null;
+    const id = nextCategoryId(name.en); const picked = state.addingCategory || {}; state.draft.categories.push({ id, name, ...(picked.photo ? { photo: picked.photo } : picked.image ? { image: picked.image } : {}) }); state.addingCategory = null;
     saveDraft(); render(); $(`[data-category-card="${id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }); flash(t('Category added. Add its photo or assign devices to it.')); return;
   }
   if (f.dataset?.categoryForm !== undefined) { readCategoryForm(f); return; }
