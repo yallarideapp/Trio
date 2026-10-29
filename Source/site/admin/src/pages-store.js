@@ -6,6 +6,7 @@ import { validBatteryHealth, validBatteryCycles } from '../../../shared/battery.
 import { validCategories, mediaOwners } from '../../../shared/categories.js';
 import { validSiteText, normalizeSiteText, validHeroMode } from '../../../shared/site-text.js';
 import { validHeroSlots, normalizeHeroSlots } from '../../../shared/hero-slots.js';
+import { validTracking } from '../../../shared/tracking.js';
 import { conditions, notes, warranties } from '../../../shared/labels.js';
 import { ApiError, withDefaults } from '../../src/store.js';
 import { PREVIEW_KEY, PHOTO_KEY, EDITOR_KEY, readLocal, readPreview, validPhoto } from '../../src/pages-preview.js';
@@ -17,7 +18,7 @@ const save = (key, value) => {
 const editable = (content) => {
   // Check before JSON cloning can turn non-finite numbers into null.
   if (content.categories !== undefined && !validCategories(content.categories)) invalid();
-  if (!validSiteText(content.settings?.siteText) || !validHeroMode(content.settings?.heroMode) || !validHeroSlots(content.heroSlots) || !validDeliverySettings(content.settings?.deliveryFils)) invalid();
+  if (!validSiteText(content.settings?.siteText) || !validHeroMode(content.settings?.heroMode) || !validHeroSlots(content.heroSlots) || !validDeliverySettings(content.settings?.deliveryFils) || !validTracking(content.settings?.tracking)) invalid();
   for (const product of content.products || []) for (const variant of product.variants || []) if (!validStockQuantity(variant.stockQuantity) || !validBatteryHealth(variant.batteryHealth) || !validBatteryCycles(variant.batteryCycles)) invalid();
   const result = withDefaults(clone(content));
   if (result.settings.siteText !== undefined) result.settings.siteText = normalizeSiteText(result.settings.siteText);
@@ -48,7 +49,7 @@ const pair = (value, limit) => value && text(value.ar, limit) && text(value.en, 
 function validate(content, photos) {
   if (!content || !Array.isArray(content.products) || content.products.length > 200 || !content.settings || !Array.isArray(content.categories)) invalid();
   if (!validCategories(content.categories)) invalid();
-  if (!validSiteText(content.settings.siteText) || !validHeroMode(content.settings.heroMode) || !validHeroSlots(content.heroSlots) || !validDeliverySettings(content.settings.deliveryFils)) invalid();
+  if (!validSiteText(content.settings.siteText) || !validHeroMode(content.settings.heroMode) || !validHeroSlots(content.heroSlots) || !validDeliverySettings(content.settings.deliveryFils) || !validTracking(content.settings.tracking)) invalid();
   for (const slot of content.heroSlots || []) if (slot.photo && !validPhoto(photos[slot.photo])) invalid();
   const categories = new Set(content.categories.map((category) => category.id));
   for (const category of content.categories) if (category.photo !== undefined && category.photo !== null && category.photo !== '' && (typeof category.photo !== 'string' || !/^p[a-z0-9-]{1,80}$/.test(category.photo) || !validPhoto(photos[category.photo]))) invalid();

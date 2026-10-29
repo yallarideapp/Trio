@@ -10,7 +10,8 @@
     "dev": "node tools/build.mjs live && wrangler dev",
     "db:local": "wrangler d1 migrations apply DB --local",
     "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy",
-    "test": "node tests/check.mjs"
+    "test": "node tests/check.mjs",
+    "test:measurement": "node tests/local/measurement.mjs"
   },
   "devDependencies": {
     "esbuild": "0.25.10",

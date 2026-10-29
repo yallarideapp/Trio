@@ -12,6 +12,7 @@ import { categoryArtworkSource } from '../../shared/home-artwork.js';
 import { conditionListings, catalogListings } from '../../shared/listings.js';
 import { heroSlot } from '../../shared/hero-slots.js';
 import { orderAlerts } from './order-alerts.js';
+import { createMeasurement } from './measurement.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -480,6 +481,7 @@ async function submitCheckout(form) {
     if ((customerProfile()?.id || 'guest') !== accountId) return;
     state.lastOrder = { number: result.number, channel: MODE, totalFils: result.totalFils, deliveryFils: priced.deliveryFils, text: orderText(priced, result.number), lines: priced.lines.map((line) => ({ name: line.product.name, storage: line.variant.storage, qty: line.qty, unitFils: line.unitFils })) };
     local.write(`trio-last-order-${accountId}`, state.lastOrder);
+    measurement.order(result.number, result.totalFils, priced.lines);
     // Preview only: a Telegram or WhatsApp alert, when the owner set one up on this browser.
     if (MODE === 'pages') orderAlerts.notifyOrder({ number: result.number, lines: state.lastOrder.lines, fulfilment: draft.fulfilment, deliveryFils: priced.deliveryFils, totalFils: result.totalFils, customer: draft });
     state.bag = []; saveBag(); state.checkoutToken = ''; state.checkoutSignature = '';
@@ -596,6 +598,7 @@ function translateShell() {
   updateCounts();
 }
 let lastRendered = '';
+const measurement = createMeasurement({ enabled: MODE === 'live', settings: () => S(), language: () => state.language });
 function renderRoute({ focus = false } = {}) {
   state.route = readRoute();
   // The hero motion plays when the home page is entered, not on every redraw of it.
@@ -638,6 +641,7 @@ function renderRoute({ focus = false } = {}) {
   const hs = $('#header-search'); if (hs) hs.value = ['shop', 'saved', 'offers'].includes(state.route.name) ? state.query : '';
   setMenu(false);
   setHeaderSearch(false);
+  measurement.afterRender();
   if (focus) requestAnimationFrame(() => { heading?.setAttribute('tabindex', '-1'); heading?.focus({ preventScroll: true }); window.scrollTo({ top: 0, behavior: 'instant' }); });
 }
 function updateDetailBuy(product) {

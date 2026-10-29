@@ -13,6 +13,7 @@ import { categoryArtworkSource } from '../../../shared/home-artwork.js';
 import { availabilitySummary, setDeviceSoldOut } from '../../../shared/availability.js';
 import { HERO_SLOT_IDS, normalizeHeroSlots } from '../../../shared/hero-slots.js';
 import { orderAlerts } from '../../src/order-alerts.js';
+import { validTrackingValue } from '../../../shared/tracking.js';
 
 const IS_PAGES = MODE === 'pages';
 const USE_TECHNICAL = MODE !== 'demo';
@@ -26,6 +27,15 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
 const AR = {
+  'Google measurement': 'قياس Google', 'Google Analytics and Google Ads conversions, only after the visitor agrees.': 'Google Analytics وتحويلات Google Ads، بعد موافقة الزائر فقط.',
+  'Google Analytics ID': 'معرّف Google Analytics', 'Google Ads ID': 'معرّف Google Ads', 'Order conversion label': 'تسمية تحويل الطلب', 'Contact conversion label': 'تسمية تحويل التواصل',
+  'From Google Analytics: Admin → Data streams. Looks like G-XXXXXXX. Empty = no Analytics.': 'من Google Analytics: المشرف ← مصادر البيانات. يبدأ بـ G-XXXXXXX. فارغ = بدون Analytics.',
+  'From Google Ads: Goals → Conversions. Looks like AW-123456789. Optional.': 'من Google Ads: الأهداف ← التحويلات. يبدأ بـ AW-123456789. اختياري.',
+  'The part after the / in your “website order” conversion. Optional.': 'الجزء اللي بعد / بتحويل «طلب من الموقع». اختياري.',
+  'The part after the / in your “WhatsApp or call click” conversion. Optional.': 'الجزء اللي بعد / بتحويل «الضغط على واتساب أو الاتصال». اختياري.',
+  'Nothing from Google loads unless the visitor taps Accept. No customer name, number or address is ever sent. With all fields empty there is no banner and no Google requests.': 'ما بينحمّل إشي من Google إلا بعد ما يضغط الزائر «موافق»، وما بينبعت اسم أي زبون أو رقمه أو عنوانه. إذا الحقول فاضية ما بيطلع شريط الموافقة وما في ولا طلب لـ Google.',
+  'The preview never loads Google. These IDs work on the live site.': 'المعاينة ما بتحمّل Google أبداً. هالمعرّفات بتشتغل عالموقع الحقيقي.',
+  'Check the format; the last valid value is kept.': 'راجع الصيغة؛ بنحتفظ بآخر قيمة صحيحة.',
   'Contact & delivery': 'التواصل والتوصيل', 'Edit the shop details and delivery fees.': 'عدّل بيانات المحل ورسوم التوصيل.', 'Delivery fees': 'رسوم التوصيل', 'Prices': 'الأسعار',
   'Shown in the bag and checkout and added to delivery orders. Pickup is free. Leave 0 to confirm the fee by phone, as before.': 'بتبيّن بالسلة وصفحة الطلب وبتنضاف لطلبات التوصيل. الاستلام من المحل بدون رسوم. خليها 0 إذا بدك تأكد الرسوم بالتلفون زي قبل.',
   'Amman · JOD': 'عمّان · دينار', 'Other governorates · JOD': 'باقي المحافظات · دينار', 'Devices total': 'مجموع الأجهزة',
@@ -627,7 +637,23 @@ function contactView() {
   const fee = (label, name, value) => field(label, name, String(jod(value)), { type: 'number', dir: 'ltr', attrs: 'min="0" max="100" step="0.01" inputmode="decimal" required' });
   return `<div class="head"><h1>${esc(t('Contact & delivery'))}</h1></div><p class="muted">${esc(t('Edit the shop details and delivery fees.'))}</p><form id="contact-form" class="edit"><div class="grid2"><section class="card"><h2>${esc(t('Contact'))}</h2>${field('Shop phone', 'phone', s.phone, { type: 'tel', dir: 'ltr' })}${field('WhatsApp number (with 962)', 'whatsapp', s.whatsapp, { type: 'tel', dir: 'ltr' })}${field(IS_PAGES ? 'Social link for the Repair and Visit us pages' : 'Instagram link', 'instagram', s.instagram, { type: 'url', dir: 'ltr' })}${field('Facebook link', 'facebook', s.facebook, { type: 'url', dir: 'ltr' })}${field('Map link', 'maps', s.maps, { type: 'url', dir: 'ltr' })}${field('Address (Arabic)', 'address.ar', s.address.ar)}${field('Address (English)', 'address.en', s.address.en, { dir: 'ltr' })}</section>
   <section class="card"><h2>${esc(t('Delivery fees'))}</h2><p class="muted small">${esc(t('Shown in the bag and checkout and added to delivery orders. Pickup is free. Leave 0 to confirm the fee by phone, as before.'))}</p>${fee(t('Amman · JOD'), 'fee.amman', fees.amman)}${fee(t('Other governorates · JOD'), 'fee.other', fees.other)}${IS_PAGES ? '' : `<div class="checks"><label><input type="checkbox" name="ordersOn"${s.ordersOn !== false ? ' checked' : ''}> ${esc(t('Take orders on the site'))}</label></div>${pair('Delivery note', 'deliveryNote', 'textarea')}`}</section></div></form>
-  ${alertsPanel()}`;
+  ${trackingPanel()}${alertsPanel()}`;
+}
+function trackingPanel() {
+  const g = state.draft.settings.tracking || {};
+  const id = (label, name, hint, pattern) => `<label class="f"><span>${esc(t(label))}</span><input name="tracking.${name}" dir="ltr" maxlength="64" autocomplete="off" spellcheck="false" pattern="${pattern}" value="${esc(g[name] || '')}"><small>${esc(t(hint))}</small></label>`;
+  return `<form id="tracking-form" class="card tracking-card" novalidate autocomplete="off"><h2>${esc(t('Google measurement'))}</h2><p class="muted">${esc(t('Google Analytics and Google Ads conversions, only after the visitor agrees.'))}</p>${IS_PAGES ? `<p class="muted small">${esc(t('The preview never loads Google. These IDs work on the live site.'))}</p>` : ''}<div class="grid2 tight">${id('Google Analytics ID', 'gaId', 'From Google Analytics: Admin → Data streams. Looks like G-XXXXXXX. Empty = no Analytics.', 'G-[A-Z0-9]{4,20}')}${id('Google Ads ID', 'adsId', 'From Google Ads: Goals → Conversions. Looks like AW-123456789. Optional.', 'AW-[0-9]{5,20}')}${id('Order conversion label', 'adsOrderLabel', 'The part after the / in your “website order” conversion. Optional.', '[A-Za-z0-9_\\-]{4,64}')}${id('Contact conversion label', 'adsContactLabel', 'The part after the / in your “WhatsApp or call click” conversion. Optional.', '[A-Za-z0-9_\\-]{4,64}')}</div><p class="muted small">${esc(t('Nothing from Google loads unless the visitor taps Accept. No customer name, number or address is ever sent. With all fields empty there is no banner and no Google requests.'))}</p><p class="tracking-feedback small" role="status"></p></form>`;
+}
+function readTracking(form) {
+  const s = state.draft.settings; const next = { gaId: '', adsId: '', adsOrderLabel: '', adsContactLabel: '', ...(s.tracking || {}) };
+  let bad = false;
+  for (const key of ['gaId', 'adsId', 'adsOrderLabel', 'adsContactLabel']) {
+    const input = form.elements[`tracking.${key}`]; const value = input.value.trim();
+    if (validTrackingValue(key, value)) next[key] = value; else bad = true;
+  }
+  s.tracking = next;
+  const note = $('.tracking-feedback', form); if (note) note.textContent = bad ? t('Check the format; the last valid value is kept.') : '';
+  saveDraft();
 }
 function alertsPanel() {
   if (!IS_PAGES) return `<section class="card alerts-card"><h2>${esc(t('Order alerts'))}</h2><p class="muted">${esc(t('Each new order is emailed and, when set up, sent to Telegram from the server. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID as Cloudflare secrets; the Cloudflare guide shows how.'))}</p></section>`;
@@ -744,6 +770,8 @@ function readCurrentForm() {
   if (texts) readTexts(texts);
   const contact = $('#contact-form');
   if (contact) readContact(contact);
+  const tracking = $('#tracking-form');
+  if (tracking) readTracking(tracking);
   for (const form of $$('[data-category-form]')) readCategoryForm(form);
 }
 async function exportDraft() {
@@ -981,6 +1009,7 @@ document.addEventListener('change', async (e) => {
   if (form && form.id === 'device-form') { readDeviceForm(form); updateDeviceStockSummary(); }
   if (form && form.id === 'settings-form') readSettings(form);
   if (form && form.id === 'contact-form') readContact(form);
+  if (form && form.id === 'tracking-form') readTracking(form);
   if (form && form.id === 'alerts-form' && e.target.name === 'channel') { state.alertChannel = e.target.value; for (const group of $$('[data-alert-fields]', form)) group.hidden = group.dataset.alertFields !== e.target.value; }
   if (form && form.id === 'texts-form') readTexts(form);
   if (form?.dataset?.categoryForm !== undefined) readCategoryForm(form);
@@ -993,6 +1022,7 @@ document.addEventListener('input', (e) => {
   if (form && form.id === 'device-form' && e.target.type !== 'file') { readDeviceForm(form); updateDeviceStockSummary(); }
   if (form && form.id === 'settings-form') readSettings(form);
   if (form && form.id === 'contact-form') readContact(form);
+  if (form && form.id === 'tracking-form') readTracking(form);
   if (form && form.id === 'texts-form') {
     readTexts(form);
     if (e.target.dataset?.siteText) {

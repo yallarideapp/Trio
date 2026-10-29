@@ -210,3 +210,4 @@ code{font-size:12px;background:var(--ink);padding:2px 6px;border-radius:6px}
 .alert-choices{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 .alert-choice{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer}
 .alert-feedback:empty{display:none}
+.tracking-card{margin-top:16px}.tracking-card input:invalid{border-color:#e5484d}.tracking-feedback{color:#ffb4b4;margin:6px 0 0}.tracking-feedback:empty{display:none}

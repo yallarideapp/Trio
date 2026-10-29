@@ -75,7 +75,8 @@ if (mode === 'pages') {
 }
 
 if (mode === 'live') {
-  const csp = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+  // Google is allowed so measurement can load after the visitor agrees (it never loads before).
+  const csp = "default-src 'self'; script-src 'self' https://www.googletagmanager.com; style-src 'self'; img-src 'self' data: blob: https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://*.google.com https://*.google.jo; font-src 'self'; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://*.google.com https://*.google.jo https://pagead2.googlesyndication.com; frame-src https://td.doubleclick.net https://www.googletagmanager.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
   await writeFile(path.join(out, '_headers'), [
     '/*', `  Content-Security-Policy: ${csp}`, '  X-Content-Type-Options: nosniff', '  Referrer-Policy: strict-origin-when-cross-origin', '  Permissions-Policy: camera=(), microphone=(), geolocation=()', '  X-Frame-Options: DENY',
     '/assets/*', '  Cache-Control: public, max-age=604800',

@@ -5,6 +5,7 @@
 import seedContent from '../../shared/catalog.js';
 import { priceOrder, normaliseMobile } from '../../shared/pricing.js';
 import { governorates } from '../../shared/labels.js';
+import { normalizeTracking } from '../../shared/tracking.js';
 import { PHOTO_KEY, previewRequested, readLocal, readPreview, validPhoto } from './pages-preview.js';
 import { createBrowserShop } from './browser-shop.js';
 
@@ -40,6 +41,7 @@ export function withDefaults(content) {
   result.categories = Array.isArray(content.categories) && content.categories.length ? content.categories : base.categories;
   result.products = Array.isArray(content.products) ? content.products : base.products;
   result.heroSlots = Array.isArray(content.heroSlots) ? content.heroSlots : [];
+  result.settings.tracking = normalizeTracking(result.settings.tracking);
   return result;
 }
 

@@ -328,8 +328,12 @@ export async function verifyWorkerOrders() {
       withFees.settings.deliveryFils = { amman: -5, other: 0 };
       expectError(await send('PUT', '/api/admin/content', { baseVersion: current.data.version, content: withFees }, { cookie: secondCookie }), 400, 'bad-content');
       withFees.settings.deliveryFils = { amman: 2500, other: 5000 };
+      withFees.settings.tracking = { gaId: '<script>' };
+      expectError(await send('PUT', '/api/admin/content', { baseVersion: current.data.version, content: withFees }, { cookie: secondCookie }), 400, 'bad-content');
+      withFees.settings.tracking = { gaId: 'G-ABC12345', adsId: 'AW-123456789', adsOrderLabel: 'order_1', adsContactLabel: '' };
       assert.equal((await send('PUT', '/api/admin/content', { baseVersion: current.data.version, content: withFees }, { cookie: secondCookie })).status, 200, 'delivery fees publish');
       assert.deepEqual((await send('GET', '/api/content')).data.content.settings.deliveryFils, { amman: 2500, other: 5000 }, 'the fees are public');
+      assert.deepEqual((await send('GET', '/api/content')).data.content.settings.tracking, { gaId: 'G-ABC12345', adsId: 'AW-123456789', adsOrderLabel: 'order_1', adsContactLabel: '' }, 'valid Google IDs publish; invalid ones are refused');
       const devices = priceLines(withFees, lines).totalFils;
       const sent = [];
       const realFetch = globalThis.fetch;

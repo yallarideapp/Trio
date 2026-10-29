@@ -24,7 +24,7 @@ export function verifyStorefront() {
   const document = { documentElement: {}, querySelector: () => null, querySelectorAll: () => [], addEventListener() {} };
   const location = { hash: '#/', replace(value) { this.hash = value; } };
   const context = vm.createContext({
-    ...pricing, ...battery, ...siteCopy, ...homeArtwork, heroSlot, orderAlerts, conditionListings, catalogListings, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates, PREVIEW_KEY: 'trio-pages-preview-v1',
+    ...pricing, ...battery, ...siteCopy, ...homeArtwork, heroSlot, orderAlerts, createMeasurement: () => ({ afterRender() {}, order() {} }), conditionListings, catalogListings, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates, PREVIEW_KEY: 'trio-pages-preview-v1',
     playHeroMotion: () => {},
     renderAccount: () => '<h1>My account</h1>', loadAccount: async () => {}, bindAccount: () => {}, accountLabel: () => 'Sign in', customerProfile: () => null, setAccountText: () => {},
     MODE: 'pages', api: { photoUrl: () => '' }, local: { read: (key, fallback = null) => stored.has(key) ? structuredClone(stored.get(key)) : fallback, write: (key, value) => { stored.set(key, structuredClone(value)); return true; } },

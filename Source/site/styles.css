@@ -658,3 +658,10 @@ img.hero-motion-off{object-fit:contain;object-position:center;max-width:none}
 .bag-summary .fee-list{display:grid;gap:2px;text-align:end;font-size:14px}
 .done-card .receipt-delivery{font-size:15px;color:var(--muted)}.done-card .receipt-delivery strong{font-size:17px}
 .done-card .receipt-delivery+.receipt-total{border-top:0;padding-top:6px}
+
+/* Measurement consent (live site only, when Google IDs are set) */
+.consent-banner{position:fixed;inset-inline:16px;bottom:16px;z-index:120;max-width:620px;margin-inline:auto;display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;padding:16px 18px;background:var(--surface,#1b1e18);color:var(--paper,#f4f5ef);border:1px solid var(--line,#2a2f25);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.35);font-size:13.5px;line-height:1.7}
+.consent-banner p{flex:1 1 260px;margin:0}
+.consent-actions{display:flex;gap:8px;flex-wrap:wrap}.consent-actions .button{min-height:40px;padding:8px 18px}
+.footer-consent{padding:0;border:0;background:none;color:inherit;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+@media (max-width:780px){.consent-banner{bottom:calc(84px + env(safe-area-inset-bottom));inset-inline:12px;padding:14px}}

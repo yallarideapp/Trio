@@ -16,6 +16,7 @@ import { PREVIEW_KEY, PHOTO_KEY, EDITOR_KEY } from '../site/src/pages-preview.js
 import { applyHomePlacement, nextHomePriority, validHomePriority } from '../shared/home-placement.js';
 import { MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage } from '../shared/categories.js';
 import { orderAlerts, orderAlertText, whatsappNumber } from '../site/src/order-alerts.js';
+import { validTrackingValue } from '../shared/tracking.js';
 import { siteTextEntries, siteText, SITE_TEXT_LIMIT, validSiteText, validHeroMode } from '../shared/site-text.js';
 import { categoryArtworkSource } from '../shared/home-artwork.js';
 import { availabilitySummary, setDeviceSoldOut } from '../shared/availability.js';
@@ -544,7 +545,7 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   const source = readFileSync(new URL('../site/admin/src/admin.js', import.meta.url), 'utf8')
     .replace(/^import[^\n]*\n/gm, '').replace(/\(async function start\(\) \{[\s\S]*$/, '');
   const context = vm.createContext({
-    ...pricing, validBatteryHealth, validBatteryCycles, conditions, conditionGroup, conditionOptions, forwardArrow, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications, applyHomePlacement, MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage, siteTextEntries, siteText, SITE_TEXT_LIMIT, validSiteText, validHeroMode, categoryArtworkSource, availabilitySummary, setDeviceSoldOut, orderAlerts, PREVIEW_KEY,
+    ...pricing, validBatteryHealth, validBatteryCycles, conditions, conditionGroup, conditionOptions, forwardArrow, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications, applyHomePlacement, MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage, siteTextEntries, siteText, SITE_TEXT_LIMIT, validSiteText, validHeroMode, categoryArtworkSource, availabilitySummary, setDeviceSoldOut, orderAlerts, validTrackingValue, PREVIEW_KEY,
     api, pagesAdmin, MODE: 'pages', ApiError, local, withDefaults, document,
     window: { addEventListener() {} }, history: { replaceState() {} }, Element: class {}, console, setTimeout, clearTimeout, setInterval() {},
   });

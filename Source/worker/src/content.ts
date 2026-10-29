@@ -7,6 +7,8 @@ import seed from '../../shared/catalog.js';
 import { conditions, notes as noteLabels, warranties } from '../../shared/labels.js';
 // @ts-ignore
 import { validPrice, validStockQuantity, validOfferPrice, validDeliverySettings } from '../../shared/pricing.js';
+// @ts-ignore
+import { validTracking, normalizeTracking } from '../../shared/tracking.js';
 // @ts-ignore shared optional device measurements
 import { validBatteryHealth, validBatteryCycles } from '../../shared/battery.js';
 // @ts-ignore verified bilingual device profiles
@@ -51,6 +53,7 @@ export function sanitizeContent(input: any): any {
   if (!validSiteText(s.siteText)) throw new HttpError(400, 'bad-content', { field: 'site-text' });
   if (!validHeroMode(s.heroMode)) throw new HttpError(400, 'bad-content', { field: 'hero-mode' });
   if (!validDeliverySettings(s.deliveryFils)) throw new HttpError(400, 'bad-content', { field: 'delivery-fees' });
+  if (!validTracking(s.tracking)) throw new HttpError(400, 'bad-content', { field: 'tracking' });
   const settings = {
     phone: str(s.phone, 20).replace(/[^\d+]/g, ''),
     whatsapp: str(s.whatsapp, 20).replace(/\D/g, ''),
@@ -60,6 +63,7 @@ export function sanitizeContent(input: any): any {
     ...(s.siteText !== undefined && s.siteText !== null ? { siteText: normalizeSiteText(s.siteText) } : {}),
     ...(s.heroMode !== undefined && s.heroMode !== null ? { heroMode: s.heroMode } : {}),
     deliveryFils: { amman: s.deliveryFils?.amman || 0, other: s.deliveryFils?.other || 0 },
+    tracking: normalizeTracking(s.tracking),
   };
   if (Array.isArray(input)) throw new HttpError(400, 'bad-content');
   // Reject malformed lists rather than silently dropping categories, shortening
