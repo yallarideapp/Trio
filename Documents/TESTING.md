@@ -317,3 +317,8 @@ This release replaces the source/date/disclaimer sections described above with r
 
 - Settings order: Preview backup, Home presentation, Order alerts, Google measurement, then (live) Prices note and password. Contact & delivery keeps only contact details and delivery fees (plus the live orders switch and delivery note).
 - Checked: `npm test` (alerts and measurement only in Settings, in that order, both languages), all three builds with no warnings; browser at 390 and 1280 px: not on Contact & delivery, present in Settings, WhatsApp fields toggle, a Google ID survives switching tabs; no console errors, no outside requests.
+
+## 2026-10-29 — Launch checklist says where each step is done
+
+- Overview → "Before the site goes live": each item shows where it is done and, when it is in the admin, opens that tab (prices and stock → Devices & prices, contact → Contact & delivery, ordering → Contact & delivery on the live site). In the preview the ordering item explains that the switch is on the live site and the preview always takes demo orders.
+- Checked: `npm test`, all three builds with no warnings; browser at 390 and 1280 px: the contact item opens Contact & delivery; no console errors.

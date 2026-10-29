@@ -27,6 +27,12 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
 const AR = {
+  'Devices & prices → edit each device → Options and prices': 'الأجهزة والأسعار ← عدّل كل جهاز ← الخيارات والأسعار',
+  'Devices & prices → tap the stock badge on each device': 'الأجهزة والأسعار ← اضغط على شارة الكمية بكل جهاز',
+  'Contact & delivery → Contact': 'التواصل والتوصيل ← التواصل',
+  'Contact & delivery → Delivery fees → Take orders on the site': 'التواصل والتوصيل ← رسوم التوصيل ← استقبال الطلبات من الموقع',
+  'On the live site: Contact & delivery → Take orders on the site. The preview always takes demo orders.': 'على الموقع الحقيقي: التواصل والتوصيل ← استقبال الطلبات من الموقع. المعاينة دايماً بتستقبل طلبات تجريبية.',
+  'Cloudflare guide (Cloudflare-guide.md)': 'دليل Cloudflare (Cloudflare-guide.md)',
   'Preview backup': 'نسخة المعاينة',
   'Google measurement': 'قياس Google', 'Google Analytics and Google Ads conversions, only after the visitor agrees.': 'Google Analytics وتحويلات Google Ads، بعد موافقة الزائر فقط.',
   'Google Analytics ID': 'معرّف Google Analytics', 'Google Ads ID': 'معرّف Google Ads', 'Order conversion label': 'تسمية تحويل الطلب', 'Contact conversion label': 'تسمية تحويل التواصل',
@@ -293,17 +299,17 @@ function overviewView() {
   const recent = state.orders.slice(0, 5);
   const settings = state.draft?.settings || {};
   const checks = [
-    { label: 'Replace the example prices with real ones', done: false },
-    { label: 'Check stock for every device', done: false, extra: out ? t('Out of stock: {n}', { n: out }) : '' },
-    { label: 'Confirm contact and address details with the shop', done: false },
-    { label: 'Turn on ordering from the website', done: MODE === 'live' && settings.ordersOn !== false },
-    { label: 'Hosting and a domain in the shop’s name', done: MODE === 'live' },
+    { label: 'Replace the example prices with real ones', done: false, go: 'devices', where: 'Devices & prices → edit each device → Options and prices' },
+    { label: 'Check stock for every device', done: false, extra: out ? t('Out of stock: {n}', { n: out }) : '', go: 'devices', where: 'Devices & prices → tap the stock badge on each device' },
+    { label: 'Confirm contact and address details with the shop', done: false, go: 'contact', where: 'Contact & delivery → Contact' },
+    { label: 'Turn on ordering from the website', done: MODE === 'live' && settings.ordersOn !== false, go: MODE === 'live' ? 'contact' : '', where: MODE === 'live' ? 'Contact & delivery → Delivery fees → Take orders on the site' : 'On the live site: Contact & delivery → Take orders on the site. The preview always takes demo orders.' },
+    { label: 'Hosting and a domain in the shop’s name', done: MODE === 'live', where: 'Cloudflare guide (Cloudflare-guide.md)' },
   ];
   return `<div class="head"><h1>${esc(t('Overview'))}</h1></div>
   <div class="ov-cards">${card('New orders', fresh, 'orders')}${card('Devices shown', shown.length, 'devices')}${card('Devices on offer', offers, 'devices')}${card('Out of stock devices', out, 'devices')}</div>
   <div class="ov-grid"><section class="card"><div class="ov-head"><h2>${esc(t('Latest orders'))}</h2><button type="button" class="text-link" data-overview-go="orders">${esc(t('All orders'))}</button></div>
   ${recent.length ? `<ul class="ov-orders">${recent.map((o) => `<li><button type="button" data-overview-go="orders" data-order="${esc(o.number)}"><span class="ov-o-main"><strong><span dir="ltr">${esc(o.number)}</span> <span class="muted">${esc(o.customer.name)}</span></strong><small dir="ltr">${esc(fmtDate(o.createdAt))}</small></span><span class="ov-o-side"><strong>${esc(fils(o.totalFils))}</strong><span class="status s-${esc(o.status)}">${esc(t(o.status))}</span></span></button></li>`).join('')}</ul>` : `<p class="muted">${esc(t('No orders yet. The first order from the site shows up here.'))}</p>`}</section>
-  <section class="card"><h2>${esc(t('Before the site goes live'))}</h2><ul class="ov-checks">${checks.map((c) => `<li class="${c.done ? 'is-done' : ''}"><span class="ov-tick" aria-hidden="true">${c.done ? '✓' : ''}</span><span>${esc(t(c.label))}${c.extra ? ` <small class="muted">(${esc(c.extra)})</small>` : ''}</span></li>`).join('')}</ul></section></div>`;
+  <section class="card"><h2>${esc(t('Before the site goes live'))}</h2><ul class="ov-checks">${checks.map((c) => { const body = `<span class="ov-tick" aria-hidden="true">${c.done ? '✓' : ''}</span><span>${esc(t(c.label))}${c.extra ? ` <small class="muted">(${esc(c.extra)})</small>` : ''}<small class="ov-where">${esc(t(c.where))}</small></span>`; return `<li class="${c.done ? 'is-done' : ''}">${c.go ? `<button type="button" class="ov-check-go" data-overview-go="${c.go}">${body}</button>` : `<div class="ov-check-go is-static">${body}</div>`}</li>`; }).join('')}</ul></section></div>`;
 }
 function ordersView() {
   const notice = IS_PAGES ? localOrdersNotice() : MODE === 'live' ? `<aside class="preview-notice order-notice"><div><strong>${esc(t('Customer orders'))}</strong><p>${esc(t('Customer checkout orders arrive here automatically. This list refreshes every 15 seconds while the panel is visible.'))}</p></div></aside>` : '';
