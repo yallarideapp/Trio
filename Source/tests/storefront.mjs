@@ -13,6 +13,7 @@ import * as battery from '../shared/battery.js';
 import * as siteCopy from '../shared/site-text.js';
 import * as homeArtwork from '../shared/home-artwork.js';
 import { conditionListings, catalogListings } from '../shared/listings.js';
+import { heroSlot, validHeroSlots, normalizeHeroSlots } from '../shared/hero-slots.js';
 import { existsSync, statSync } from 'node:fs';
 
 export function verifyStorefront() {
@@ -21,7 +22,7 @@ export function verifyStorefront() {
   const document = { documentElement: {}, querySelector: () => null, querySelectorAll: () => [], addEventListener() {} };
   const location = { hash: '#/', replace(value) { this.hash = value; } };
   const context = vm.createContext({
-    ...pricing, ...battery, ...siteCopy, ...homeArtwork, conditionListings, catalogListings, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates, PREVIEW_KEY: 'trio-pages-preview-v1',
+    ...pricing, ...battery, ...siteCopy, ...homeArtwork, heroSlot, conditionListings, catalogListings, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates, PREVIEW_KEY: 'trio-pages-preview-v1',
     playHeroMotion: () => {},
     renderAccount: () => '<h1>My account</h1>', loadAccount: async () => {}, bindAccount: () => {}, accountLabel: () => 'Sign in', customerProfile: () => null, setAccountText: () => {},
     MODE: 'pages', api: { photoUrl: () => '' }, local: { read: (key, fallback = null) => stored.has(key) ? structuredClone(stored.get(key)) : fallback, write: (key, value) => { stored.set(key, structuredClone(value)); return true; } },
@@ -279,6 +280,20 @@ export function verifyStorefront() {
       ui.state.heroCategory = 'watches';
       assert(ui.renderHome().includes(`class="hero-product" href="#/p/${watch.id}?cond=new"`), `${language}: selected watch displays the chosen device instead of static category artwork`);
     } finally { ui.state.content = beforeSelections; ui.state.heroCategory = 'phones'; }
+    // Banner slots from the admin: a picked device or an uploaded picture wins for that tab only.
+    const beforeSlots = ui.state.content; const slotPhotoUrl = context.api.photoUrl;
+    try {
+      ui.state.content = structuredClone(beforeSlots);
+      const laptop = ui.state.content.products.find((product) => product.category === 'laptops' && !product.hidden);
+      ui.state.content.heroSlots = [{ id: 'laptops', device: laptop.id, photo: '' }, { id: 'audio', device: '', photo: 'pbanner' }];
+      context.api.photoUrl = (id) => id === 'pbanner' ? 'data:image/webp;base64,YmFubmVy' : '';
+      ui.state.heroCategory = 'laptops';
+      assert(ui.renderHome().includes(`class="hero-product" href="#/p/${laptop.id}`), `${language}: a banner slot shows the device the owner picked`);
+      ui.state.heroCategory = 'audio';
+      assert(ui.renderHome().includes('data:image/webp;base64,YmFubmVy'), `${language}: a banner slot shows the uploaded picture`);
+      assert(validHeroSlots(ui.state.content.heroSlots) && !validHeroSlots([{ id: 'audio', device: 'x', photo: 'pbanner' }]) && !validHeroSlots([{ id: 'tablets', device: 'x' }]), 'banner slots refuse both choices at once and unknown tabs');
+      assert.deepEqual(normalizeHeroSlots([{ id: 'audio' }, { id: 'phones', device: 'a' }]), [{ id: 'phones', device: 'a', photo: '' }], 'empty banner slots are dropped');
+    } finally { ui.state.content = beforeSlots; context.api.photoUrl = slotPhotoUrl; ui.state.heroCategory = 'phones'; }
     // The hero and offers keep their four-category scope even when tablets and
     // accessories lead the catalog and are promoted into offers and home tiles.
     const contentBeforeHomeCheck = ui.state.content;

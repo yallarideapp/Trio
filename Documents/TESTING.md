@@ -259,3 +259,9 @@ This release replaces the source/date/disclaimer sections described above with r
 
 - Admin device list now uses Flick-style cards: photo, name, brand and starting price on top with badges (stock, «عليه عرض», «بالرئيسية»); below, a «ظاهر / مخفي» button and icon buttons for edit, duplicate (adds a hidden copy) and delete (asks first), plus move up/down. The «يظهر بالرئيسية» switch left the list; it stays in the device form.
 - Automated: all checks pass (the editor test now checks the new list actions). Browser (Pages build): show/hide, duplicate, delete and edit work at 1280px and 390px; the form still has the home-page choice; no errors or horizontal overflow.
+
+## 2026-10-29 — Home banner section in the admin
+
+- New Banner tab: for each home banner tab (phones, laptops, watches, audio) the owner picks a device, uploads a picture, or leaves it on Automatic.
+- Checked: `npm test` (new storefront checks for a picked device, an uploaded picture, and refused slot data); all three builds with no warnings.
+- Browser: picked a laptop and uploaded a picture for audio in the preview admin, saved, and confirmed both on the storefront banner at 1280 px; admin layout checked at 390 and 1280 px; no console errors.

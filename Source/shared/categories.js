@@ -18,4 +18,4 @@ export function validCategories(value) {
 
 // Uploaded category and product pictures share the same media bank. Every path
 // which retains, exports or remaps uploads must include both kinds of owner.
-export const mediaOwners = (content) => [...(content?.products || []), ...(content?.categories || [])];
+export const mediaOwners = (content) => [...(content?.products || []), ...(content?.categories || []), ...(content?.heroSlots || [])];

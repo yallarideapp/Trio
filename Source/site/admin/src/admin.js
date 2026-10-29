@@ -11,6 +11,7 @@ import { siteTextEntries, siteText, SITE_TEXT_LIMIT, validSiteText, validHeroMod
 import { PREVIEW_KEY } from '../../src/pages-preview.js';
 import { categoryArtworkSource } from '../../../shared/home-artwork.js';
 import { availabilitySummary, setDeviceSoldOut } from '../../../shared/availability.js';
+import { HERO_SLOT_IDS, normalizeHeroSlots } from '../../../shared/hero-slots.js';
 
 const IS_PAGES = MODE === 'pages';
 const USE_TECHNICAL = MODE !== 'demo';
@@ -24,7 +25,8 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
 const AR = {
-  'Shown': 'ظاهر', 'On offer': 'عليه عرض', 'On home page': 'بالرئيسية', 'Duplicate': 'نسخ', 'Delete': 'حذف', 'Copy added (hidden). Edit it, then show it.': 'انضافت نسخة مخفية. عدّلها وبعدين خليها ظاهرة.',
+  'Banner': 'البانر', 'Home banner': 'بانر الرئيسية', 'Choose what each tab of the home banner shows: a device from your list, or a picture you upload. Automatic keeps the current choice.': 'اختار شو يبيّن بكل تبويب ببانر الرئيسية: جهاز من القائمة، أو صورة بتحمّلها. «تلقائي» بيخلي الاختيار الحالي.', 'Automatic': 'تلقائي', 'Device to show': 'الجهاز اللي يبيّن', 'Upload a picture': 'حمّل صورة', 'Replace picture': 'غيّر الصورة', 'Remove picture': 'شيل الصورة', 'Uploaded picture': 'صورة محمّلة', 'Shows now': 'بيبيّن هلّق', 'No devices in this category yet.': 'ما في أجهزة بهالقسم لسا.', 'Banner updated. Save your changes to apply it.': 'تغيّر البانر. احفظ التعديلات عشان يبيّن.',
+  'Shown': 'ظاهر', 'On offer': 'عليه عرض', 'On home page': 'بالرئيسية', 'Copy added (hidden). Edit it, then show it.': 'انضافت نسخة مخفية. عدّلها وبعدين خليها ظاهرة.',
   'Overview': 'نظرة عامة', 'New orders': 'طلبات جديدة', 'Devices shown': 'أجهزة ظاهرة', 'Devices on offer': 'أجهزة عليها عرض', 'Out of stock devices': 'أجهزة غير متوفرة', 'Latest orders': 'آخر الطلبات', 'All orders': 'كل الطلبات', 'No orders yet. The first order from the site shows up here.': 'ما في طلبات لسا. أول طلب من الموقع بيطلع هون.', 'Before the site goes live': 'قبل ما يصير الموقع رسمي', 'Replace the example prices with real ones': 'حط الأسعار الحقيقية بدل الأمثلة', 'Confirm contact and address details with the shop': 'أكّد معلومات التواصل والعنوان مع المحل', 'Check stock for every device': 'راجع المخزون لكل جهاز', 'Turn on ordering from the website': 'شغّل الطلبات من الموقع', 'Hosting and a domain in the shop’s name': 'استضافة ودومين باسم المحل', 'Out of stock: {n}': 'غير متوفر: {n}',
   'Device stock': 'مخزون الجهاز', 'In stock': 'متوفر', 'Some options are out of stock': 'بعض الخيارات غير متوفرة', 'Manage stock': 'عدّل المخزون',
   '{available} of {total} options available': '{available} من {total} خيارات متوفرة', 'Mark all options out of stock': 'اجعل كل الخيارات غير متوفرة', 'Clear manual out-of-stock flags': 'ألغِ التعطيل اليدوي للخيارات',
@@ -123,7 +125,7 @@ const t = (s, vars = {}) => (lang === 'ar' ? AR[s] || s : ({ new: 'New', confirm
 const L = (o) => (o && typeof o === 'object' ? o[lang] || o.ar || o.en || '' : String(o || ''));
 const money = (jd) => formatJD(toFils(jd), lang);
 
-const initialView = IS_PAGES ? ({ '#orders': 'orders', '#devices': 'devices', '#categories': 'categories', '#settings': 'settings' }[globalThis.location?.hash] || 'overview') : 'overview';
+const initialView = IS_PAGES ? ({ '#orders': 'orders', '#devices': 'devices', '#banner': 'banner', '#categories': 'categories', '#settings': 'settings' }[globalThis.location?.hash] || 'overview') : 'overview';
 const state = { view: initialView, signedIn: IS_PAGES, setup: true, published: null, version: 0, draft: null, dirty: false, orders: [], legacyOrders: [], orderFilter: '', orderOpen: null, orderQuery: '', orderBefore: null, editing: null, category: 'all', query: '', addingCategory: null, message: '', textQuery: '', textArea: 'home', textAdvanced: false, textMode: 'main' };
 
 function saveDraft() {
@@ -152,7 +154,7 @@ async function guard(fn) {
 // ---------- shell ----------
 function topBar() {
   const n = state.orders.filter((o) => o.status === 'new').length;
-  const tabs = IS_PAGES ? [['overview', 'Overview'], ['devices', 'Devices'], ['categories', 'Categories'], ['orders', 'Orders'], ['settings', 'Settings']] : [['overview', 'Overview'], ['orders', 'Orders'], ['devices', 'Devices'], ['categories', 'Categories'], ['settings', 'Settings']];
+  const tabs = IS_PAGES ? [['overview', 'Overview'], ['devices', 'Devices'], ['categories', 'Categories'], ['banner', 'Banner'], ['orders', 'Orders'], ['settings', 'Settings']] : [['overview', 'Overview'], ['orders', 'Orders'], ['devices', 'Devices'], ['categories', 'Categories'], ['banner', 'Banner'], ['settings', 'Settings']];
   return `<header class="bar"><div class="bar-in"><a class="brand" href="../index.html#/" ${MODE === 'demo' ? '' : 'target="_blank" rel="noopener"'}><img src="../assets/instagram/logo.jpg" alt="" width="34" height="34"><span dir="ltr">TRIO</span><small>${esc(t(IS_PAGES ? 'Catalog editor' : 'Admin'))}</small></a>
   <nav class="tabs">${tabs.map(([id, label]) => `<button type="button" data-view="${id}" aria-current="${state.view === id}">${esc(t(label))}${id === 'orders' && n ? `<span class="badge">${n}</span>` : ''}</button>`).join('')}</nav>
   <div class="bar-actions"><span id="draft-state" class="draft-state" role="status"></span><button type="button" id="publish" class="btn primary">${esc(t(IS_PAGES ? 'Save preview' : 'Publish'))}</button>${IS_PAGES ? `<a class="btn ghost" href="../index.html?preview=draft#/" target="_blank" rel="noopener">${esc(t('View preview'))}${forwardArrow}</a>` : ''}<button type="button" id="lang" class="btn ghost" lang="${lang === 'ar' ? 'en' : 'ar'}">${lang === 'ar' ? 'EN' : 'ع'}</button>${MODE === 'demo' || IS_PAGES ? '' : `<button type="button" id="logout" class="btn ghost">${esc(t('Sign out'))}</button>`}</div></div>
@@ -175,7 +177,7 @@ function render() {
   document.body.classList.toggle('pages-editor', IS_PAGES);
   const root = $('#admin');
   if (!state.signedIn) { root.innerHTML = signInView(); return; }
-  root.innerHTML = `${topBar()}<main class="wrap">${IS_PAGES && !['orders', 'overview'].includes(state.view) ? previewTools() : ''}${state.view === 'overview' ? overviewView() : state.view === 'orders' ? ordersView() : state.view === 'devices' ? (state.editing ? editView() : devicesView()) : state.view === 'categories' ? categoriesView() : settingsView()}</main><p id="flash" class="flash" role="status" hidden></p>`;
+  root.innerHTML = `${topBar()}<main class="wrap">${IS_PAGES && !['orders', 'overview'].includes(state.view) ? previewTools() : ''}${state.view === 'overview' ? overviewView() : state.view === 'banner' ? bannerView() : state.view === 'orders' ? ordersView() : state.view === 'devices' ? (state.editing ? editView() : devicesView()) : state.view === 'categories' ? categoriesView() : settingsView()}</main><p id="flash" class="flash" role="status" hidden></p>`;
   updateBar();
   if (state.view === 'settings') filterWebsiteTexts();
 }
@@ -194,6 +196,29 @@ function legacyOrdersExport() {
   return IS_PAGES && state.legacyOrders.length ? `<details class="card"><summary>${esc(t('Previous browser records'))} (${state.legacyOrders.length})</summary><p class="muted">${esc(t('These earlier records exist only in this browser. They are separate from customer checkout orders.'))}</p><div class="btns"><button type="button" class="btn ghost" data-export-legacy-orders>${esc(t('Export previous records'))}</button></div></details>` : '';
 }
 // Overview (like the Flick admin): the numbers that need attention, the latest orders and what is left before launch.
+// Home banner: for each tab, a device from the list or an uploaded picture.
+const uploadedSrc = (id) => (id ? (IS_PAGES ? adminApi.photoUrl(id) : api.photoUrl(id)) || '' : '');
+function setHeroSlot(id, patch) {
+  const slots = (state.draft.heroSlots || []).filter((slot) => slot.id !== id);
+  slots.push({ id, device: '', photo: '', ...patch });
+  state.draft.heroSlots = normalizeHeroSlots(slots);
+  saveDraft();
+}
+function bannerView() {
+  const c = state.draft, slots = c.heroSlots || [];
+  const cards = HERO_SLOT_IDS.map((id) => {
+    const category = c.categories.find((item) => item.id === id); if (!category) return '';
+    const slot = slots.find((item) => item.id === id) || {};
+    const devices = c.products.filter((p) => p.category === id && !p.hidden);
+    const picked = slot.device ? c.products.find((p) => p.id === slot.device) : null;
+    const src = slot.photo ? uploadedSrc(slot.photo) : picked ? photoSrc(picked) : '';
+    const now = slot.photo ? t('Uploaded picture') : picked ? L(picked.name) : t('Automatic');
+    return `<section class="card banner-slot"><div class="banner-preview">${src ? `<img src="${esc(src)}" alt="" loading="lazy">` : `<span class="banner-auto">${esc(t('Automatic'))}</span>`}</div><div class="banner-fields"><h2>${esc(L(category.name))}</h2><p class="muted small">${esc(t('Shows now'))}: <strong dir="auto">${esc(now)}</strong></p>
+      <label class="f"><span>${esc(t('Device to show'))}</span><select data-hero-device="${id}"><option value="">${esc(t('Automatic'))}</option>${devices.map((p) => `<option value="${esc(p.id)}"${slot.device === p.id ? ' selected' : ''}>${esc(L(p.name))}</option>`).join('')}</select></label>${devices.length ? '' : `<p class="muted small">${esc(t('No devices in this category yet.'))}</p>`}
+      <div class="btns"><label class="btn small">${esc(t(slot.photo ? 'Replace picture' : 'Upload a picture'))}<input type="file" class="file-input" accept="image/jpeg,image/png,image/webp" data-hero-photo="${id}"></label>${slot.photo ? `<button type="button" class="btn ghost small" data-hero-photo-clear="${id}">${esc(t('Remove picture'))}</button>` : ''}</div></div></section>`;
+  }).join('');
+  return `<div class="head"><h1>${esc(t('Home banner'))}</h1></div><p class="muted">${esc(t('Choose what each tab of the home banner shows: a device from your list, or a picture you upload. Automatic keeps the current choice.'))}</p><div class="banner-slots">${cards}</div>`;
+}
 function overviewView() {
   const products = state.draft?.products || [];
   const shown = products.filter((p) => !p.hidden);
@@ -639,7 +664,7 @@ document.addEventListener('click', async (e) => {
   const el = e.target instanceof Element ? e.target : null; if (!el) return;
   const hit = (s) => el.closest(s);
   if (hit('#lang')) { readCurrentForm(); lang = lang === 'ar' ? 'en' : 'ar'; local.write('trio-admin-lang', lang); render(); return; }
-  if (hit('[data-view]')) { const view = hit('[data-view]').dataset.view; if (!['overview', 'devices', 'categories', 'orders', 'settings'].includes(view)) return; readCurrentForm(); if (view === 'settings') { state.textMode = 'main'; state.textQuery = ''; state.textAdvanced = false; } state.view = view; state.editing = null; state.orderOpen = null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); if (['orders', 'overview'].includes(state.view)) await loadOrders(); render(); return; }
+  if (hit('[data-view]')) { const view = hit('[data-view]').dataset.view; if (!['overview', 'devices', 'categories', 'banner', 'orders', 'settings'].includes(view)) return; readCurrentForm(); if (view === 'settings') { state.textMode = 'main'; state.textQuery = ''; state.textAdvanced = false; } state.view = view; state.editing = null; state.orderOpen = null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); if (['orders', 'overview'].includes(state.view)) await loadOrders(); render(); return; }
   if (hit('#publish')) { publish(); return; }
   if (hit('[data-stock-edit]')) {
     state.editing = { index: Number(hit('[data-stock-edit]').dataset.stockEdit) }; render();
@@ -701,6 +726,7 @@ document.addEventListener('click', async (e) => {
   if (IS_PAGES && hit('[data-export-orders]')) { await exportOrders(); return; }
   if (IS_PAGES && hit('[data-export-legacy-orders]')) { await exportOrders({ legacy: true }); return; }
   if (hit('[data-refresh-orders]')) { await loadOrders(); render(); return; }
+  if (hit('[data-hero-photo-clear]')) { setHeroSlot(hit('[data-hero-photo-clear]').dataset.heroPhotoClear, {}); render(); flash(t('Banner updated. Save your changes to apply it.')); return; }
   if (hit('[data-overview-go]')) { const view = hit('[data-overview-go]').dataset.overviewGo; readCurrentForm(); state.view = view; state.editing = null; state.orderOpen = hit('[data-overview-go]').dataset.order || null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); render(); window.scrollTo(0, 0); return; }
   if (hit('[data-open-order]')) { state.orderOpen = hit('[data-open-order]').dataset.openOrder; render(); window.scrollTo(0, 0); return; }
   if (hit('[data-close-order]')) { state.orderOpen = null; await loadOrders(); render(); return; }
@@ -767,6 +793,16 @@ document.addEventListener('change', async (e) => {
     filterWebsiteTexts(); return;
   }
   const form = e.target.closest && e.target.closest('form');
+  if (e.target.dataset?.heroDevice !== undefined) { setHeroSlot(e.target.dataset.heroDevice, { device: e.target.value }); render(); flash(t('Banner updated. Save your changes to apply it.')); return; }
+  if (e.target.dataset?.heroPhoto !== undefined && e.target.files?.[0]) {
+    const id = e.target.dataset.heroPhoto; if (!state.signedIn || !HERO_SLOT_IDS.includes(id)) return;
+    const input = e.target; const file = input.files[0];
+    input.disabled = true; flash(t('Uploading…'), 'warn');
+    try { const blob = await resizeImage(file); const res = await adminApi.uploadPhoto(blob); setHeroSlot(id, { photo: res.id }); render(); flash(t(IS_PAGES ? 'Photo uploaded. Save preview to show it.' : 'Photo uploaded. Publish to show it.')); }
+    catch (error) { if (error instanceof ApiError && error.status === 401) { state.signedIn = false; render(); return; } flash(t('Could not upload the photo.'), 'error'); }
+    finally { if (input.isConnected) { input.disabled = false; input.value = ''; } }
+    return;
+  }
   if (e.target.dataset?.categoryPhoto !== undefined && e.target.files?.[0]) {
     const category = state.draft?.categories.find((item) => item.id === e.target.dataset.categoryPhoto);
     if (!state.signedIn || !category) return;

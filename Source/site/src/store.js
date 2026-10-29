@@ -39,6 +39,7 @@ export function withDefaults(content) {
   }
   result.categories = Array.isArray(content.categories) && content.categories.length ? content.categories : base.categories;
   result.products = Array.isArray(content.products) ? content.products : base.products;
+  result.heroSlots = Array.isArray(content.heroSlots) ? content.heroSlots : [];
   return result;
 }
 

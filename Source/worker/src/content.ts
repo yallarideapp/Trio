@@ -1,3 +1,5 @@
+// @ts-ignore shared banner slot rules
+import { validHeroSlots, normalizeHeroSlots } from '../../shared/hero-slots.js';
 import { Env, HttpError, str, isStr } from './util';
 // @ts-ignore shared plain-JS modules (also used by the storefront)
 import seed from '../../shared/catalog.js';
@@ -109,5 +111,8 @@ export function sanitizeContent(input: any): any {
     const homePriority = validHomePriority(p.homePriority) ? p.homePriority : 0;
     return { id, category, brand: str(p.brand, 30), name, image, photo, imageNote: imageNote && (imageNote.ar || imageNote.en) ? imageNote : undefined, hidden: p.hidden === true, offer: p.offer === true, featured: p.featured === true, homePriority, tagline: pair(p.tagline, 140), about: pair(p.about, 1200), specs, technical, source: httpsUrl(p.source, 300), variants };
   });
-  return { settings, categories, products };
+  if (!validHeroSlots(input.heroSlots)) throw new HttpError(400, 'bad-content', { field: 'hero-slots' });
+  if ((input.heroSlots || []).some((slot: any) => slot && slot.photo && !PHOTO.test(slot.photo))) throw new HttpError(400, 'bad-content', { field: 'hero-slot-photo' });
+  const heroSlots = normalizeHeroSlots(input.heroSlots).map((slot: any) => (slot.device && !ids.has(slot.device) ? null : slot)).filter(Boolean);
+  return { settings, categories, products, heroSlots };
 }

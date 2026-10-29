@@ -10,6 +10,7 @@ import { storeCopy, resolvedCopy, siteText, shellTextId } from '../../shared/sit
 import { PREVIEW_KEY } from './pages-preview.js';
 import { categoryArtworkSource } from '../../shared/home-artwork.js';
 import { conditionListings, catalogListings } from '../../shared/listings.js';
+import { heroSlot } from '../../shared/hero-slots.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -162,7 +163,22 @@ function categoryArtwork(id, { eager = false } = {}) {
   const [src, alt] = picture;
   return `<span class="category-artwork ${id}"><img src="${src}" alt="${alt}" loading="${eager ? 'eager' : 'lazy'}" decoding="async" draggable="false"></span>`;
 }
+const heroTabs = () => `<div class="hero-tabs" role="group" aria-label="${esc(t('heroChoose'))}">${homeCategoryIds().map((id) => `<button type="button" data-hero-category="${esc(id)}" aria-pressed="${id === state.heroCategory}">${esc(categoryName(id))}</button>`).join('')}</div>`;
+// A device chosen for this banner tab: its own photo, name, price and page.
+function heroProductCard(product) {
+  const low = fromPrice(product);
+  const caption = low !== null ? `<span class="hero-price"><small>${esc(t('from'))}</small> <bdi>${esc(money(low))}</bdi></span>` : `<span class="hero-price">${esc(t('soldOut'))}</span>`;
+  return `<a class="hero-product" href="${productUrl(product, startingVariant(product))}" aria-label="${esc(`${t('view')}: ${L(product.name)}`)}"><div class="device-media hero-device">${media(product, { eager: true, hero: true })}</div><div class="hero-product-caption"><div><p class="product-brand" dir="ltr">${esc(product.brand)}</p><p class="hero-product-name" dir="auto">${esc(L(product.name))}</p></div>${caption}</div></a>${heroTabs()}`;
+}
 function heroShowcase() {
+  // A banner choice from the admin wins: a picked device, or an uploaded picture.
+  const slot = heroSlot(state.content, state.heroCategory);
+  const picked = slot?.device ? products().find((product) => product.id === slot.device) : null;
+  if (slot?.photo) {
+    const title = categoryName(state.heroCategory);
+    return `<a class="hero-product" href="${categoryUrl(state.heroCategory)}" aria-label="${esc(`${t('browse')}: ${title}`)}"><div class="device-media hero-device">${media({ photo: slot.photo, brand: '', name: { ar: title, en: title } }, { eager: true })}</div><div class="hero-product-caption"><div><p class="hero-product-name" dir="auto">${esc(title)}</p></div><span class="hero-price">${arrow}</span></div></a>${heroTabs()}`;
+  }
+  if (picked) return heroProductCard(picked);
   if (S().heroMode === 'default') {
     const pictures = { phones: 'assets/devices/iphone-17-pro-max.webp', laptops: 'assets/devices/macbook-pro.webp', watches: 'assets/devices/huawei-watch-gt6.webp', audio: 'assets/categories/airpods-pro.png' };
     const picture = pictures[state.heroCategory];
