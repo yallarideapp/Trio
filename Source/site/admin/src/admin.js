@@ -25,6 +25,7 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
 const AR = {
+  'Devices & prices': 'الأجهزة والأسعار', 'Banner devices': 'أجهزة البانر', 'Admin sections': 'أقسام اللوحة',
   'Banner': 'البانر', 'Home banner': 'بانر الرئيسية', 'Choose what each tab of the home banner shows: a device from your list, or a picture you upload. Automatic keeps the current choice.': 'اختار شو يبيّن بكل تبويب ببانر الرئيسية: جهاز من القائمة، أو صورة بتحمّلها. «تلقائي» بيخلي الاختيار الحالي.', 'Automatic': 'تلقائي', 'Device to show': 'الجهاز اللي يبيّن', 'Upload a picture': 'حمّل صورة', 'Replace picture': 'غيّر الصورة', 'Remove picture': 'شيل الصورة', 'Uploaded picture': 'صورة محمّلة', 'Shows now': 'بيبيّن هلّق', 'No devices in this category yet.': 'ما في أجهزة بهالقسم لسا.', 'Banner updated. Save your changes to apply it.': 'تغيّر البانر. احفظ التعديلات عشان يبيّن.',
   'Shown': 'ظاهر', 'On offer': 'عليه عرض', 'On home page': 'بالرئيسية', 'Copy added (hidden). Edit it, then show it.': 'انضافت نسخة مخفية. عدّلها وبعدين خليها ظاهرة.',
   'Overview': 'نظرة عامة', 'New orders': 'طلبات جديدة', 'Devices shown': 'أجهزة ظاهرة', 'Devices on offer': 'أجهزة عليها عرض', 'Out of stock devices': 'أجهزة غير متوفرة', 'Latest orders': 'آخر الطلبات', 'All orders': 'كل الطلبات', 'No orders yet. The first order from the site shows up here.': 'ما في طلبات لسا. أول طلب من الموقع بيطلع هون.', 'Before the site goes live': 'قبل ما يصير الموقع رسمي', 'Replace the example prices with real ones': 'حط الأسعار الحقيقية بدل الأمثلة', 'Confirm contact and address details with the shop': 'أكّد معلومات التواصل والعنوان مع المحل', 'Check stock for every device': 'راجع المخزون لكل جهاز', 'Turn on ordering from the website': 'شغّل الطلبات من الموقع', 'Hosting and a domain in the shop’s name': 'استضافة ودومين باسم المحل', 'Out of stock: {n}': 'غير متوفر: {n}',
@@ -152,11 +153,25 @@ async function guard(fn) {
 }
 
 // ---------- shell ----------
+// Side menu, in the same order as the Flick admin (without the sections Trio has no use for).
+const NAV_ICONS = {
+  overview: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  orders: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+  devices: '<rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/>',
+  banner: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 16 5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/>',
+  categories: '<path d="M4 6h7v5H4zM13 6h7v5h-7zM4 13h7v5H4zM13 13h7v5h-7z"/>',
+  texts: '<path d="M5 6V4h14v2M12 4v16M9 20h6"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>',
+};
+const NAV = [['overview', 'Overview'], ['orders', 'Orders'], ['devices', 'Devices & prices'], ['banner', 'Banner devices'], ['categories', 'Categories'], ['texts', 'Website texts'], ['settings', 'Settings']];
+function sideNav() {
+  const n = state.orders.filter((o) => o.status === 'new').length;
+  return `<aside class="side"><nav class="tabs side-nav" aria-label="${esc(t('Admin sections'))}">${NAV.map(([id, label]) => `<button type="button" data-view="${id}" aria-current="${state.view === id}"><svg viewBox="0 0 24 24" aria-hidden="true">${NAV_ICONS[id]}</svg><span class="nav-label">${esc(t(label))}</span>${id === 'orders' && n ? `<span class="badge">${n}</span>` : ''}</button>`).join('')}</nav></aside>`;
+}
 function topBar() {
   const n = state.orders.filter((o) => o.status === 'new').length;
-  const tabs = IS_PAGES ? [['overview', 'Overview'], ['devices', 'Devices'], ['categories', 'Categories'], ['banner', 'Banner'], ['texts', 'Website texts'], ['orders', 'Orders'], ['settings', 'Settings']] : [['overview', 'Overview'], ['orders', 'Orders'], ['devices', 'Devices'], ['categories', 'Categories'], ['banner', 'Banner'], ['texts', 'Website texts'], ['settings', 'Settings']];
+  void n;
   return `<header class="bar"><div class="bar-in"><a class="brand" href="../index.html#/" ${MODE === 'demo' ? '' : 'target="_blank" rel="noopener"'}><img src="../assets/instagram/logo.jpg" alt="" width="34" height="34"><span dir="ltr">TRIO</span><small>${esc(t(IS_PAGES ? 'Catalog editor' : 'Admin'))}</small></a>
-  <nav class="tabs">${tabs.map(([id, label]) => `<button type="button" data-view="${id}" aria-current="${state.view === id}">${esc(t(label))}${id === 'orders' && n ? `<span class="badge">${n}</span>` : ''}</button>`).join('')}</nav>
   <div class="bar-actions"><span id="draft-state" class="draft-state" role="status"></span><button type="button" id="publish" class="btn primary">${esc(t(IS_PAGES ? 'Save preview' : 'Publish'))}</button>${IS_PAGES ? `<a class="btn ghost" href="../index.html?preview=draft#/" target="_blank" rel="noopener">${esc(t('View preview'))}${forwardArrow}</a>` : ''}<button type="button" id="lang" class="btn ghost" lang="${lang === 'ar' ? 'en' : 'ar'}">${lang === 'ar' ? 'EN' : 'ع'}</button>${MODE === 'demo' || IS_PAGES ? '' : `<button type="button" id="logout" class="btn ghost">${esc(t('Sign out'))}</button>`}</div></div>
   ${MODE === 'demo' ? `<p class="demo-line">${esc(t('Demo: changes stay in this browser. No password needed.'))}</p>` : ''}</header>`;
 }
@@ -177,8 +192,11 @@ function render() {
   document.body.classList.toggle('pages-editor', IS_PAGES);
   const root = $('#admin');
   if (!state.signedIn) { root.innerHTML = signInView(); return; }
-  root.innerHTML = `${topBar()}<main class="wrap">${IS_PAGES && !['orders', 'overview'].includes(state.view) ? previewTools() : ''}${state.view === 'overview' ? overviewView() : state.view === 'banner' ? bannerView() : state.view === 'texts' ? textsView() : state.view === 'orders' ? ordersView() : state.view === 'devices' ? (state.editing ? editView() : devicesView()) : state.view === 'categories' ? categoriesView() : settingsView()}</main><p id="flash" class="flash" role="status" hidden></p>`;
+  root.innerHTML = `${topBar()}<div class="shell">${sideNav()}<main class="wrap">${IS_PAGES && !['orders', 'overview'].includes(state.view) ? previewTools() : ''}${state.view === 'overview' ? overviewView() : state.view === 'banner' ? bannerView() : state.view === 'texts' ? textsView() : state.view === 'orders' ? ordersView() : state.view === 'devices' ? (state.editing ? editView() : devicesView()) : state.view === 'categories' ? categoriesView() : settingsView()}</main></div><p id="flash" class="flash" role="status" hidden></p>`;
   updateBar();
+  // On narrow screens the side menu is a scrolling row: keep the open section in view.
+  const nav = $('.side-nav'), active = nav?.querySelector('[aria-current="true"]');
+  if (nav && active && nav.scrollWidth > nav.clientWidth) { const a = active.getBoundingClientRect(), b = nav.getBoundingClientRect(); nav.scrollLeft += (a.left + a.width / 2) - (b.left + b.width / 2); }
   if (state.view === 'texts') filterWebsiteTexts();
 }
 function signInView() {

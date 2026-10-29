@@ -276,3 +276,9 @@ This release replaces the source/date/disclaimer sections described above with r
 
 - Split Settings into two tabs: "Website texts" (the important texts and the full text editor) and "Settings" (home presentation, contact details, ordering, password).
 - Checked: `npm test` (editor views updated for the two tabs), all three builds with no warnings; in the browser at 390 and 1280 px, edited a hero line in Website texts and the phone in Settings, switched between tabs, both kept, saved, and the storefront showed the new heading; no console errors.
+
+## 2026-10-29 — Side menu like the Flick admin
+
+- The admin tabs moved into a side menu with icons, in Flick's order without the sections Trio does not have: Overview, Orders, Devices & prices, Banner devices, Categories, Website texts, Settings. New orders show a count on Orders.
+- On screens up to 900 px the menu becomes one scrolling row under the top bar, and the open section is kept in view.
+- Checked: `npm test`, all three builds with no warnings; browser at 390, 900 and 1280 px in Arabic and English: order and labels correct, menu stays in place while scrolling on desktop, no sideways page scroll, no console errors.
