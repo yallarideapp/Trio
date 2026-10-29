@@ -201,3 +201,12 @@ code{font-size:12px;background:var(--ink);padding:2px 6px;border-radius:6px}
 .pick-groups .banner-pick{max-height:none;overflow:visible}
 .pick-group{margin:6px 0 0;font-size:12px;font-weight:700;color:var(--muted)}
 .add-category-photo{display:flex;align-items:center;gap:12px;margin-top:10px}.add-category-photo .category-photo{width:96px;height:96px}
+
+/* Contact & delivery */
+.total.sub{font-size:14px;color:var(--muted);margin:4px 0}.total.sub strong{font-size:15px}
+.alerts-card{margin-top:16px}
+.alert-status{display:inline-block;margin:4px 0 10px;padding:6px 12px;border-radius:999px;background:var(--surface-2);font-size:13px;font-weight:700}
+.alert-status.is-on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.alert-choices{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.alert-choice{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.alert-feedback:empty{display:none}

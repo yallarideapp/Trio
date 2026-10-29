@@ -2,7 +2,7 @@ import { Env, HttpError, json, readJson, checkOrigin, clientIp, sha256, takeSlot
 import { getContent } from './content';
 import { customerId } from './customer';
 // @ts-ignore shared plain-JS modules
-import { priceLines, normaliseMobile, formatJD } from '../../shared/pricing.js';
+import { priceLines, priceOrder, normaliseMobile, formatJD } from '../../shared/pricing.js';
 // @ts-ignore
 import { governorates, conditions } from '../../shared/labels.js';
 
@@ -25,9 +25,8 @@ export async function placeOrder(request: Request, env: Env, ctx: ExecutionConte
   const existing = await findByToken(env, token);
   if (existing) return json({ number: existing.number, totalFils: existing.total_fils });
 
-  const priced = priceLines(content, body.lines);
-  if (!priced.ok) throw new HttpError(['sold-out', 'unknown', 'stock-limit'].includes(priced.error) ? 409 : 400, priced.error, priced.id ? { id: priced.id } : {});
-  if (!Number.isInteger(body.totalFils) || body.totalFils !== priced.totalFils) throw new HttpError(409, 'price-changed');
+  const devices = priceLines(content, body.lines);
+  if (!devices.ok) throw new HttpError(['sold-out', 'unknown', 'stock-limit'].includes(devices.error) ? 409 : 400, devices.error, devices.id ? { id: devices.id } : {});
 
   const c = body.customer || {};
   const name = str(c.name, 60);
@@ -44,6 +43,8 @@ export async function placeOrder(request: Request, env: Env, ctx: ExecutionConte
     address = str(c.address, 200);
     if (address.length < 4) throw new HttpError(400, 'bad-address');
   }
+  const priced = priceOrder(content, body.lines, fulfilment, governorate);
+  if (!Number.isInteger(body.totalFils) || body.totalFils !== priced.totalFils) throw new HttpError(409, 'price-changed');
   const notes = str(c.notes, 300);
   const lang = body.lang === 'en' ? 'en' : 'ar';
   const owner = await customerId(request, env);
@@ -73,19 +74,32 @@ export async function placeOrder(request: Request, env: Env, ctx: ExecutionConte
   }
   if (!number) throw new HttpError(500, 'server');
 
-  if (env.RESEND_API_KEY && env.ORDER_EMAIL) {
-    ctx.waitUntil(sendOrderEmail(env, { number, createdAt, name, mobile, governorate, address, notes, fulfilment, lines: priced.lines, totalFils: priced.totalFils }).catch((e) => console.error('email', e)));
-  }
+  const alert = { number, createdAt, name, mobile, governorate, address, notes, fulfilment, lines: priced.lines, deliveryFils: priced.deliveryFils, totalFils: priced.totalFils };
+  if (env.RESEND_API_KEY && env.ORDER_EMAIL) ctx.waitUntil(sendOrderEmail(env, alert).catch((e) => console.error('email', e)));
+  if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID) ctx.waitUntil(sendTelegram(env, alert).catch((e) => console.error('telegram', e)));
   return json({ number, totalFils: priced.totalFils }, 201);
 }
 
 const escHtml = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string));
 
+// One line per field, so a customer cannot add fake lines to the alert.
+const oneLine = (value: unknown, max: number) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+async function sendTelegram(env: Env, o: any) {
+  const gov = governorates.find(([id]: [string]) => id === o.governorate);
+  const text = [`🛍️ طلب جديد · ${o.number}`, ...o.lines.map((l: any) => `• ${oneLine(l.product.name.ar, 60)}${l.variant.storage ? ` (${oneLine(l.variant.storage, 20)})` : ''} × ${l.qty} — ${formatJD(l.totalFils, 'ar')}`), o.fulfilment === 'pickup' ? 'استلام من المحل' : `التوصيل: ${o.deliveryFils ? formatJD(o.deliveryFils, 'ar') : 'يتأكد بالتلفون'}`, `المجموع: ${formatJD(o.totalFils, 'ar')}`, `👤 ${oneLine(o.name, 60)} · ${o.mobile}`, o.fulfilment === 'pickup' ? '' : `📍 ${gov ? gov[1] : ''} — ${oneLine(o.address, 200)}`, o.notes ? `📝 ${oneLine(o.notes, 300)}` : ''].filter(Boolean).join('\n');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text, disable_web_page_preview: true }) });
+    if (!res.ok) console.error('telegram status', res.status);
+  } finally { clearTimeout(timer); }
+}
+
 async function sendOrderEmail(env: Env, o: any) {
   const gov = governorates.find(([id]: [string]) => id === o.governorate);
   const rows = o.lines.map((l: any) => `<tr><td style="padding:8px;border-bottom:1px solid #2a2f25">${escHtml(l.product.name.ar)}${l.variant.storage ? ` · ${escHtml(l.variant.storage)}` : ''}${l.variant.condition ? ` · ${escHtml(conditions[l.variant.condition]?.ar || '')}` : ''}</td><td style="padding:8px;border-bottom:1px solid #2a2f25">× ${l.qty}</td><td style="padding:8px;border-bottom:1px solid #2a2f25;white-space:nowrap">${escHtml(formatJD(l.totalFils, 'ar'))}</td></tr>`).join('');
-  const html = `<div dir="rtl" style="background:#121410;color:#f4f5ef;font-family:Arial,sans-serif;padding:24px"><h1 style="color:#70f336;margin:0 0 8px">طلب جديد ${escHtml(o.number)}</h1><p style="margin:0 0 16px;color:#a4ad9b">${escHtml(o.createdAt)}</p><p style="margin:0">${escHtml(o.name)} · <span dir="ltr">${escHtml(o.mobile)}</span></p><p style="margin:4px 0 16px">${o.fulfilment === 'pickup' ? 'استلام من المحل' : `توصيل: ${escHtml(gov ? gov[1] : '')} — ${escHtml(o.address)}`}</p>${o.notes ? `<p style="margin:0 0 16px">ملاحظات: ${escHtml(o.notes)}</p>` : ''}<table style="border-collapse:collapse;width:100%;color:#f4f5ef">${rows}</table><p style="font-size:18px;margin:16px 0 0">المجموع: <strong style="color:#70f336">${escHtml(formatJD(o.totalFils, 'ar'))}</strong></p></div>`;
-  const text = [`طلب جديد ${o.number}`, `${o.name} — ${o.mobile}`, o.fulfilment === 'pickup' ? 'استلام من المحل' : `توصيل: ${gov ? gov[1] : ''} — ${o.address}`, o.notes ? `ملاحظات: ${o.notes}` : '', ...o.lines.map((l: any) => `- ${l.product.name.ar} ${l.variant.storage || ''} × ${l.qty} = ${formatJD(l.totalFils, 'ar')}`), `المجموع: ${formatJD(o.totalFils, 'ar')}`].filter(Boolean).join('\n');
+  const html = `<div dir="rtl" style="background:#121410;color:#f4f5ef;font-family:Arial,sans-serif;padding:24px"><h1 style="color:#70f336;margin:0 0 8px">طلب جديد ${escHtml(o.number)}</h1><p style="margin:0 0 16px;color:#a4ad9b">${escHtml(o.createdAt)}</p><p style="margin:0">${escHtml(o.name)} · <span dir="ltr">${escHtml(o.mobile)}</span></p><p style="margin:4px 0 16px">${o.fulfilment === 'pickup' ? 'استلام من المحل' : `توصيل: ${escHtml(gov ? gov[1] : '')} — ${escHtml(o.address)}`}</p>${o.notes ? `<p style="margin:0 0 16px">ملاحظات: ${escHtml(o.notes)}</p>` : ''}<table style="border-collapse:collapse;width:100%;color:#f4f5ef">${rows}</table>${o.deliveryFils ? `<p style="margin:12px 0 0">التوصيل: ${escHtml(formatJD(o.deliveryFils, 'ar'))}</p>` : ''}<p style="font-size:18px;margin:16px 0 0">المجموع: <strong style="color:#70f336">${escHtml(formatJD(o.totalFils, 'ar'))}</strong></p></div>`;
+  const text = [`طلب جديد ${o.number}`, `${o.name} — ${o.mobile}`, o.fulfilment === 'pickup' ? 'استلام من المحل' : `توصيل: ${gov ? gov[1] : ''} — ${o.address}`, o.notes ? `ملاحظات: ${o.notes}` : '', ...o.lines.map((l: any) => `- ${l.product.name.ar} ${l.variant.storage || ''} × ${l.qty} = ${formatJD(l.totalFils, 'ar')}`), o.deliveryFils ? `التوصيل: ${formatJD(o.deliveryFils, 'ar')}` : '', `المجموع: ${formatJD(o.totalFils, 'ar')}`].filter(Boolean).join('\n');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 6000);
   try {

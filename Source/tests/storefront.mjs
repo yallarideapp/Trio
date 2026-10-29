@@ -14,6 +14,8 @@ import * as siteCopy from '../shared/site-text.js';
 import * as homeArtwork from '../shared/home-artwork.js';
 import { conditionListings, catalogListings } from '../shared/listings.js';
 import { heroSlot, validHeroSlots, normalizeHeroSlots } from '../shared/hero-slots.js';
+const alertCalls = [];
+const orderAlerts = { notifyOrder: (order) => { alertCalls.push(order); return Promise.resolve({ status: 'off' }); } };
 import { existsSync, statSync } from 'node:fs';
 
 export function verifyStorefront() {
@@ -22,7 +24,7 @@ export function verifyStorefront() {
   const document = { documentElement: {}, querySelector: () => null, querySelectorAll: () => [], addEventListener() {} };
   const location = { hash: '#/', replace(value) { this.hash = value; } };
   const context = vm.createContext({
-    ...pricing, ...battery, ...siteCopy, ...homeArtwork, heroSlot, conditionListings, catalogListings, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates, PREVIEW_KEY: 'trio-pages-preview-v1',
+    ...pricing, ...battery, ...siteCopy, ...homeArtwork, heroSlot, orderAlerts, conditionListings, catalogListings, deviceSpecifications, conditions, conditionShort, conditionGroup, forwardArrow, noteLabels: notes, warranties, governorates, PREVIEW_KEY: 'trio-pages-preview-v1',
     playHeroMotion: () => {},
     renderAccount: () => '<h1>My account</h1>', loadAccount: async () => {}, bindAccount: () => {}, accountLabel: () => 'Sign in', customerProfile: () => null, setAccountText: () => {},
     MODE: 'pages', api: { photoUrl: () => '' }, local: { read: (key, fallback = null) => stored.has(key) ? structuredClone(stored.get(key)) : fallback, write: (key, value) => { stored.set(key, structuredClone(value)); return true; } },
@@ -280,6 +282,27 @@ export function verifyStorefront() {
       ui.state.heroCategory = 'watches';
       assert(ui.renderHome().includes(`class="hero-product" href="#/p/${watch.id}?cond=new"`), `${language}: selected watch displays the chosen device instead of static category artwork`);
     } finally { ui.state.content = beforeSelections; ui.state.heroCategory = 'phones'; }
+    // Delivery fees from Contact & delivery: Amman and other governorates; pickup is free; 0 keeps "confirmed by phone".
+    {
+      const feeContent = structuredClone(ui.state.content);
+      feeContent.settings.deliveryFils = { amman: 2000, other: 4500 };
+      const product = feeContent.products.find((item) => item.variants?.some((variant) => pricing.variantQuantityLimit(variant) > 0 && pricing.validPrice(variant.price)));
+      const variant = product.variants.find((item) => pricing.variantQuantityLimit(item) > 0 && pricing.validPrice(item.price));
+      const bagLines = [{ id: pricing.variantId(product.id, variant.key), qty: 1 }];
+      const devices = pricing.priceLines(feeContent, bagLines).totalFils;
+      assert.equal(pricing.priceOrder(feeContent, bagLines, 'delivery', 'amman').totalFils, devices + 2000, 'Amman delivery adds the Amman fee');
+      assert.equal(pricing.priceOrder(feeContent, bagLines, 'delivery', 'irbid').totalFils, devices + 4500, 'other governorates add the other fee');
+      assert.equal(pricing.priceOrder(feeContent, bagLines, 'pickup', '').totalFils, devices, 'pickup has no fee');
+      assert.equal(pricing.priceOrder(ui.state.content, bagLines, 'delivery', 'amman').deliveryFils, 0, 'no fees set keeps the old totals');
+      for (const bad of [{ amman: -1 }, { amman: 1.5 }, { other: 100001 }, { extra: 1 }, [], 'x']) assert(!pricing.validDeliverySettings(bad), `delivery fees refuse ${JSON.stringify(bad)}`);
+      assert(pricing.validDeliverySettings({ amman: 0, other: 3000 }) && pricing.validDeliverySettings(undefined), 'valid delivery fees are accepted');
+      const before = ui.state.content; const beforeBag = ui.state.bag;
+      try {
+        ui.state.content = feeContent; ui.state.bag = bagLines;
+        const bag = ui.renderBag();
+        assert(bag.includes('fee-list') && !bag.includes('is-total'), `${language}: the bag lists both fees before a governorate is chosen`);
+      } finally { ui.state.content = before; ui.state.bag = beforeBag; }
+    }
     // Banner slots from the admin: a picked device or an uploaded picture wins for that tab only.
     const beforeSlots = ui.state.content; const slotPhotoUrl = context.api.photoUrl;
     try {

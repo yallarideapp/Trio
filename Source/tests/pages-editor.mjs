@@ -15,6 +15,7 @@ import { pagesAdmin } from '../site/admin/src/pages-store.js';
 import { PREVIEW_KEY, PHOTO_KEY, EDITOR_KEY } from '../site/src/pages-preview.js';
 import { applyHomePlacement, nextHomePriority, validHomePriority } from '../shared/home-placement.js';
 import { MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage } from '../shared/categories.js';
+import { orderAlerts, orderAlertText, whatsappNumber } from '../site/src/order-alerts.js';
 import { siteTextEntries, siteText, SITE_TEXT_LIMIT, validSiteText, validHeroMode } from '../shared/site-text.js';
 import { categoryArtworkSource } from '../shared/home-artwork.js';
 import { availabilitySummary, setDeviceSoldOut } from '../shared/availability.js';
@@ -543,7 +544,7 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   const source = readFileSync(new URL('../site/admin/src/admin.js', import.meta.url), 'utf8')
     .replace(/^import[^\n]*\n/gm, '').replace(/\(async function start\(\) \{[\s\S]*$/, '');
   const context = vm.createContext({
-    ...pricing, validBatteryHealth, validBatteryCycles, conditions, conditionGroup, conditionOptions, forwardArrow, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications, applyHomePlacement, MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage, siteTextEntries, siteText, SITE_TEXT_LIMIT, validSiteText, validHeroMode, categoryArtworkSource, availabilitySummary, setDeviceSoldOut, PREVIEW_KEY,
+    ...pricing, validBatteryHealth, validBatteryCycles, conditions, conditionGroup, conditionOptions, forwardArrow, noteLabels, warranties, orderStatuses, governorates, deviceSpecifications, applyHomePlacement, MAX_CATEGORIES, CATEGORY_NAME_LIMIT, validCategoryId, validCategoryName, validCategoryImage, siteTextEntries, siteText, SITE_TEXT_LIMIT, validSiteText, validHeroMode, categoryArtworkSource, availabilitySummary, setDeviceSoldOut, orderAlerts, PREVIEW_KEY,
     api, pagesAdmin, MODE: 'pages', ApiError, local, withDefaults, document,
     window: { addEventListener() {} }, history: { replaceState() {} }, Element: class {}, console, setTimeout, clearTimeout, setInterval() {},
   });
@@ -555,7 +556,7 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   ui.state.legacyOrders = copy(legacyOrders);
   for (const language of ['ar', 'en']) {
     ui.setLanguage(language);
-    for (const view of ['orders', 'devices', 'categories', 'texts', 'settings']) {
+    for (const view of ['orders', 'devices', 'categories', 'texts', 'contact', 'settings']) {
       ui.state.view = view;
       ui.state.editing = null;
       ui.render();
@@ -577,7 +578,12 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
       }
       if (view === 'settings') {
         assert(!html.includes('data-text-entry=') && !html.includes('name="siteText.'), `${language}: website texts have their own tab, apart from settings`);
-        assert(html.includes('name="phone"') && html.includes('data-hero-mode="default"') && html.includes('data-hero-mode="selected"'), `${language}: contact details and the default animation choice stay in settings`);
+        assert(!html.includes('name="phone"') && html.includes('data-hero-mode="default"') && html.includes('data-hero-mode="selected"'), `${language}: the default animation choice stays in settings; contact moved to its own tab`);
+      }
+      if (view === 'contact') {
+        for (const name of ['phone', 'whatsapp', 'instagram', 'maps', 'address.ar', 'fee.amman', 'fee.other']) assert(html.includes(`name="${name}"`), `${language}: contact & delivery has ${name}`);
+        assert(html.includes('id="alerts-form"') && html.includes('data-alert-find') && html.includes('name="tgToken"') && html.includes('name="waKey"'), `${language}: preview order alerts can be set up`);
+        assert(!html.includes('data-hero-mode'), `${language}: contact & delivery holds only contact, delivery and alerts`);
       }
       if (view === 'texts') {
         assert(!html.includes('name="phone"') && !html.includes('class="card home-presentation"'), `${language}: the texts tab holds only website texts`);

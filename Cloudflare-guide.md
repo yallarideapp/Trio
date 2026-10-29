@@ -75,6 +75,19 @@ npx wrangler secret put ORDER_EMAIL      # الإيميل اللي بتوصله 
 - بعد ما يكون في دومين، تحقق منه بـ Resend وحط `ORDER_FROM` مثل: `TRIO Mobile <orders@yourdomain.com>`.
 - الطلب بنحفظ بقاعدة البيانات **قبل** محاولة الإيميل، فلو الإيميل ما زبط الطلب ما بضيع.
 
+### تنبيه تلغرام لكل طلب (اختياري)
+
+1. بتلغرام افتح ‎@BotFather‎ واكتب ‎/newbot‎، وبيعطيك **توكن البوت**.
+2. افتح البوت تبعك واضغط **Start**. بعدها افتح `https://api.telegram.org/bot<التوكن>/getUpdates` بالمتصفح وخذ الرقم اللي بعد `"chat":{"id":` (هذا الـ Chat ID).
+3. حطهم كأسرار (مش بالملفات):
+
+```sh
+npx wrangler secret put TELEGRAM_BOT_TOKEN
+npx wrangler secret put TELEGRAM_CHAT_ID
+```
+
+كل طلب جديد بيوصلك رسالة فيها الأجهزة والتوصيل والمجموع ورقم الزبون. الطلب بنحفظ قبل الرسالة، فلو تلغرام ما ردّ الطلب ما بضيع.
+
 ## 5. ربط GitHub بـ Cloudflare (نشر تلقائي)
 
 1. Cloudflare: **Workers & Pages → Create application → Import a repository (GitHub)**.

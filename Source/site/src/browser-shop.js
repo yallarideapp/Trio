@@ -1,5 +1,5 @@
 // Owner demo only: accounts, sessions and orders remain in this browser.
-import { normaliseMobile, priceLines, MAX_LINES, MAX_QTY } from '../../shared/pricing.js';
+import { normaliseMobile, priceOrder, MAX_LINES, MAX_QTY } from '../../shared/pricing.js';
 import { governorates, orderStatuses } from '../../shared/labels.js';
 
 export const BROWSER_SHOP_KEY = 'trio-browser-shop-v1';
@@ -212,11 +212,11 @@ export function createBrowserShop({ ApiError, getContent }) {
     if (data.orders.length >= 500) error('orders-full', 507);
     const loaded = await getContent(); const content = loaded?.content;
     if (!content || content.settings?.ordersOn === false) error('orders-off', 403);
-    const priced = priceLines(content, requestedLines);
+    const priced = priceOrder(content, requestedLines, body.fulfilment, customer.governorate);
     if (!priced.ok) error(priced.error, ['unknown', 'sold-out', 'stock-limit'].includes(priced.error) ? 409 : 400);
     if (priced.totalFils !== body.totalFils) error('price-changed', 409);
     const seq = data.nextOrder + 1;
-    const order = { seq, number: `DEMO-${seq}`, token: body.token, signature, customerId: owner, createdAt: stamp(), status: 'new', note: '', lang: body.lang === 'en' ? 'en' : 'ar', fulfilment: body.fulfilment, customer, totalFils: priced.totalFils, lines: priced.lines.map((line) => ({ id: line.id, name: line.product.name.en, nameAr: line.product.name.ar, storage: line.variant.storage || '', condition: line.variant.condition || '', qty: line.qty, unitFils: line.unitFils })) };
+    const order = { seq, number: `DEMO-${seq}`, token: body.token, signature, customerId: owner, createdAt: stamp(), status: 'new', note: '', lang: body.lang === 'en' ? 'en' : 'ar', fulfilment: body.fulfilment, customer, totalFils: priced.totalFils, deliveryFils: priced.deliveryFils, lines: priced.lines.map((line) => ({ id: line.id, name: line.product.name.en, nameAr: line.product.name.ar, storage: line.variant.storage || '', condition: line.variant.condition || '', qty: line.qty, unitFils: line.unitFils })) };
     data.nextOrder = seq; data.orders.push(order);
     return receipt(order);
   }, 'token-conflict');

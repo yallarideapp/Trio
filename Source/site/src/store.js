@@ -3,7 +3,7 @@
 // Pages runs an owner demo; catalog drafts still require explicit preview selection.
 // __MODE__ is replaced at build time with "live", "demo" or "pages".
 import seedContent from '../../shared/catalog.js';
-import { priceLines, normaliseMobile } from '../../shared/pricing.js';
+import { priceOrder, normaliseMobile } from '../../shared/pricing.js';
 import { governorates } from '../../shared/labels.js';
 import { PHOTO_KEY, previewRequested, readLocal, readPreview, validPhoto } from './pages-preview.js';
 import { createBrowserShop } from './browser-shop.js';
@@ -139,7 +139,7 @@ const demo = {
   async placeOrder(order) {
     const { content } = demoContent();
     if (!content.settings.ordersOn) throw new ApiError('orders-off', 403);
-    const priced = priceLines(content, order.lines);
+    const priced = priceOrder(content, order.lines, order.fulfilment, order.customer?.governorate);
     if (!priced.ok) throw new ApiError(priced.error, 400, { id: priced.id });
     if (priced.totalFils !== order.totalFils) throw new ApiError('price-changed', 409);
     const mobile = normaliseMobile(order.customer && order.customer.mobile);
@@ -153,7 +153,7 @@ const demo = {
     const saved = {
       number: `T-${next}`, token: order.token, createdAt: new Date().toISOString(), status: 'new', note: '',
       customer: { ...order.customer, mobile, governorateName: gov ? gov[1] : '' }, fulfilment: order.fulfilment, lang: order.lang,
-      totalFils: priced.totalFils,
+      totalFils: priced.totalFils, deliveryFils: priced.deliveryFils,
       lines: priced.lines.map((line) => ({ id: line.id, qty: line.qty, unitFils: line.unitFils, name: line.product.name.en, nameAr: line.product.name.ar, storage: line.variant.storage, condition: line.variant.condition })),
     };
     orders.unshift(saved);

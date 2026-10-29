@@ -12,6 +12,7 @@ import { PREVIEW_KEY } from '../../src/pages-preview.js';
 import { categoryArtworkSource } from '../../../shared/home-artwork.js';
 import { availabilitySummary, setDeviceSoldOut } from '../../../shared/availability.js';
 import { HERO_SLOT_IDS, normalizeHeroSlots } from '../../../shared/hero-slots.js';
+import { orderAlerts } from '../../src/order-alerts.js';
 
 const IS_PAGES = MODE === 'pages';
 const USE_TECHNICAL = MODE !== 'demo';
@@ -25,6 +26,24 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
 const AR = {
+  'Contact & delivery': 'التواصل والتوصيل', 'Edit the shop details and delivery fees.': 'عدّل بيانات المحل ورسوم التوصيل.', 'Delivery fees': 'رسوم التوصيل', 'Prices': 'الأسعار',
+  'Shown in the bag and checkout and added to delivery orders. Pickup is free. Leave 0 to confirm the fee by phone, as before.': 'بتبيّن بالسلة وصفحة الطلب وبتنضاف لطلبات التوصيل. الاستلام من المحل بدون رسوم. خليها 0 إذا بدك تأكد الرسوم بالتلفون زي قبل.',
+  'Amman · JOD': 'عمّان · دينار', 'Other governorates · JOD': 'باقي المحافظات · دينار', 'Devices total': 'مجموع الأجهزة',
+  'Order alerts': 'تنبيهات الطلبات', 'Off on this browser': 'مش مفعّلة على هذا المتصفح', 'On · Telegram · chat ID': 'مفعّلة على تلغرام · Chat ID', 'On · WhatsApp ·': 'مفعّلة على واتساب ·',
+  'Telegram': 'تلغرام', 'WhatsApp · CallMeBot': 'واتساب · CallMeBot', 'Bot token': 'توكن البوت', 'Chat ID': 'Chat ID', 'Find my chat ID': 'جيب الـ Chat ID', 'WhatsApp number': 'رقم الواتس', 'CallMeBot key (apikey)': 'مفتاح CallMeBot (apikey)',
+  'In Telegram: @BotFather → /newbot gives you the token. Then open your bot and press Start.': 'بتلغرام: ‎@BotFather‎ ← ‎/newbot‎ وبيعطيك التوكن. بعدها افتح البوت تبعك واضغط Start.',
+  'From your WhatsApp, send “I allow callmebot to send me messages” to the CallMeBot number; it replies with your key.': 'من واتسابك ابعت ‎I allow callmebot to send me messages‎ لرقم CallMeBot، وبيرد عليك بالمفتاح.',
+  'Each new demo order sends you a message on Telegram or WhatsApp. The token and key are saved on this browser only and are not in the preview export.': 'كل طلب تجريبي جديد بيوصلك رسالة على تلغرام أو واتساب. التوكن والمفتاح بينحفظوا على هذا المتصفح بس، وما بيدخلوا بملف التصدير.',
+  'Each new order is emailed and, when set up, sent to Telegram from the server. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID as Cloudflare secrets; the Cloudflare guide shows how.': 'كل طلب جديد بيوصل عالإيميل، وعلى تلغرام من السيرفر إذا جهّزته. حط TELEGRAM_BOT_TOKEN و TELEGRAM_CHAT_ID كأسرار بـ Cloudflare، والطريقة بدليل Cloudflare.',
+  'Save alerts': 'احفظ التنبيهات', 'Send a test message': 'ابعت رسالة تجربة', 'Turn off alerts': 'وقّف التنبيهات', 'Looking…': 'بدوّر…', 'Sending…': 'جاري الإرسال…',
+  'Found. Now press Save alerts.': 'لقيناه. اضغط «احفظ التنبيهات».', 'That token isn’t valid. Copy the whole token from BotFather’s message.': 'التوكن مش صحيح. انسخه كامل من رسالة BotFather.',
+  'Open your bot in Telegram and press Start (or send it any message), then try again.': 'افتح البوت تبعك بتلغرام واضغط Start أو ابعتله أي رسالة، وبعدين جرّب كمان مرة.',
+  'Couldn’t reach Telegram. Check the connection and try again.': 'ما قدرنا نوصل لتلغرام. تأكد من الإنترنت وجرّب كمان مرة.',
+  'Delivered. Check Telegram.': 'وصلت ✓ شيّك تلغرام.', 'Sent to CallMeBot. It should reach your WhatsApp within a minute; if not, check the number and key.': 'انبعتت لـ CallMeBot. لازم توصلك على الواتس خلال دقيقة، وإذا ما وصلت راجع الرقم والمفتاح.',
+  'Telegram refused the message:': 'تلغرام رفض الرسالة:', 'Press “Find my chat ID” first, then Save.': 'اضغط «جيب الـ Chat ID» أول، وبعدين احفظ.',
+  'Check the token and chat ID: the token from BotFather, the chat ID in digits.': 'راجع التوكن والـ Chat ID: التوكن من BotFather، والـ Chat ID أرقام.',
+  'Check the number and key: the number like +9627XXXXXXXX, the key from the CallMeBot message.': 'راجع الرقم والمفتاح: الرقم مثل ‎+9627XXXXXXXX‎، والمفتاح من رسالة CallMeBot.',
+  'Order alerts saved.': 'انحفظت تنبيهات الطلبات.', 'Order alerts are off on this browser.': 'توقفت تنبيهات الطلبات على هذا المتصفح.',
   'Pick any device to use its picture for this category.': 'اختار أي جهاز عشان تنحط صورته صورة للقسم.', 'No device pictures yet.': 'ما في صور أجهزة لسا.', 'Category picture from a device': 'صورة القسم من جهاز', 'Category picture updated.': 'تغيّرت صورة القسم.',
   'Devices & prices': 'الأجهزة والأسعار', 'Banner devices': 'أجهزة البانر', 'Admin sections': 'أقسام اللوحة',
   'Banner': 'البانر', 'Home banner': 'بانر الرئيسية', 'Choose what each tab of the home banner shows: a device from your list, or a picture you upload. Automatic keeps the current choice.': 'اختار شو يبيّن بكل تبويب ببانر الرئيسية: جهاز من القائمة، أو صورة بتحمّلها. «تلقائي» بيخلي الاختيار الحالي.', 'Automatic': 'تلقائي', 'Device to show': 'الجهاز اللي يبيّن', 'Upload a picture': 'حمّل صورة', 'Replace picture': 'غيّر الصورة', 'Remove picture': 'شيل الصورة', 'Uploaded picture': 'صورة محمّلة', 'Shows now': 'بيبيّن هلّق', 'No devices in this category yet.': 'ما في أجهزة بهالقسم لسا.', 'Banner updated. Save your changes to apply it.': 'تغيّر البانر. احفظ التعديلات عشان يبيّن.',
@@ -127,7 +146,7 @@ const t = (s, vars = {}) => (lang === 'ar' ? AR[s] || s : ({ new: 'New', confirm
 const L = (o) => (o && typeof o === 'object' ? o[lang] || o.ar || o.en || '' : String(o || ''));
 const money = (jd) => formatJD(toFils(jd), lang);
 
-const initialView = IS_PAGES ? ({ '#orders': 'orders', '#devices': 'devices', '#banner': 'banner', '#texts': 'texts', '#categories': 'categories', '#settings': 'settings' }[globalThis.location?.hash] || 'overview') : 'overview';
+const initialView = IS_PAGES ? ({ '#orders': 'orders', '#devices': 'devices', '#banner': 'banner', '#texts': 'texts', '#contact': 'contact', '#categories': 'categories', '#settings': 'settings' }[globalThis.location?.hash] || 'overview') : 'overview';
 const state = { view: initialView, signedIn: IS_PAGES, setup: true, published: null, version: 0, draft: null, dirty: false, orders: [], legacyOrders: [], orderFilter: '', orderOpen: null, orderQuery: '', orderBefore: null, editing: null, category: 'all', query: '', addingCategory: null, message: '', textQuery: '', textArea: 'home', textAdvanced: false, textMode: 'main' };
 
 function saveDraft() {
@@ -162,9 +181,10 @@ const NAV_ICONS = {
   banner: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 16 5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/>',
   categories: '<path d="M4 6h7v5H4zM13 6h7v5h-7zM4 13h7v5H4zM13 13h7v5h-7z"/>',
   texts: '<path d="M5 6V4h14v2M12 4v16M9 20h6"/>',
+  contact: '<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>',
 };
-const NAV = [['overview', 'Overview'], ['orders', 'Orders'], ['devices', 'Devices & prices'], ['banner', 'Banner devices'], ['categories', 'Categories'], ['texts', 'Website texts'], ['settings', 'Settings']];
+const NAV = [['overview', 'Overview'], ['orders', 'Orders'], ['devices', 'Devices & prices'], ['banner', 'Banner devices'], ['categories', 'Categories'], ['texts', 'Website texts'], ['contact', 'Contact & delivery'], ['settings', 'Settings']];
 function sideNav() {
   const n = state.orders.filter((o) => o.status === 'new').length;
   return `<aside class="side"><nav class="tabs side-nav" aria-label="${esc(t('Admin sections'))}">${NAV.map(([id, label]) => `<button type="button" data-view="${id}" aria-current="${state.view === id}"><svg viewBox="0 0 24 24" aria-hidden="true">${NAV_ICONS[id]}</svg><span class="nav-label">${esc(t(label))}</span>${id === 'orders' && n ? `<span class="badge">${n}</span>` : ''}</button>`).join('')}</nav></aside>`;
@@ -193,7 +213,7 @@ function render() {
   document.body.classList.toggle('pages-editor', IS_PAGES);
   const root = $('#admin');
   if (!state.signedIn) { root.innerHTML = signInView(); return; }
-  root.innerHTML = `${topBar()}<div class="shell">${sideNav()}<main class="wrap">${IS_PAGES && !['orders', 'overview'].includes(state.view) ? previewTools() : ''}${state.view === 'overview' ? overviewView() : state.view === 'banner' ? bannerView() : state.view === 'texts' ? textsView() : state.view === 'orders' ? ordersView() : state.view === 'devices' ? (state.editing ? editView() : devicesView()) : state.view === 'categories' ? categoriesView() : settingsView()}</main></div><p id="flash" class="flash" role="status" hidden></p>`;
+  root.innerHTML = `${topBar()}<div class="shell">${sideNav()}<main class="wrap">${IS_PAGES && !['orders', 'overview'].includes(state.view) ? previewTools() : ''}${state.view === 'overview' ? overviewView() : state.view === 'banner' ? bannerView() : state.view === 'texts' ? textsView() : state.view === 'contact' ? contactView() : state.view === 'orders' ? ordersView() : state.view === 'devices' ? (state.editing ? editView() : devicesView()) : state.view === 'categories' ? categoriesView() : settingsView()}</main></div><p id="flash" class="flash" role="status" hidden></p>`;
   updateBar();
   // On narrow screens the side menu is a scrolling row: keep the open section in view.
   const nav = $('.side-nav'), active = nav?.querySelector('[aria-current="true"]');
@@ -294,7 +314,7 @@ function orderDetail(o) {
   return `<div class="head"><button type="button" class="btn ghost small" data-close-order>← ${esc(t('Back'))}</button><h1 dir="ltr">${esc(o.number)}</h1><span class="status s-${esc(o.status)}">${esc(t(o.status))}</span></div>
   <div class="grid2"><section class="card"><h2>${esc(o.customer.name)}</h2>${mobile ? `<p dir="ltr" class="big">${esc(mobile)}</p><div class="btns"><a class="btn primary" href="tel:${esc(mobile)}">${esc(t('Call'))}</a>${wa ? `<a class="btn wa" href="${esc(wa)}" target="_blank" rel="noopener">${esc(t('WhatsApp'))}</a>` : ''}</div>` : ''}
   <p><strong>${esc(o.fulfilment === 'pickup' ? t('Pickup in store') : t('Delivery'))}</strong>${o.fulfilment === 'pickup' || !o.customer.governorate ? '' : ` — ${esc(gov ? (lang === 'ar' ? gov[1] : gov[2]) : o.customer.governorate)}`}</p>${o.customer.address ? `<p>${esc(o.customer.address)}</p>` : ''}${o.customer.notes ? `<p class="muted"><strong>${esc(t('Customer notes'))}:</strong> ${esc(o.customer.notes)}</p>` : ''}<p class="muted">${esc(fmtDate(o.createdAt))}</p></section>
-  <section class="card"><ul class="lines">${o.lines.map((l) => `<li><span dir="auto">${esc(lang === 'ar' ? l.nameAr || l.name : l.name)}${l.storage ? ` · ${esc(l.storage)}` : ''}${l.condition ? ` · ${esc(L(conditions[l.condition]))}` : ''}</span><span>× ${l.qty}</span><strong>${esc(fils(l.unitFils * l.qty))}</strong></li>`).join('')}</ul><p class="total"><span>${esc(t('Total'))}</span><strong>${esc(fils(o.totalFils))}</strong></p>
+  <section class="card"><ul class="lines">${o.lines.map((l) => `<li><span dir="auto">${esc(lang === 'ar' ? l.nameAr || l.name : l.name)}${l.storage ? ` · ${esc(l.storage)}` : ''}${l.condition ? ` · ${esc(L(conditions[l.condition]))}` : ''}</span><span>× ${l.qty}</span><strong>${esc(fils(l.unitFils * l.qty))}</strong></li>`).join('')}</ul>${(() => { const devices = o.lines.reduce((sum, l) => sum + l.unitFils * l.qty, 0); const fee = o.totalFils - devices; return fee > 0 ? `<p class="total sub"><span>${esc(t('Devices total'))}</span><strong>${esc(fils(devices))}</strong></p><p class="total sub"><span>${esc(t('Delivery'))}</span><strong>${esc(fils(fee))}</strong></p>` : ''; })()}<p class="total"><span>${esc(t('Total'))}</span><strong>${esc(fils(o.totalFils))}</strong></p>
   <form id="order-form" data-number="${esc(o.number)}"><label class="f"><span>${esc(t('Status'))}</span><select name="status">${orderStatuses.map((s) => `<option value="${s}"${o.status === s ? ' selected' : ''}>${esc(t(s))}</option>`).join('')}</select></label><label class="f"><span>${esc(t(IS_PAGES ? 'Demo note' : 'Private note'))}</span><textarea name="note" rows="3" maxlength="500">${esc(o.note || '')}</textarea></label><button class="btn primary" type="submit">${esc(t(IS_PAGES ? 'Save demo order' : 'Save'))}</button></form></section></div>`;
 }
 async function loadOrders({ append = false } = {}) {
@@ -595,9 +615,28 @@ function settingsView() {
   const s = state.draft.settings;
   const pair = (label, key, sub) => field(`${label} (Arabic)`, `${key}.ar`, s[key]?.ar || '', { type: sub }) + field(`${label} (English)`, `${key}.en`, s[key]?.en || '', { type: sub, dir: 'ltr' });
   const defaultHero = s.heroMode === 'default';
-  return `<div class="head"><h1>${esc(t('Settings'))}</h1></div><form id="settings-form" class="edit"><section class="card home-presentation"><h2>${esc(t('Home presentation'))}</h2><p class="muted">${esc(t('Restore the original animated showcase without deleting devices, uploaded pictures or home selections. Selecting a device again switches back to your selected devices.'))}</p><div class="btns"><button type="button" class="btn${defaultHero ? ' primary' : ' ghost'}" data-hero-mode="default" aria-pressed="${defaultHero}">${esc(t('Restore default animations and pictures'))}</button><button type="button" class="btn${!defaultHero ? ' primary' : ' ghost'}" data-hero-mode="selected" aria-pressed="${!defaultHero}">${esc(t('Use selected devices'))}</button></div><p class="muted small" role="status">${esc(t(defaultHero ? 'Default animations and pictures are active.' : 'Your selected devices are active.'))}</p></section><div class="grid2"><section class="card"><h2>${esc(t('Contact'))}</h2>${field('Shop phone', 'phone', s.phone, { type: 'tel', dir: 'ltr' })}${field('WhatsApp number (with 962)', 'whatsapp', s.whatsapp, { type: 'tel', dir: 'ltr' })}${field(IS_PAGES ? 'Social link for the Repair and Visit us pages' : 'Instagram link', 'instagram', s.instagram, { type: 'url', dir: 'ltr' })}${field('Facebook link', 'facebook', s.facebook, { type: 'url', dir: 'ltr' })}${field('Map link', 'maps', s.maps, { type: 'url', dir: 'ltr' })}${field('Address (Arabic)', 'address.ar', s.address.ar)}${field('Address (English)', 'address.en', s.address.en, { dir: 'ltr' })}</section>
-  ${IS_PAGES ? '' : `<section class="card"><h2>${esc(t('Ordering'))}</h2><div class="checks"><label><input type="checkbox" name="ordersOn"${s.ordersOn !== false ? ' checked' : ''}> ${esc(t('Take orders on the site'))}</label></div>${pair('Delivery note', 'deliveryNote', 'textarea')}${pair('Prices note', 'pricesNote', 'textarea')}</section>`}</div></form>
+  return `<div class="head"><h1>${esc(t('Settings'))}</h1></div><form id="settings-form" class="edit"><section class="card home-presentation"><h2>${esc(t('Home presentation'))}</h2><p class="muted">${esc(t('Restore the original animated showcase without deleting devices, uploaded pictures or home selections. Selecting a device again switches back to your selected devices.'))}</p><div class="btns"><button type="button" class="btn${defaultHero ? ' primary' : ' ghost'}" data-hero-mode="default" aria-pressed="${defaultHero}">${esc(t('Restore default animations and pictures'))}</button><button type="button" class="btn${!defaultHero ? ' primary' : ' ghost'}" data-hero-mode="selected" aria-pressed="${!defaultHero}">${esc(t('Use selected devices'))}</button></div><p class="muted small" role="status">${esc(t(defaultHero ? 'Default animations and pictures are active.' : 'Your selected devices are active.'))}</p></section>${IS_PAGES ? '' : `<section class="card"><h2>${esc(t('Prices'))}</h2>${pair('Prices note', 'pricesNote', 'textarea')}</section>`}</form>
   ${MODE === 'demo' || IS_PAGES ? '' : `<form id="password-form" class="card narrow"><h2>${esc(t('Change password'))}</h2><label class="f"><span>${esc(t('Current password'))}</span><input name="current" type="password" autocomplete="current-password" required></label><label class="f"><span>${esc(t('New password'))}</span><input name="password" type="password" autocomplete="new-password" minlength="16" required><small>${esc(t('At least 16 characters.'))}</small></label><button class="btn" type="submit">${esc(t('Change password'))}</button></form>`}`;
+}
+// Contact details, delivery fees and order alerts, like the OneStyle admin.
+const jod = (value) => (Number.isSafeInteger(value) && value > 0 ? value / 1000 : 0);
+function contactView() {
+  const s = state.draft.settings;
+  const pair = (label, key, sub) => field(`${label} (Arabic)`, `${key}.ar`, s[key]?.ar || '', { type: sub }) + field(`${label} (English)`, `${key}.en`, s[key]?.en || '', { type: sub, dir: 'ltr' });
+  const fees = s.deliveryFils || {};
+  const fee = (label, name, value) => field(label, name, String(jod(value)), { type: 'number', dir: 'ltr', attrs: 'min="0" max="100" step="0.01" inputmode="decimal" required' });
+  return `<div class="head"><h1>${esc(t('Contact & delivery'))}</h1></div><p class="muted">${esc(t('Edit the shop details and delivery fees.'))}</p><form id="contact-form" class="edit"><div class="grid2"><section class="card"><h2>${esc(t('Contact'))}</h2>${field('Shop phone', 'phone', s.phone, { type: 'tel', dir: 'ltr' })}${field('WhatsApp number (with 962)', 'whatsapp', s.whatsapp, { type: 'tel', dir: 'ltr' })}${field(IS_PAGES ? 'Social link for the Repair and Visit us pages' : 'Instagram link', 'instagram', s.instagram, { type: 'url', dir: 'ltr' })}${field('Facebook link', 'facebook', s.facebook, { type: 'url', dir: 'ltr' })}${field('Map link', 'maps', s.maps, { type: 'url', dir: 'ltr' })}${field('Address (Arabic)', 'address.ar', s.address.ar)}${field('Address (English)', 'address.en', s.address.en, { dir: 'ltr' })}</section>
+  <section class="card"><h2>${esc(t('Delivery fees'))}</h2><p class="muted small">${esc(t('Shown in the bag and checkout and added to delivery orders. Pickup is free. Leave 0 to confirm the fee by phone, as before.'))}</p>${fee(t('Amman · JOD'), 'fee.amman', fees.amman)}${fee(t('Other governorates · JOD'), 'fee.other', fees.other)}${IS_PAGES ? '' : `<div class="checks"><label><input type="checkbox" name="ordersOn"${s.ordersOn !== false ? ' checked' : ''}> ${esc(t('Take orders on the site'))}</label></div>${pair('Delivery note', 'deliveryNote', 'textarea')}`}</section></div></form>
+  ${alertsPanel()}`;
+}
+function alertsPanel() {
+  if (!IS_PAGES) return `<section class="card alerts-card"><h2>${esc(t('Order alerts'))}</h2><p class="muted">${esc(t('Each new order is emailed and, when set up, sent to Telegram from the server. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID as Cloudflare secrets; the Cloudflare guide shows how.'))}</p></section>`;
+  const saved = orderAlerts.get(), channel = state.alertChannel || saved?.channel || 'telegram';
+  const status = !saved ? t('Off on this browser') : saved.channel === 'telegram' ? `${t('On · Telegram · chat ID')} ${saved.chatId}` : `${t('On · WhatsApp ·')} ${saved.phone}`;
+  const choice = (id, label) => `<label class="alert-choice"><input type="radio" name="channel" value="${id}"${channel === id ? ' checked' : ''}><span>${esc(t(label))}</span></label>`;
+  const telegram = `${field('Bot token', 'tgToken', '', { dir: 'ltr', attrs: 'autocomplete="off" maxlength="80"' })}<p class="muted small">${esc(t('In Telegram: @BotFather → /newbot gives you the token. Then open your bot and press Start.'))}</p>${field('Chat ID', 'tgChat', saved?.channel === 'telegram' ? saved.chatId : '', { dir: 'ltr', attrs: 'autocomplete="off" maxlength="24"' })}<div class="btns"><button type="button" class="btn small" data-alert-find>${esc(t('Find my chat ID'))}</button></div>`;
+  const whatsapp = `${field('WhatsApp number', 'waPhone', saved?.channel === 'whatsapp' ? saved.phone : '', { dir: 'ltr', attrs: 'autocomplete="off" maxlength="20"' })}${field('CallMeBot key (apikey)', 'waKey', '', { dir: 'ltr', attrs: 'autocomplete="off" maxlength="64"' })}<p class="muted small">${esc(t('From your WhatsApp, send “I allow callmebot to send me messages” to the CallMeBot number; it replies with your key.'))}</p>`;
+  return `<section class="card alerts-card" data-alerts><h2>${esc(t('Order alerts'))}</h2><p class="muted">${esc(t('Each new demo order sends you a message on Telegram or WhatsApp. The token and key are saved on this browser only and are not in the preview export.'))}</p><p class="alert-status${saved ? ' is-on' : ''}" role="status">${esc(status)}</p><form id="alerts-form" novalidate autocomplete="off"><div class="alert-choices">${choice('telegram', 'Telegram')}${choice('whatsapp', 'WhatsApp · CallMeBot')}</div><div data-alert-fields="telegram"${channel === 'telegram' ? '' : ' hidden'}>${telegram}</div><div data-alert-fields="whatsapp"${channel === 'whatsapp' ? '' : ' hidden'}>${whatsapp}</div><p class="alert-feedback muted small" role="status"></p><div class="btns"><button type="submit" class="btn primary">${esc(t('Save alerts'))}</button>${saved ? `<button type="button" class="btn" data-alert-test>${esc(t('Send a test message'))}</button><button type="button" class="btn ghost" data-alert-clear>${esc(t('Turn off alerts'))}</button>` : ''}</div></form></section>`;
 }
 function readWebsiteTexts(form) {
   const s = state.draft.settings;
@@ -622,10 +661,23 @@ function readWebsiteTexts(form) {
 }
 function readSettings(form) {
   const s = state.draft.settings; const g = (n) => form.elements[n];
+  if (!IS_PAGES) s.pricesNote = { ar: g('pricesNote.ar').value.trim(), en: g('pricesNote.en').value.trim() };
+  saveDraft();
+}
+function readContact(form) {
+  const s = state.draft.settings; const g = (n) => form.elements[n];
   for (const k of ['phone', 'whatsapp', 'instagram', 'facebook', 'maps']) s[k] = g(k).value.trim();
   s.whatsapp = s.whatsapp.replace(/\D/g, '');
-  for (const k of IS_PAGES ? ['address'] : ['address', 'deliveryNote', 'pricesNote']) s[k] = { ar: g(`${k}.ar`).value.trim(), en: g(`${k}.en`).value.trim() };
+  for (const k of IS_PAGES ? ['address'] : ['address', 'deliveryNote']) s[k] = { ar: g(`${k}.ar`).value.trim(), en: g(`${k}.en`).value.trim() };
   s.ordersOn = IS_PAGES ? false : g('ordersOn').checked;
+  // Fees are typed in JOD and kept in fils. An empty or invalid field keeps the last good value.
+  const fees = { ...(s.deliveryFils || {}) };
+  for (const key of ['amman', 'other']) {
+    const input = g(`fee.${key}`); const value = Number(input.value);
+    if (input.value.trim() === '') fees[key] = 0;
+    else if (Number.isFinite(value) && value >= 0 && value <= 100) fees[key] = Math.round(value * 1000);
+  }
+  s.deliveryFils = { amman: fees.amman || 0, other: fees.other || 0 };
   saveDraft();
 }
 function focusBatteryFields() {
@@ -690,6 +742,8 @@ function readCurrentForm() {
   if (settings) readSettings(settings);
   const texts = $('#texts-form');
   if (texts) readTexts(texts);
+  const contact = $('#contact-form');
+  if (contact) readContact(contact);
   for (const form of $$('[data-category-form]')) readCategoryForm(form);
 }
 async function exportDraft() {
@@ -711,7 +765,7 @@ document.addEventListener('click', async (e) => {
   const el = e.target instanceof Element ? e.target : null; if (!el) return;
   const hit = (s) => el.closest(s);
   if (hit('#lang')) { readCurrentForm(); lang = lang === 'ar' ? 'en' : 'ar'; local.write('trio-admin-lang', lang); render(); return; }
-  if (hit('[data-view]')) { const view = hit('[data-view]').dataset.view; if (!['overview', 'devices', 'categories', 'banner', 'texts', 'orders', 'settings'].includes(view)) return; readCurrentForm(); if (view === 'texts') { state.textMode = 'main'; state.textQuery = ''; state.textAdvanced = false; } state.view = view; state.editing = null; state.orderOpen = null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); if (['orders', 'overview'].includes(state.view)) await loadOrders(); render(); return; }
+  if (hit('[data-view]')) { const view = hit('[data-view]').dataset.view; if (!['overview', 'devices', 'categories', 'banner', 'texts', 'contact', 'orders', 'settings'].includes(view)) return; readCurrentForm(); if (view === 'texts') { state.textMode = 'main'; state.textQuery = ''; state.textAdvanced = false; } state.view = view; state.editing = null; state.orderOpen = null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); if (['orders', 'overview'].includes(state.view)) await loadOrders(); render(); return; }
   if (hit('#publish')) { publish(); return; }
   if (hit('[data-stock-edit]')) {
     state.editing = { index: Number(hit('[data-stock-edit]').dataset.stockEdit) }; render();
@@ -773,6 +827,24 @@ document.addEventListener('click', async (e) => {
   if (IS_PAGES && hit('[data-export-orders]')) { await exportOrders(); return; }
   if (IS_PAGES && hit('[data-export-legacy-orders]')) { await exportOrders({ legacy: true }); return; }
   if (hit('[data-refresh-orders]')) { await loadOrders(); render(); return; }
+  if (hit('[data-alert-clear]')) { orderAlerts.clear(); render(); flash(t('Order alerts are off on this browser.')); return; }
+  if (hit('[data-alert-find]') || hit('[data-alert-test]')) {
+    const button = hit('[data-alert-find]') || hit('[data-alert-test]'); const form = button.closest('form'); const feedback = $('.alert-feedback', form);
+    button.disabled = true;
+    if (button.matches('[data-alert-find]')) {
+      feedback.textContent = t('Looking…');
+      const result = await orderAlerts.findChat(form.tgToken.value);
+      if (button.isConnected) button.disabled = false;
+      if (result.chatId) { form.tgChat.value = result.chatId; feedback.textContent = `${t('Found. Now press Save alerts.')} ${result.name ? `${result.name} · ` : ''}${result.chatId}`; return; }
+      feedback.textContent = t(result.error === 'token' ? 'That token isn’t valid. Copy the whole token from BotFather’s message.' : result.error === 'nostart' ? 'Open your bot in Telegram and press Start (or send it any message), then try again.' : 'Couldn’t reach Telegram. Check the connection and try again.');
+      return;
+    }
+    feedback.textContent = t('Sending…');
+    const result = await orderAlerts.test();
+    if (button.isConnected) button.disabled = false;
+    feedback.textContent = result.status === 'delivered' ? `${t('Delivered. Check Telegram.')}${result.bot ? ` @${result.bot}` : ''}` : result.status === 'sent' ? t('Sent to CallMeBot. It should reach your WhatsApp within a minute; if not, check the number and key.') : result.reason === 'network' ? t('Couldn’t reach Telegram. Check the connection and try again.') : `${t('Telegram refused the message:')} ${result.reason || result.code || '?'}`;
+    return;
+  }
   if (hit('[data-hero-pick]')) { const el = hit('[data-hero-pick]'); pickHeroDevice(el.dataset.heroPick, el.dataset.device); render(); document.querySelector(`[data-hero-pick="${el.dataset.heroPick}"][data-device="${CSS.escape(el.dataset.device)}"]`)?.focus(); flash(t('Banner updated. Save your changes to apply it.')); return; }
   if (hit('[data-hero-photo-clear]')) { setHeroSlot(hit('[data-hero-photo-clear]').dataset.heroPhotoClear, {}); render(); flash(t('Banner updated. Save your changes to apply it.')); return; }
   if (hit('[data-overview-go]')) { const view = hit('[data-overview-go]').dataset.overviewGo; readCurrentForm(); state.view = view; state.editing = null; state.orderOpen = hit('[data-overview-go]').dataset.order || null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); render(); window.scrollTo(0, 0); return; }
@@ -908,6 +980,8 @@ document.addEventListener('change', async (e) => {
   }
   if (form && form.id === 'device-form') { readDeviceForm(form); updateDeviceStockSummary(); }
   if (form && form.id === 'settings-form') readSettings(form);
+  if (form && form.id === 'contact-form') readContact(form);
+  if (form && form.id === 'alerts-form' && e.target.name === 'channel') { state.alertChannel = e.target.value; for (const group of $$('[data-alert-fields]', form)) group.hidden = group.dataset.alertFields !== e.target.value; }
   if (form && form.id === 'texts-form') readTexts(form);
   if (form?.dataset?.categoryForm !== undefined) readCategoryForm(form);
 });
@@ -918,6 +992,7 @@ document.addEventListener('input', (e) => {
   const form = e.target.closest && e.target.closest('form');
   if (form && form.id === 'device-form' && e.target.type !== 'file') { readDeviceForm(form); updateDeviceStockSummary(); }
   if (form && form.id === 'settings-form') readSettings(form);
+  if (form && form.id === 'contact-form') readContact(form);
   if (form && form.id === 'texts-form') {
     readTexts(form);
     if (e.target.dataset?.siteText) {
@@ -959,6 +1034,15 @@ document.addEventListener('submit', async (e) => {
     const number = f.dataset.number;
     const ok = await guard(() => orderApi.updateOrder(number, { status: f.status.value, note: f.note.value }));
     if (ok) { const o = state.orders.find((x) => x.number === number); if (o) { o.status = f.status.value; o.note = f.note.value; } render(); flash(t(IS_PAGES ? 'Demo order saved.' : 'Saved.')); }
+    return;
+  }
+  if (f.id === 'alerts-form') {
+    const channel = f.elements.channel.value === 'whatsapp' ? 'whatsapp' : 'telegram';
+    const feedback = $('.alert-feedback', f);
+    if (channel === 'telegram' && !f.tgChat.value.trim() && f.tgToken.value.trim()) { feedback.textContent = t('Press “Find my chat ID” first, then Save.'); return; }
+    const ok = orderAlerts.save(channel === 'telegram' ? { channel, token: f.tgToken.value, chatId: f.tgChat.value } : { channel, phone: f.waPhone.value, apikey: f.waKey.value });
+    if (!ok) { feedback.textContent = t(channel === 'telegram' ? 'Check the token and chat ID: the token from BotFather, the chat ID in digits.' : 'Check the number and key: the number like +9627XXXXXXXX, the key from the CallMeBot message.'); return; }
+    state.alertChannel = channel; render(); flash(t('Order alerts saved.'));
     return;
   }
   if (f.id === 'password-form') {

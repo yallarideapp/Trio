@@ -91,6 +91,29 @@ export function priceLines(content, lines) {
   return { ok: true, lines: out, totalFils: total };
 }
 
+// Delivery fees in fils, set by the owner: one for Amman and one for the other governorates.
+// 0 (or unset) means the fee is confirmed with the shop, as before. Pickup is always free.
+export const DELIVERY_MAX_FILS = 100000;
+export const validDeliveryFils = (value) => Number.isSafeInteger(value) && value >= 0 && value <= DELIVERY_MAX_FILS;
+export function validDeliverySettings(value) {
+  if (value === undefined || value === null) return true;
+  return typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every((key) => ['amman', 'other'].includes(key)) && ['amman', 'other'].every((key) => value[key] === undefined || validDeliveryFils(value[key]));
+}
+export function deliveryFils(settings, fulfilment, governorate) {
+  if (fulfilment !== 'delivery') return 0;
+  const fees = settings?.deliveryFils || {};
+  const value = governorate === 'amman' ? fees.amman : fees.other;
+  return validDeliveryFils(value) ? value : 0;
+}
+export const hasDeliveryFees = (settings) => Boolean(deliveryFils(settings, 'delivery', 'amman') || deliveryFils(settings, 'delivery', 'other'));
+// Devices plus the delivery fee. totalFils is what the customer pays.
+export function priceOrder(content, lines, fulfilment, governorate) {
+  const priced = priceLines(content, lines);
+  if (!priced.ok) return priced;
+  const fee = deliveryFils(content?.settings, fulfilment, governorate);
+  return { ...priced, subtotalFils: priced.totalFils, deliveryFils: fee, totalFils: priced.totalFils + fee };
+}
+
 export function fromPrice(product) {
   const prices = (product.variants || []).filter((item) => variantQuantityLimit(item) > 0 && validPrice(item.price) && validOfferPrice(item)).map(variantFils);
   return prices.length ? Math.min(...prices) : null;

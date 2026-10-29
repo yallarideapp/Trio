@@ -23,4 +23,5 @@
   //   RESEND_API_KEY  optional, order emails through Resend
   //   ORDER_EMAIL     optional, where order emails go
   //   ORDER_FROM      optional, sender on a verified Resend domain
+  //   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID  optional, a Telegram message for each new order
 }

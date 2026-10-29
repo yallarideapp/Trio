@@ -321,6 +321,36 @@ export async function verifyWorkerOrders() {
       const stored = (await send('GET', '/api/admin/orders', undefined, { cookie: secondCookie })).data.orders.find((order) => order.number === placed.data.number);
       assert.equal(stored.totalFils, offerBody.totalFils, 'the saved order carries the offer total');
     }
+    // Delivery fees: published in the content and added by the Worker; pickup stays free; Telegram gets the order.
+    {
+      const current = await send('GET', '/api/admin/content', undefined, { cookie: secondCookie });
+      const withFees = structuredClone(current.data.content);
+      withFees.settings.deliveryFils = { amman: -5, other: 0 };
+      expectError(await send('PUT', '/api/admin/content', { baseVersion: current.data.version, content: withFees }, { cookie: secondCookie }), 400, 'bad-content');
+      withFees.settings.deliveryFils = { amman: 2500, other: 5000 };
+      assert.equal((await send('PUT', '/api/admin/content', { baseVersion: current.data.version, content: withFees }, { cookie: secondCookie })).status, 200, 'delivery fees publish');
+      assert.deepEqual((await send('GET', '/api/content')).data.content.settings.deliveryFils, { amman: 2500, other: 5000 }, 'the fees are public');
+      const devices = priceLines(withFees, lines).totalFils;
+      const sent = [];
+      const realFetch = globalThis.fetch;
+      globalThis.fetch = async (url, init) => { sent.push({ url: String(url), body: JSON.parse(init.body) }); return new Response('{"ok":true}'); };
+      env.TELEGRAM_BOT_TOKEN = '123456:test-token'; env.TELEGRAM_CHAT_ID = '42';
+      try {
+        const noFee = orderBody(); noFee.customer.governorate = 'irbid'; noFee.totalFils = devices;
+        expectError(await send('POST', '/api/order', noFee, { ip: '198.51.100.41' }), 409, 'price-changed');
+        const irbid = orderBody(); irbid.customer.governorate = 'irbid'; irbid.totalFils = devices + 5000;
+        const placed = await send('POST', '/api/order', irbid, { ip: '198.51.100.42' });
+        assert.equal(placed.status, 201, 'a delivery order outside Amman pays the other-governorates fee');
+        assert.equal(placed.data.totalFils, devices + 5000);
+        const pickup = orderBody(); pickup.fulfilment = 'pickup'; pickup.customer.governorate = ''; pickup.customer.address = ''; pickup.totalFils = devices;
+        assert.equal((await send('POST', '/api/order', pickup, { ip: '198.51.100.43' })).status, 201, 'pickup has no delivery fee');
+        await Promise.all(pending);
+        const alert = sent.find((item) => item.url === 'https://api.telegram.org/bot123456:test-token/sendMessage' && item.body.text.includes(placed.data.number));
+        assert(alert && alert.body.chat_id === '42' && alert.body.text.includes('التوصيل') && !alert.body.text.includes('Test request\n'), 'the Telegram alert carries the order and its delivery fee');
+        const stored = (await send('GET', '/api/admin/orders', undefined, { cookie: secondCookie })).data.orders.find((order) => order.number === placed.data.number);
+        assert.equal(stored.totalFils - stored.lines.reduce((sum, line) => sum + line.qty * line.unitFils, 0), 5000, 'the saved order shows the fee as total minus devices');
+      } finally { globalThis.fetch = realFetch; delete env.TELEGRAM_BOT_TOKEN; delete env.TELEGRAM_CHAT_ID; }
+    }
     assert.deepEqual((await send('POST', '/api/admin/logout', {}, { cookie: secondCookie })).data, { ok: true });
     expectError(await send('GET', '/api/admin/orders', undefined, { cookie: secondCookie }), 401, 'signed-out');
     expectError(await send('GET', '/api/admin/orders'), 401, 'signed-out');

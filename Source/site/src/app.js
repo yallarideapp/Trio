@@ -1,7 +1,7 @@
 import deviceSpecifications from '../../shared/device-specs.js';
 import { api, local, MODE, ApiError } from './store.js';
 import { renderAccount, loadAccount, bindAccount, accountLabel, customerProfile, setAccountText } from './account.js';
-import { priceLines, fromPrice, formatJD, toFils, variantId, splitVariantId, visibleProducts, normaliseMobile, MAX_QTY, MAX_LINES, validPrice, variantQuantityLimit, variantFils, variantHasOffer, inOffers } from '../../shared/pricing.js';
+import { priceLines, priceOrder, deliveryFils, hasDeliveryFees, fromPrice, formatJD, toFils, variantId, splitVariantId, visibleProducts, normaliseMobile, MAX_QTY, MAX_LINES, validPrice, variantQuantityLimit, variantFils, variantHasOffer, inOffers } from '../../shared/pricing.js';
 import { conditions, conditionShort, conditionGroup, notes as noteLabels, warranties, governorates } from '../../shared/labels.js';
 import { validBatteryHealth, validBatteryCycles } from '../../shared/battery.js';
 import { forwardArrow } from '../../shared/navigation.js';
@@ -11,6 +11,7 @@ import { PREVIEW_KEY } from './pages-preview.js';
 import { categoryArtworkSource } from '../../shared/home-artwork.js';
 import { conditionListings, catalogListings } from '../../shared/listings.js';
 import { heroSlot } from '../../shared/hero-slots.js';
+import { orderAlerts } from './order-alerts.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -378,8 +379,18 @@ function bagLine(line) {
   const p = line.product; const v = line.variant;
   return `<li class="bag-line"><a class="bag-thumb device-media" href="${productUrl(p, v)}">${media(p)}</a><div class="bag-info"><a class="bag-name" href="${productUrl(p, v)}" dir="auto">${esc(L(p.name))}</a><p class="bag-variant" dir="auto">${esc(variantLabel(v))}</p><div class="bag-row"><div class="qty" role="group" aria-label="${esc(t('qty'))}"><button type="button" data-qty="${esc(line.id)}" data-delta="-1" aria-label="−"${line.qty <= 1 ? ' disabled' : ''}>−</button><output>${line.qty}</output><button type="button" data-qty="${esc(line.id)}" data-delta="1" aria-label="+"${line.qty >= variantQuantityLimit(v) ? ' disabled' : ''}>+</button></div><strong class="bag-price"><bdi>${esc(money(line.totalFils))}</bdi></strong></div><button type="button" class="bag-remove" data-remove="${esc(line.id)}">${esc(t('remove'))}</button></div></li>`;
 }
-function summary(priced, withButton) {
-  return `<aside class="bag-summary"><dl><div><dt>${esc(t('subtotal'))}</dt><dd><bdi>${esc(money(priced.totalFils))}</bdi></dd></div><div><dt>${esc(t('delivery'))}</dt><dd>${esc(t(MODE === 'pages' ? 'demoDelivery' : 'deliveryValue'))}</dd></div><div class="is-total"><dt>${esc(t('total'))}</dt><dd><bdi>${esc(money(priced.totalFils))}</bdi></dd></div></dl><p class="summary-note">${esc(t('payCash'))}</p>${withButton ? `<a class="button button-primary button-wide" href="#/checkout">${esc(t('checkoutLive'))}${arrow}</a><a class="text-link" href="#/shop">${esc(t('keepShopping'))}</a>` : ''}</aside>`;
+// The bag shows the owner's fees; checkout passes the chosen fulfilment and governorate.
+const noFeeText = () => t(MODE === 'pages' ? 'demoDelivery' : 'deliveryValue');
+const feeText = (fils) => fils ? money(fils) : noFeeText();
+function summary(priced, withButton, choice = null) {
+  const subtotal = priced.totalFils;
+  const fees = hasDeliveryFees(S());
+  const fee = choice ? deliveryFils(S(), choice.fulfilment, choice.governorate) : 0;
+  const delivery = choice?.fulfilment === 'pickup' ? esc(t('pickupFree'))
+    : choice ? `<bdi>${esc(feeText(fee))}</bdi>`
+    : fees ? `<span class="fee-list"><span>${esc(t('deliveryAmman'))}: <bdi>${esc(feeText(deliveryFils(S(), 'delivery', 'amman')))}</bdi></span><span>${esc(t('deliveryOther'))}: <bdi>${esc(feeText(deliveryFils(S(), 'delivery', 'other')))}</bdi></span></span>` : esc(noFeeText());
+  const total = !choice && fees ? '' : `<div class="is-total"><dt>${esc(t('total'))}</dt><dd><bdi>${esc(money(subtotal + fee))}</bdi></dd></div>`;
+  return `<aside class="bag-summary" id="${choice ? 'checkout-summary' : 'bag-summary'}"><dl><div><dt>${esc(t('subtotal'))}</dt><dd><bdi>${esc(money(subtotal))}</bdi></dd></div><div><dt>${esc(t('delivery'))}</dt><dd>${delivery}</dd></div>${total}</dl>${!choice && fees ? `<p class="summary-note">${esc(t('deliveryAtCheckout'))}</p>` : ''}<p class="summary-note">${esc(t('payCash'))}</p>${withButton ? `<a class="button button-primary button-wide" href="#/checkout">${esc(t('checkoutLive'))}${arrow}</a><a class="text-link" href="#/shop">${esc(t('keepShopping'))}</a>` : ''}</aside>`;
 }
 function renderBag() {
   const fixed = cleanBag();
@@ -389,7 +400,7 @@ function renderBag() {
 }
 function orderText(priced, number = '') {
   const lines = priced.lines.map((l) => `• ${L(l.product.name)}${l.variant.storage || l.variant.condition ? ` — ${variantLabel(l.variant)}` : ''} × ${l.qty} = ${money(l.totalFils)}`);
-  return [t('waHello'), t('waOrder'), ...lines, `${t('waTotal')}: ${money(priced.totalFils)}`, number ? `${t('waNumber')}: ${number}` : ''].filter(Boolean).join('\n');
+  return [t('waHello'), t('waOrder'), ...lines, priced.deliveryFils ? `${t('delivery')}: ${money(priced.deliveryFils)}` : '', `${t('waTotal')}: ${money(priced.totalFils)}`, number ? `${t('waNumber')}: ${number}` : ''].filter(Boolean).join('\n');
 }
 function renderInquiry() {
   return `<div class="container page-shell inquiry-page"><div class="page-heading"><h1>${esc(t('checkoutTitle'))}</h1><p class="page-intro">${esc(t('ordersOff'))}</p></div><div class="contact-actions"><a class="button button-primary" href="#/contact">${esc(t('contact'))}${arrow}</a><a class="button button-outline" href="#/bag">${esc(t('bag'))}</a></div></div>`;
@@ -414,7 +425,7 @@ function renderCheckout() {
   <label class="hp" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
   <p class="summary-note">${esc(t(MODE === 'pages' ? 'demoPrivacy' : 'privacy'))}</p>
   <button class="button button-primary button-wide" type="submit">${esc(t('placeOrder'))}</button></form>
-  <div><ul class="bag-lines is-compact">${priced.lines.map((l) => `<li class="bag-line"><span class="bag-thumb device-media">${media(l.product)}</span><div class="bag-info"><span class="bag-name" dir="auto">${esc(L(l.product.name))} × ${l.qty}</span><p class="bag-variant" dir="auto">${esc(variantLabel(l.variant))}</p><strong class="bag-price"><bdi>${esc(money(l.totalFils))}</bdi></strong></div></li>`).join('')}</ul>${summary(priced, false)}</div></div></div>`;
+  <div><ul class="bag-lines is-compact">${priced.lines.map((l) => `<li class="bag-line"><span class="bag-thumb device-media">${media(l.product)}</span><div class="bag-info"><span class="bag-name" dir="auto">${esc(L(l.product.name))} × ${l.qty}</span><p class="bag-variant" dir="auto">${esc(variantLabel(l.variant))}</p><strong class="bag-price"><bdi>${esc(money(l.totalFils))}</bdi></strong></div></li>`).join('')}</ul>${summary(priced, false, { fulfilment: pickup ? 'pickup' : 'delivery', governorate: draft.governorate || 'amman' })}</div></div></div>`;
 }
 function renderDone(number) {
   const order = state.lastOrder && state.lastOrder.number === number && state.lastOrder.channel === MODE ? state.lastOrder : null;
@@ -422,7 +433,15 @@ function renderDone(number) {
   const details = Array.isArray(order.lines) && order.lines.length ? `<ul class="receipt-lines" aria-label="${esc(t('shop'))}">${order.lines.map((line) => `<li class="receipt-line"><div class="receipt-item-info"><strong class="receipt-item-name"><bdi>${esc(L(line.name))}</bdi></strong><div class="receipt-item-meta">${line.storage ? `<span dir="auto">${esc(line.storage)}</span>` : ''}<span>${esc(t('qty'))}: <bdi>${esc(num(line.qty))}</bdi></span></div></div><strong class="receipt-line-total"><bdi>${esc(money(line.unitFils * line.qty))}</bdi></strong></li>`).join('')}</ul>` : '';
   const accountOrder = MODE === 'pages' && customerProfile();
   const actions = `${accountOrder ? `<a class="button button-primary" href="#/account">${esc(t('myOrders'))}</a>` : ''}<a class="button ${accountOrder ? 'button-outline' : 'button-primary'}" href="#/shop">${esc(t('keepShopping'))}</a>${MODE !== 'pages' && S().whatsapp ? `<a class="button button-whatsapp" href="${esc(waHref(order.text || ''))}" ${external}>${icon('whatsapp')}${esc(t('sendWhatsapp'))}</a>` : ''}${MODE !== 'pages' ? `<a class="button button-outline" href="${esc(phoneHref())}">${icon('phone')}${esc(t('call'))}</a>` : ''}`;
-  return `<div class="container page-shell done-page"><div class="done-card"><span class="done-icon" aria-hidden="true">✓</span><h1>${esc(t(MODE === 'pages' ? 'demoDone' : 'doneTitle'))}</h1><div class="receipt-reference"><p>${esc(t('doneText'))}</p><p class="order-number" dir="ltr">${esc(number)}</p></div><p class="receipt-message">${esc(t(MODE === 'pages' ? 'demoNext' : 'doneNext'))}</p>${details}${Number.isInteger(order.totalFils) ? `<p class="receipt-total"><span>${esc(t('total'))}</span><strong><bdi>${esc(money(order.totalFils))}</bdi></strong></p>` : ''}${MODE === 'demo' ? `<p class="form-alert">${esc(t('demoNote'))}</p>` : ''}<div class="receipt-actions">${actions}</div></div></div>`;
+  return `<div class="container page-shell done-page"><div class="done-card"><span class="done-icon" aria-hidden="true">✓</span><h1>${esc(t(MODE === 'pages' ? 'demoDone' : 'doneTitle'))}</h1><div class="receipt-reference"><p>${esc(t('doneText'))}</p><p class="order-number" dir="ltr">${esc(number)}</p></div><p class="receipt-message">${esc(t(MODE === 'pages' ? 'demoNext' : 'doneNext'))}</p>${details}${Number.isSafeInteger(order.deliveryFils) && order.deliveryFils > 0 ? `<p class="receipt-total receipt-delivery"><span>${esc(t('delivery'))}</span><strong><bdi>${esc(money(order.deliveryFils))}</bdi></strong></p>` : ''}${Number.isInteger(order.totalFils) ? `<p class="receipt-total"><span>${esc(t('total'))}</span><strong><bdi>${esc(money(order.totalFils))}</bdi></strong></p>` : ''}${MODE === 'demo' ? `<p class="form-alert">${esc(t('demoNote'))}</p>` : ''}<div class="receipt-actions">${actions}</div></div></div>`;
+}
+// Keeps the checkout total in step with the chosen fulfilment and governorate.
+function updateCheckoutSummary() {
+  const form = $('#checkout-form'), box = $('#checkout-summary');
+  if (!form || !box) return;
+  const priced = bagPriced(); if (!priced.ok) return;
+  const fulfilment = form.elements.fulfilment?.value === 'pickup' ? 'pickup' : 'delivery';
+  box.outerHTML = summary(priced, false, { fulfilment, governorate: form.elements.governorate?.value || 'amman' });
 }
 function randomToken() {
   const bytes = new Uint8Array(16);
@@ -446,7 +465,7 @@ async function submitCheckout(form) {
   if (!normaliseMobile(draft.mobile)) return showFormError('bad-mobile');
   if (draft.fulfilment === 'delivery' && !governorates.some(([id]) => id === draft.governorate)) return showFormError('bad-governorate');
   if (draft.fulfilment === 'delivery' && draft.address.length < 4) return showFormError('bad-address');
-  const priced = bagPriced();
+  const priced = priceOrder(state.content, state.bag, draft.fulfilment, draft.governorate);
   if (!priced.ok) return showFormError(priced.error);
   const accountId = customerProfile()?.id || 'guest';
   const signature = JSON.stringify({ lines: state.bag, totalFils: priced.totalFils, customer: draft, accountId });
@@ -459,8 +478,10 @@ async function submitCheckout(form) {
     const result = await api.placeOrder(order);
     if (!result || typeof result.number !== 'string' || !/^[A-Za-z0-9-]{1,64}$/.test(result.number) || !Number.isSafeInteger(result.totalFils) || result.totalFils <= 0) throw new ApiError('generic');
     if ((customerProfile()?.id || 'guest') !== accountId) return;
-    state.lastOrder = { number: result.number, channel: MODE, totalFils: result.totalFils, text: orderText(priced, result.number), lines: priced.lines.map((line) => ({ name: line.product.name, storage: line.variant.storage, qty: line.qty, unitFils: line.unitFils })) };
+    state.lastOrder = { number: result.number, channel: MODE, totalFils: result.totalFils, deliveryFils: priced.deliveryFils, text: orderText(priced, result.number), lines: priced.lines.map((line) => ({ name: line.product.name, storage: line.variant.storage, qty: line.qty, unitFils: line.unitFils })) };
     local.write(`trio-last-order-${accountId}`, state.lastOrder);
+    // Preview only: a Telegram or WhatsApp alert, when the owner set one up on this browser.
+    if (MODE === 'pages') orderAlerts.notifyOrder({ number: result.number, lines: state.lastOrder.lines, fulfilment: draft.fulfilment, deliveryFils: priced.deliveryFils, totalFils: result.totalFils, customer: draft });
     state.bag = []; saveBag(); state.checkoutToken = ''; state.checkoutSignature = '';
     location.hash = `#/done/${encodeURIComponent(result.number)}`;
     loadAccount();
@@ -698,7 +719,8 @@ document.addEventListener('change', (event) => {
   if (id === 'brand-filter') state.brand = event.target.value;
   else if (id === 'sort-order') state.sort = event.target.value;
   else if (id === 'cond-filter') state.cond = event.target.value;
-  else if (event.target.name === 'fulfilment') { const box = $('.delivery-fields'); if (box) { const pickup = event.target.value === 'pickup'; box.hidden = pickup; $$('input,select', box).forEach((field) => { field.disabled = pickup; field.required = !pickup; }); } return; }
+  else if (event.target.name === 'fulfilment') { const box = $('.delivery-fields'); if (box) { const pickup = event.target.value === 'pickup'; box.hidden = pickup; $$('input,select', box).forEach((field) => { field.disabled = pickup; field.required = !pickup; }); } updateCheckoutSummary(); return; }
+  else if (event.target.name === 'governorate' && event.target.form?.id === 'checkout-form') { updateCheckoutSummary(); return; }
   else return;
   syncFilterUrl(); updateResults();
 });
