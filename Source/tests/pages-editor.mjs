@@ -569,7 +569,7 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
       assert(html.includes(language === 'ar' ? 'احفظ المعاينة' : 'Save preview'), `${language}: editor calls the action saving a preview`);
       assert(html.includes('href="../index.html?preview=draft#/"'), 'preview link opts into local changes');
       assert(html.includes('href="../index.html#/"'), 'public store link excludes the preview parameter');
-      if (view !== 'orders') for (const id of ['export-draft', 'import-draft', 'reset-preview']) assert(html.includes(`id="${id}"`), `${language}: ${id} is accessible`);
+      for (const id of ['export-draft', 'import-draft', 'reset-preview']) assert.equal(html.includes(`id="${id}"`), view === 'settings', `${language}: ${id} is in Settings only`);
       if (view === 'devices') {
         for (let index = 0; index < content.products.length; index++) assert(html.includes(`data-stock-edit="${index}"`), `${language}: stock is reachable directly from the device list`);
         assert(html.includes('stock-flag'), `${language}: the device overview shows availability`);
