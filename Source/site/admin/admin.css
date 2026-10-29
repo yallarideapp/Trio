@@ -192,3 +192,7 @@ code{font-size:12px;background:var(--ink);padding:2px 6px;border-radius:6px}
   .side-nav button,.pages-editor .side-nav button{width:auto;flex:none;min-height:40px;padding:8px 12px;font-size:13px;gap:8px;white-space:nowrap}
   .side-nav button svg{width:17px;height:17px}
 }
+
+.category-device-pick{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.category-device-pick summary{cursor:pointer;font-weight:700;font-size:14px}
+.category-device-pick .banner-pick{grid-template-columns:repeat(auto-fill,minmax(78px,1fr));max-height:240px}

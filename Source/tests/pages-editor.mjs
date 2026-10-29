@@ -598,6 +598,9 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
         for (const category of content.categories) {
           assert(html.includes(`data-category-form="${category.id}"`), `${language}: category names are directly editable`);
           assert(html.includes(`data-category-photo="${category.id}"`), `${language}: each category has its own photo upload`);
+          const pictured = content.products.filter((product) => product.category === category.id && (product.image || product.photo));
+          for (const product of pictured) assert(html.includes(`data-category-device="${category.id}" data-device="${product.id}"`), `${language}: a category picture can come from its own devices`);
+          assert(!new RegExp(`data-category-device="${category.id}" data-device="(?!${pictured.map((product) => product.id).join('|') || '$^'})`).test(html), `${language}: only the category's own devices are offered`);
           const deletion = html.match(new RegExp(`<button[^>]*data-category-delete="${category.id}"[^>]*>`))?.[0] || '';
           if (content.products.some((product) => product.category === category.id)) assert(deletion.includes(' disabled'), `${language}: deleting a populated category is blocked`);
         }

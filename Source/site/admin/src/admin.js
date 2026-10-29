@@ -25,6 +25,7 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
 const AR = {
+  'Category picture from a device': 'صورة القسم من جهاز بالقسم', 'Pick a device to use its picture for this category.': 'اختار جهاز من القسم عشان تنحط صورته صورة للقسم.', 'No device pictures in this category yet.': 'ما في صور أجهزة بهالقسم لسا.', 'Category picture updated.': 'تغيّرت صورة القسم.',
   'Devices & prices': 'الأجهزة والأسعار', 'Banner devices': 'أجهزة البانر', 'Admin sections': 'أقسام اللوحة',
   'Banner': 'البانر', 'Home banner': 'بانر الرئيسية', 'Choose what each tab of the home banner shows: a device from your list, or a picture you upload. Automatic keeps the current choice.': 'اختار شو يبيّن بكل تبويب ببانر الرئيسية: جهاز من القائمة، أو صورة بتحمّلها. «تلقائي» بيخلي الاختيار الحالي.', 'Automatic': 'تلقائي', 'Device to show': 'الجهاز اللي يبيّن', 'Upload a picture': 'حمّل صورة', 'Replace picture': 'غيّر الصورة', 'Remove picture': 'شيل الصورة', 'Uploaded picture': 'صورة محمّلة', 'Shows now': 'بيبيّن هلّق', 'No devices in this category yet.': 'ما في أجهزة بهالقسم لسا.', 'Banner updated. Save your changes to apply it.': 'تغيّر البانر. احفظ التعديلات عشان يبيّن.',
   'Shown': 'ظاهر', 'On offer': 'عليه عرض', 'On home page': 'بالرئيسية', 'Copy added (hidden). Edit it, then show it.': 'انضافت نسخة مخفية. عدّلها وبعدين خليها ظاهرة.',
@@ -454,6 +455,14 @@ async function resizeImage(file) {
 function categoryPhoto(category) {
   return categoryArtworkSource(category, { photoUrl: (photo) => IS_PAGES ? adminApi.photoUrl(photo) : api.photoUrl(photo), assetUrl: (image) => `../${image}` });
 }
+// A category's picture can come from one of its own devices (its uploaded photo or catalog image).
+function categoryDevicePicker(category) {
+  const devices = state.draft.products.filter((p) => p.category === category.id && photoSrc(p));
+  const current = (p) => (p.photo && adminPhotoUrl(p.photo) ? category.photo === p.photo : !category.photo && Boolean(p.image) && category.image === p.image);
+  const open = devices.some(current);
+  return `<details class="category-device-pick"${open ? ' open' : ''}><summary>${esc(t('Category picture from a device'))}</summary><p class="muted small">${esc(t(devices.length ? 'Pick a device to use its picture for this category.' : 'No device pictures in this category yet.'))}</p>${devices.length ? `<div class="banner-pick" role="radiogroup" aria-label="${esc(`${t('Category picture from a device')}: ${L(category.name)}`)}">${devices.map((p) => `<button type="button" class="pick-tile" role="radio" aria-checked="${Boolean(current(p))}" data-category-device="${esc(category.id)}" data-device="${esc(p.id)}"><span class="pick-img">${thumb(p)}</span><span class="pick-name" dir="auto">${esc(L(p.name))}</span></button>`).join('')}</div>` : ''}</details>`;
+}
+const adminPhotoUrl = (id) => (IS_PAGES ? adminApi.photoUrl(id) : api.photoUrl(id)) || '';
 function categoriesView() {
   const list = state.draft.categories;
   const adding = state.addingCategory;
@@ -467,7 +476,7 @@ function categoriesView() {
     const deleteReason = deviceCount ? t('Move its devices to another category before deleting it.') : list.length <= 1 ? t('Keep at least one category.') : '';
     return `<li class="card category-editor-card" data-category-card="${esc(category.id)}"><form data-category-form="${esc(category.id)}" autocomplete="off"><div class="category-card-head"><h2 dir="auto">${esc(L(category.name))}</h2><div class="category-card-actions"><button type="button" class="btn ghost small icon" data-category-move="${esc(category.id)}" data-dir="-1" aria-label="${esc(t('Move up'))}: ${esc(L(category.name))}"${index === 0 ? ' disabled' : ''}>↑</button><button type="button" class="btn ghost small icon" data-category-move="${esc(category.id)}" data-dir="1" aria-label="${esc(t('Move down'))}: ${esc(L(category.name))}"${index === list.length - 1 ? ' disabled' : ''}>↓</button><button type="button" class="btn danger small" data-category-delete="${esc(category.id)}" aria-label="${esc(t('Delete'))}: ${esc(L(category.name))}"${deleteReason ? ` disabled title="${esc(deleteReason)}"` : ''}>${esc(t('Delete'))}</button></div></div>
     <div class="category-card-content"><div class="category-image-editor"><div class="category-photo">${photo.src ? `<img src="${esc(photo.src)}" alt="${esc(L(category.name))}" loading="lazy">` : `<span class="category-photo-placeholder" aria-label="${esc(t('No category photo yet.'))}">${esc((L(category.name) || '?').slice(0, 1))}</span>`}</div><div class="btns category-photo-actions"><label class="btn small" for="category-photo-${esc(category.id)}">${esc(t(photo.custom ? 'Change photo' : 'Upload photo'))}<input type="file" id="category-photo-${esc(category.id)}" data-category-photo="${esc(category.id)}" accept="image/*" class="file-input" aria-label="${esc(t('Category photo'))}: ${esc(L(category.name))}"></label>${photo.custom ? `<button type="button" class="btn ghost small" data-category-reset-photo="${esc(category.id)}">${esc(t('Reset photo'))}</button>` : ''}</div></div>
-    <div class="category-fields">${field('Name (Arabic)', 'name.ar', category.name.ar, { dir: 'rtl', attrs: `required maxlength="${CATEGORY_NAME_LIMIT}"` })}${field('Name (English)', 'name.en', category.name.en, { dir: 'ltr', attrs: `required maxlength="${CATEGORY_NAME_LIMIT}"` })}<p class="muted small">${esc(t('Category id'))}: <code dir="ltr">${esc(category.id)}</code></p><p class="muted small">${esc(t('The category id stays the same when you rename it.'))}</p><p class="muted small category-photo-help">${esc(t('The picture appears in the home category tile. A transparent image looks best.'))}${!photo.custom ? ` ${esc(t('Uses the default category picture until you upload a photo.'))}` : ''}</p><p class="muted small">${deviceCount} ${esc(t('devices in this category'))}${deleteReason ? ` · ${esc(deleteReason)}` : ''}</p></div></div></form></li>`;
+    <div class="category-fields">${field('Name (Arabic)', 'name.ar', category.name.ar, { dir: 'rtl', attrs: `required maxlength="${CATEGORY_NAME_LIMIT}"` })}${field('Name (English)', 'name.en', category.name.en, { dir: 'ltr', attrs: `required maxlength="${CATEGORY_NAME_LIMIT}"` })}<p class="muted small">${esc(t('Category id'))}: <code dir="ltr">${esc(category.id)}</code></p><p class="muted small">${esc(t('The category id stays the same when you rename it.'))}</p><p class="muted small category-photo-help">${esc(t('The picture appears in the home category tile. A transparent image looks best.'))}${!photo.custom ? ` ${esc(t('Uses the default category picture until you upload a photo.'))}` : ''}</p><p class="muted small">${deviceCount} ${esc(t('devices in this category'))}${deleteReason ? ` · ${esc(deleteReason)}` : ''}</p></div></div>${categoryDevicePicker(category)}</form></li>`;
   }).join('')}</ol>`;
 }
 function readCategoryForm(form) {
@@ -787,6 +796,18 @@ document.addEventListener('click', async (e) => {
       if (state.category === id) state.category = 'all';
       saveDraft(); render();
     }
+    return;
+  }
+  if (hit('[data-category-device]')) {
+    const el = hit('[data-category-device]');
+    const category = state.draft.categories.find((item) => item.id === el.dataset.categoryDevice);
+    const product = state.draft.products.find((item) => item.id === el.dataset.device && item.category === el.dataset.categoryDevice);
+    if (!category || !product) return;
+    readCurrentForm();
+    if (product.photo && adminPhotoUrl(product.photo)) { category.photo = product.photo; category.image = ''; }
+    else if (product.image) { category.photo = ''; category.image = product.image; }
+    else return;
+    saveDraft(); render(); flash(t('Category picture updated.'));
     return;
   }
   if (hit('[data-category-reset-photo]')) {

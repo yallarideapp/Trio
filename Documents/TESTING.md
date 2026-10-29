@@ -282,3 +282,8 @@ This release replaces the source/date/disclaimer sections described above with r
 - The admin tabs moved into a side menu with icons, in Flick's order without the sections Trio does not have: Overview, Orders, Devices & prices, Banner devices, Categories, Website texts, Settings. New orders show a count on Orders.
 - On screens up to 900 px the menu becomes one scrolling row under the top bar, and the open section is kept in view.
 - Checked: `npm test`, all three builds with no warnings; browser at 390, 900 and 1280 px in Arabic and English: order and labels correct, menu stays in place while scrolling on desktop, no sideways page scroll, no console errors.
+
+## 2026-10-29 — Category picture from one of its devices
+
+- Each category card in Categories has "Category picture from a device": tiles of that category's own devices; tapping one uses its picture (its uploaded photo, otherwise its catalog image) for the home category tile. Upload and "Reset photo" still work.
+- Checked: `npm test` (new check: each category offers only its own devices with pictures), all three builds with no warnings; browser at 390 and 1280 px: picked MacBook Air for Laptops, the card and home tile showed it after saving the preview; no console errors.
