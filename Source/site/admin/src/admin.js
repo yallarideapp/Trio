@@ -125,7 +125,7 @@ const t = (s, vars = {}) => (lang === 'ar' ? AR[s] || s : ({ new: 'New', confirm
 const L = (o) => (o && typeof o === 'object' ? o[lang] || o.ar || o.en || '' : String(o || ''));
 const money = (jd) => formatJD(toFils(jd), lang);
 
-const initialView = IS_PAGES ? ({ '#orders': 'orders', '#devices': 'devices', '#banner': 'banner', '#categories': 'categories', '#settings': 'settings' }[globalThis.location?.hash] || 'overview') : 'overview';
+const initialView = IS_PAGES ? ({ '#orders': 'orders', '#devices': 'devices', '#banner': 'banner', '#texts': 'texts', '#categories': 'categories', '#settings': 'settings' }[globalThis.location?.hash] || 'overview') : 'overview';
 const state = { view: initialView, signedIn: IS_PAGES, setup: true, published: null, version: 0, draft: null, dirty: false, orders: [], legacyOrders: [], orderFilter: '', orderOpen: null, orderQuery: '', orderBefore: null, editing: null, category: 'all', query: '', addingCategory: null, message: '', textQuery: '', textArea: 'home', textAdvanced: false, textMode: 'main' };
 
 function saveDraft() {
@@ -154,7 +154,7 @@ async function guard(fn) {
 // ---------- shell ----------
 function topBar() {
   const n = state.orders.filter((o) => o.status === 'new').length;
-  const tabs = IS_PAGES ? [['overview', 'Overview'], ['devices', 'Devices'], ['categories', 'Categories'], ['banner', 'Banner'], ['orders', 'Orders'], ['settings', 'Settings']] : [['overview', 'Overview'], ['orders', 'Orders'], ['devices', 'Devices'], ['categories', 'Categories'], ['banner', 'Banner'], ['settings', 'Settings']];
+  const tabs = IS_PAGES ? [['overview', 'Overview'], ['devices', 'Devices'], ['categories', 'Categories'], ['banner', 'Banner'], ['texts', 'Website texts'], ['orders', 'Orders'], ['settings', 'Settings']] : [['overview', 'Overview'], ['orders', 'Orders'], ['devices', 'Devices'], ['categories', 'Categories'], ['banner', 'Banner'], ['texts', 'Website texts'], ['settings', 'Settings']];
   return `<header class="bar"><div class="bar-in"><a class="brand" href="../index.html#/" ${MODE === 'demo' ? '' : 'target="_blank" rel="noopener"'}><img src="../assets/instagram/logo.jpg" alt="" width="34" height="34"><span dir="ltr">TRIO</span><small>${esc(t(IS_PAGES ? 'Catalog editor' : 'Admin'))}</small></a>
   <nav class="tabs">${tabs.map(([id, label]) => `<button type="button" data-view="${id}" aria-current="${state.view === id}">${esc(t(label))}${id === 'orders' && n ? `<span class="badge">${n}</span>` : ''}</button>`).join('')}</nav>
   <div class="bar-actions"><span id="draft-state" class="draft-state" role="status"></span><button type="button" id="publish" class="btn primary">${esc(t(IS_PAGES ? 'Save preview' : 'Publish'))}</button>${IS_PAGES ? `<a class="btn ghost" href="../index.html?preview=draft#/" target="_blank" rel="noopener">${esc(t('View preview'))}${forwardArrow}</a>` : ''}<button type="button" id="lang" class="btn ghost" lang="${lang === 'ar' ? 'en' : 'ar'}">${lang === 'ar' ? 'EN' : 'ع'}</button>${MODE === 'demo' || IS_PAGES ? '' : `<button type="button" id="logout" class="btn ghost">${esc(t('Sign out'))}</button>`}</div></div>
@@ -177,9 +177,9 @@ function render() {
   document.body.classList.toggle('pages-editor', IS_PAGES);
   const root = $('#admin');
   if (!state.signedIn) { root.innerHTML = signInView(); return; }
-  root.innerHTML = `${topBar()}<main class="wrap">${IS_PAGES && !['orders', 'overview'].includes(state.view) ? previewTools() : ''}${state.view === 'overview' ? overviewView() : state.view === 'banner' ? bannerView() : state.view === 'orders' ? ordersView() : state.view === 'devices' ? (state.editing ? editView() : devicesView()) : state.view === 'categories' ? categoriesView() : settingsView()}</main><p id="flash" class="flash" role="status" hidden></p>`;
+  root.innerHTML = `${topBar()}<main class="wrap">${IS_PAGES && !['orders', 'overview'].includes(state.view) ? previewTools() : ''}${state.view === 'overview' ? overviewView() : state.view === 'banner' ? bannerView() : state.view === 'texts' ? textsView() : state.view === 'orders' ? ordersView() : state.view === 'devices' ? (state.editing ? editView() : devicesView()) : state.view === 'categories' ? categoriesView() : settingsView()}</main><p id="flash" class="flash" role="status" hidden></p>`;
   updateBar();
-  if (state.view === 'settings') filterWebsiteTexts();
+  if (state.view === 'texts') filterWebsiteTexts();
 }
 function signInView() {
   const setup = !state.setup;
@@ -557,11 +557,15 @@ function filterWebsiteTexts() {
   const advanced = $('[data-text-advanced]');
   if (advanced) { advanced.textContent = t(state.textAdvanced ? 'Show fewer texts' : 'More texts and messages'); advanced.setAttribute('aria-expanded', String(state.textAdvanced)); }
 }
+function textsView() {
+  return `<div class="head"><h1>${esc(t('Website texts'))}</h1></div><form id="texts-form" class="edit">${websiteTextsView()}</form>`;
+}
+function readTexts(form) { readWebsiteTexts(form); saveDraft(); }
 function settingsView() {
   const s = state.draft.settings;
   const pair = (label, key, sub) => field(`${label} (Arabic)`, `${key}.ar`, s[key]?.ar || '', { type: sub }) + field(`${label} (English)`, `${key}.en`, s[key]?.en || '', { type: sub, dir: 'ltr' });
   const defaultHero = s.heroMode === 'default';
-  return `<div class="head"><h1>${esc(t('Settings'))}</h1></div><form id="settings-form" class="edit">${websiteTextsView()}<section class="card home-presentation"><h2>${esc(t('Home presentation'))}</h2><p class="muted">${esc(t('Restore the original animated showcase without deleting devices, uploaded pictures or home selections. Selecting a device again switches back to your selected devices.'))}</p><div class="btns"><button type="button" class="btn${defaultHero ? ' primary' : ' ghost'}" data-hero-mode="default" aria-pressed="${defaultHero}">${esc(t('Restore default animations and pictures'))}</button><button type="button" class="btn${!defaultHero ? ' primary' : ' ghost'}" data-hero-mode="selected" aria-pressed="${!defaultHero}">${esc(t('Use selected devices'))}</button></div><p class="muted small" role="status">${esc(t(defaultHero ? 'Default animations and pictures are active.' : 'Your selected devices are active.'))}</p></section><div class="grid2"><section class="card"><h2>${esc(t('Contact'))}</h2>${field('Shop phone', 'phone', s.phone, { type: 'tel', dir: 'ltr' })}${field('WhatsApp number (with 962)', 'whatsapp', s.whatsapp, { type: 'tel', dir: 'ltr' })}${field(IS_PAGES ? 'Social link for the Repair and Visit us pages' : 'Instagram link', 'instagram', s.instagram, { type: 'url', dir: 'ltr' })}${field('Facebook link', 'facebook', s.facebook, { type: 'url', dir: 'ltr' })}${field('Map link', 'maps', s.maps, { type: 'url', dir: 'ltr' })}${field('Address (Arabic)', 'address.ar', s.address.ar)}${field('Address (English)', 'address.en', s.address.en, { dir: 'ltr' })}</section>
+  return `<div class="head"><h1>${esc(t('Settings'))}</h1></div><form id="settings-form" class="edit"><section class="card home-presentation"><h2>${esc(t('Home presentation'))}</h2><p class="muted">${esc(t('Restore the original animated showcase without deleting devices, uploaded pictures or home selections. Selecting a device again switches back to your selected devices.'))}</p><div class="btns"><button type="button" class="btn${defaultHero ? ' primary' : ' ghost'}" data-hero-mode="default" aria-pressed="${defaultHero}">${esc(t('Restore default animations and pictures'))}</button><button type="button" class="btn${!defaultHero ? ' primary' : ' ghost'}" data-hero-mode="selected" aria-pressed="${!defaultHero}">${esc(t('Use selected devices'))}</button></div><p class="muted small" role="status">${esc(t(defaultHero ? 'Default animations and pictures are active.' : 'Your selected devices are active.'))}</p></section><div class="grid2"><section class="card"><h2>${esc(t('Contact'))}</h2>${field('Shop phone', 'phone', s.phone, { type: 'tel', dir: 'ltr' })}${field('WhatsApp number (with 962)', 'whatsapp', s.whatsapp, { type: 'tel', dir: 'ltr' })}${field(IS_PAGES ? 'Social link for the Repair and Visit us pages' : 'Instagram link', 'instagram', s.instagram, { type: 'url', dir: 'ltr' })}${field('Facebook link', 'facebook', s.facebook, { type: 'url', dir: 'ltr' })}${field('Map link', 'maps', s.maps, { type: 'url', dir: 'ltr' })}${field('Address (Arabic)', 'address.ar', s.address.ar)}${field('Address (English)', 'address.en', s.address.en, { dir: 'ltr' })}</section>
   ${IS_PAGES ? '' : `<section class="card"><h2>${esc(t('Ordering'))}</h2><div class="checks"><label><input type="checkbox" name="ordersOn"${s.ordersOn !== false ? ' checked' : ''}> ${esc(t('Take orders on the site'))}</label></div>${pair('Delivery note', 'deliveryNote', 'textarea')}${pair('Prices note', 'pricesNote', 'textarea')}</section>`}</div></form>
   ${MODE === 'demo' || IS_PAGES ? '' : `<form id="password-form" class="card narrow"><h2>${esc(t('Change password'))}</h2><label class="f"><span>${esc(t('Current password'))}</span><input name="current" type="password" autocomplete="current-password" required></label><label class="f"><span>${esc(t('New password'))}</span><input name="password" type="password" autocomplete="new-password" minlength="16" required><small>${esc(t('At least 16 characters.'))}</small></label><button class="btn" type="submit">${esc(t('Change password'))}</button></form>`}`;
 }
@@ -592,7 +596,6 @@ function readSettings(form) {
   s.whatsapp = s.whatsapp.replace(/\D/g, '');
   for (const k of IS_PAGES ? ['address'] : ['address', 'deliveryNote', 'pricesNote']) s[k] = { ar: g(`${k}.ar`).value.trim(), en: g(`${k}.en`).value.trim() };
   s.ordersOn = IS_PAGES ? false : g('ordersOn').checked;
-  readWebsiteTexts(form);
   saveDraft();
 }
 function focusBatteryFields() {
@@ -655,6 +658,8 @@ function readCurrentForm() {
   const settings = $('#settings-form');
   if (device && state.editing) readDeviceForm(device);
   if (settings) readSettings(settings);
+  const texts = $('#texts-form');
+  if (texts) readTexts(texts);
   for (const form of $$('[data-category-form]')) readCategoryForm(form);
 }
 async function exportDraft() {
@@ -676,7 +681,7 @@ document.addEventListener('click', async (e) => {
   const el = e.target instanceof Element ? e.target : null; if (!el) return;
   const hit = (s) => el.closest(s);
   if (hit('#lang')) { readCurrentForm(); lang = lang === 'ar' ? 'en' : 'ar'; local.write('trio-admin-lang', lang); render(); return; }
-  if (hit('[data-view]')) { const view = hit('[data-view]').dataset.view; if (!['overview', 'devices', 'categories', 'banner', 'orders', 'settings'].includes(view)) return; readCurrentForm(); if (view === 'settings') { state.textMode = 'main'; state.textQuery = ''; state.textAdvanced = false; } state.view = view; state.editing = null; state.orderOpen = null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); if (['orders', 'overview'].includes(state.view)) await loadOrders(); render(); return; }
+  if (hit('[data-view]')) { const view = hit('[data-view]').dataset.view; if (!['overview', 'devices', 'categories', 'banner', 'texts', 'orders', 'settings'].includes(view)) return; readCurrentForm(); if (view === 'texts') { state.textMode = 'main'; state.textQuery = ''; state.textAdvanced = false; } state.view = view; state.editing = null; state.orderOpen = null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); if (['orders', 'overview'].includes(state.view)) await loadOrders(); render(); return; }
   if (hit('#publish')) { publish(); return; }
   if (hit('[data-stock-edit]')) {
     state.editing = { index: Number(hit('[data-stock-edit]').dataset.stockEdit) }; render();
@@ -857,6 +862,7 @@ document.addEventListener('change', async (e) => {
   }
   if (form && form.id === 'device-form') { readDeviceForm(form); updateDeviceStockSummary(); }
   if (form && form.id === 'settings-form') readSettings(form);
+  if (form && form.id === 'texts-form') readTexts(form);
   if (form?.dataset?.categoryForm !== undefined) readCategoryForm(form);
 });
 document.addEventListener('input', (e) => {
@@ -865,8 +871,9 @@ document.addEventListener('input', (e) => {
   if (e.target.id === 'order-search') { state.orderQuery = e.target.value; const pos = e.target.selectionStart; render(); const box = $('#order-search'); box.focus(); if (pos !== null) box.setSelectionRange(pos, pos); }
   const form = e.target.closest && e.target.closest('form');
   if (form && form.id === 'device-form' && e.target.type !== 'file') { readDeviceForm(form); updateDeviceStockSummary(); }
-  if (form && form.id === 'settings-form') {
-    readSettings(form);
+  if (form && form.id === 'settings-form') readSettings(form);
+  if (form && form.id === 'texts-form') {
+    readTexts(form);
     if (e.target.dataset?.siteText) {
       const entry = siteTextEntries.find((item) => item.id === e.target.dataset.siteText);
       const edited = entry && textEntryEdited(entry);

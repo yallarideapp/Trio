@@ -555,7 +555,7 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   ui.state.legacyOrders = copy(legacyOrders);
   for (const language of ['ar', 'en']) {
     ui.setLanguage(language);
-    for (const view of ['orders', 'devices', 'categories', 'settings']) {
+    for (const view of ['orders', 'devices', 'categories', 'texts', 'settings']) {
       ui.state.view = view;
       ui.state.editing = null;
       ui.render();
@@ -576,17 +576,20 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
         assert(html.includes(language === 'ar' ? 'ظاهر' : 'Shown'), `${language}: visibility is labelled`);
       }
       if (view === 'settings') {
+        assert(!html.includes('data-text-entry=') && !html.includes('name="siteText.'), `${language}: website texts have their own tab, apart from settings`);
+        assert(html.includes('name="phone"') && html.includes('data-hero-mode="default"') && html.includes('data-hero-mode="selected"'), `${language}: contact details and the default animation choice stay in settings`);
+      }
+      if (view === 'texts') {
+        assert(!html.includes('name="phone"') && !html.includes('class="card home-presentation"'), `${language}: the texts tab holds only website texts`);
         assert(!html.includes('id="site-text-search"') && !html.includes('id="site-text-area"') && !html.includes('data-text-advanced'), `${language}: the first screen does not require a page or message selector`);
         assert(html.includes('data-text-mode="more"'), `${language}: other website text controls remain available on request`);
         assert.equal((html.match(/data-text-entry=/g) || []).length, 7, `${language}: the first screen shows only seven important headings and introductions`);
         for (const id of ['store.heroLine1', 'store.heroLine2', 'store.lookingFor', 'store.offersTitle', 'store.shopIntro', 'store.serviceText', 'store.contactIntro']) for (const locale of ['ar', 'en']) assert(html.includes(`name="siteText.${id}.${locale}"`), `${language}: important website texts remain bilingual`);
         assert.equal((html.match(/name="siteText\.store\.heroLine1\.ar"/g) || []).length, 1, `${language}: a text has only one mounted editor`);
-        assert(html.indexOf('data-text-mode-panel="main"') < html.indexOf('class="card home-presentation"') && html.indexOf('data-text-mode-panel="main"') < html.indexOf('name="phone"'), `${language}: important text editing appears before animation and contact settings`);
         assert(html.includes(language === 'ar' ? 'عنوان الرئيسية — السطر الأول' : 'Hero title — first line'), `${language}: fields explain their purpose`);
         assert(html.includes('value="A whole"') && html.includes('value="new game."'), `${language}: the actual English default title is visible in editable fields`);
         assert(!html.includes('name="siteText.store.errors.network.ar"') && !html.includes('name="siteText.account.password.ar"'), `${language}: unrelated forms and error messages stay off the first screen`);
         assert(html.includes('data-reset-text="store.offersTitle"') && !html.includes('data-reset-all-text'), `${language}: the important-text screen restores individual texts without a broad reset`);
-        assert(html.includes('data-hero-mode="default"') && html.includes('data-hero-mode="selected"'), `${language}: default animation and device selections are reversible choices`);
         assert(!html.includes('name="offersTitle.ar"'), `${language}: offers heading has one editor rather than conflicting duplicate controls`);
         assert(html.includes(language === 'ar' ? 'النصوص المهمة في الموقع' : 'Main website text'), `${language}: the important-text card title is translated`);
       }
@@ -623,7 +626,7 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
     assert(root.innerHTML.includes(language === 'ar' ? 'لا توجد طلبات تجريبية بعد.' : 'No demo orders yet.'), `${language}: an empty page invites a storefront checkout demonstration`);
     assert(!root.innerHTML.includes('data-new-order') && !root.innerHTML.includes('id="new-order-form"'), `${language}: an empty Pages order book offers no manual creation`);
     ui.state.orders = copy(orders);
-    ui.state.view = 'settings';
+    ui.state.view = 'texts';
     ui.state.textMode = 'more';
     const reachedTexts = new Set();
     for (const area of ['home', 'navigation', 'devices', 'services', 'checkout', 'account']) {
@@ -745,9 +748,9 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
   ui.state.textQuery = 'Customer profile';
   assert(ui.selectedTextEntries().some((entry) => entry.id === 'account.title'), 'the full editor keeps custom messages reachable after switching modes');
   ui.state.textQuery = '';
-  await clickControl('[data-view]', { view: 'settings' });
-  assert.equal(ui.state.textMode, 'main', 'opening Settings always starts with important texts');
-  assert.deepEqual(copy(ui.state.draft.settings.siteText), savedTextOverrides, 'opening Settings preserves less-used saved text');
+  await clickControl('[data-view]', { view: 'texts' });
+  assert.equal(ui.state.textMode, 'main', 'opening Website texts always starts with important texts');
+  assert.deepEqual(copy(ui.state.draft.settings.siteText), savedTextOverrides, 'opening Website texts preserves less-used saved text');
   const stockTarget = ui.state.draft.products[0];
   const originalVariants = copy(stockTarget.variants);
   await clickControl('[data-set-device-stock]', { setDeviceStock: stockTarget.id, soldOut: 'true' });

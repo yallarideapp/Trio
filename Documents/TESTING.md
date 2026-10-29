@@ -271,3 +271,8 @@ This release replaces the source/date/disclaimer sections described above with r
 - Removed the "Show on home page" checkbox from the device form. The Banner tab now picks each tab's device from a grid of the existing devices (photo and name); the picked device also becomes that category's home device, and Automatic releases it. Moving a device to another category drops its banner choice.
 - Fixed the banner upload button's hidden file field covering the whole card.
 - Checked: `npm test`, all three builds with no warnings; in the browser at 390 and 1280 px, picked iPhone 17, saved the preview, and the storefront banner linked to iPhone 17; the device form no longer has the checkbox; no console errors.
+
+## 2026-10-29 — Website texts get their own tab
+
+- Split Settings into two tabs: "Website texts" (the important texts and the full text editor) and "Settings" (home presentation, contact details, ordering, password).
+- Checked: `npm test` (editor views updated for the two tabs), all three builds with no warnings; in the browser at 390 and 1280 px, edited a hero line in Website texts and the phone in Settings, switched between tabs, both kept, saved, and the storefront showed the new heading; no console errors.
