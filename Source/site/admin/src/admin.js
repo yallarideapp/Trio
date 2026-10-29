@@ -24,6 +24,7 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
 const AR = {
+  'Overview': 'نظرة عامة', 'New orders': 'طلبات جديدة', 'Devices shown': 'أجهزة ظاهرة', 'Devices on offer': 'أجهزة عليها عرض', 'Out of stock devices': 'أجهزة غير متوفرة', 'Latest orders': 'آخر الطلبات', 'All orders': 'كل الطلبات', 'No orders yet. The first order from the site shows up here.': 'ما في طلبات لسا. أول طلب من الموقع بيطلع هون.', 'Before the site goes live': 'قبل ما يصير الموقع رسمي', 'Replace the example prices with real ones': 'حط الأسعار الحقيقية بدل الأمثلة', 'Confirm contact and address details with the shop': 'أكّد معلومات التواصل والعنوان مع المحل', 'Check stock for every device': 'راجع المخزون لكل جهاز', 'Turn on ordering from the website': 'شغّل الطلبات من الموقع', 'Hosting and a domain in the shop’s name': 'استضافة ودومين باسم المحل', 'Out of stock: {n}': 'غير متوفر: {n}',
   'Device stock': 'مخزون الجهاز', 'In stock': 'متوفر', 'Some options are out of stock': 'بعض الخيارات غير متوفرة', 'Manage stock': 'عدّل المخزون',
   '{available} of {total} options available': '{available} من {total} خيارات متوفرة', 'Mark all options out of stock': 'اجعل كل الخيارات غير متوفرة', 'Clear manual out-of-stock flags': 'ألغِ التعطيل اليدوي للخيارات',
   'The out-of-stock checkbox below applies only to that option.': 'خيار «غير متوفر» بالأسفل يخص ذلك الخيار فقط.', 'A quantity of 0 stays out of stock. Update the quantity to make that option available.': 'الكمية 0 تبقى غير متوفرة. عدّل الكمية لإتاحة ذلك الخيار.',
@@ -121,7 +122,7 @@ const t = (s, vars = {}) => (lang === 'ar' ? AR[s] || s : ({ new: 'New', confirm
 const L = (o) => (o && typeof o === 'object' ? o[lang] || o.ar || o.en || '' : String(o || ''));
 const money = (jd) => formatJD(toFils(jd), lang);
 
-const initialView = IS_PAGES ? ({ '#orders': 'orders', '#categories': 'categories', '#settings': 'settings' }[globalThis.location?.hash] || 'devices') : 'orders';
+const initialView = IS_PAGES ? ({ '#orders': 'orders', '#devices': 'devices', '#categories': 'categories', '#settings': 'settings' }[globalThis.location?.hash] || 'overview') : 'overview';
 const state = { view: initialView, signedIn: IS_PAGES, setup: true, published: null, version: 0, draft: null, dirty: false, orders: [], legacyOrders: [], orderFilter: '', orderOpen: null, orderQuery: '', orderBefore: null, editing: null, category: 'all', query: '', addingCategory: null, message: '', textQuery: '', textArea: 'home', textAdvanced: false, textMode: 'main' };
 
 function saveDraft() {
@@ -150,7 +151,7 @@ async function guard(fn) {
 // ---------- shell ----------
 function topBar() {
   const n = state.orders.filter((o) => o.status === 'new').length;
-  const tabs = IS_PAGES ? [['devices', 'Devices'], ['categories', 'Categories'], ['orders', 'Orders'], ['settings', 'Settings']] : [['orders', 'Orders'], ['devices', 'Devices'], ['categories', 'Categories'], ['settings', 'Settings']];
+  const tabs = IS_PAGES ? [['overview', 'Overview'], ['devices', 'Devices'], ['categories', 'Categories'], ['orders', 'Orders'], ['settings', 'Settings']] : [['overview', 'Overview'], ['orders', 'Orders'], ['devices', 'Devices'], ['categories', 'Categories'], ['settings', 'Settings']];
   return `<header class="bar"><div class="bar-in"><a class="brand" href="../index.html#/" ${MODE === 'demo' ? '' : 'target="_blank" rel="noopener"'}><img src="../assets/instagram/logo.jpg" alt="" width="34" height="34"><span dir="ltr">TRIO</span><small>${esc(t(IS_PAGES ? 'Catalog editor' : 'Admin'))}</small></a>
   <nav class="tabs">${tabs.map(([id, label]) => `<button type="button" data-view="${id}" aria-current="${state.view === id}">${esc(t(label))}${id === 'orders' && n ? `<span class="badge">${n}</span>` : ''}</button>`).join('')}</nav>
   <div class="bar-actions"><span id="draft-state" class="draft-state" role="status"></span><button type="button" id="publish" class="btn primary">${esc(t(IS_PAGES ? 'Save preview' : 'Publish'))}</button>${IS_PAGES ? `<a class="btn ghost" href="../index.html?preview=draft#/" target="_blank" rel="noopener">${esc(t('View preview'))}${forwardArrow}</a>` : ''}<button type="button" id="lang" class="btn ghost" lang="${lang === 'ar' ? 'en' : 'ar'}">${lang === 'ar' ? 'EN' : 'ع'}</button>${MODE === 'demo' || IS_PAGES ? '' : `<button type="button" id="logout" class="btn ghost">${esc(t('Sign out'))}</button>`}</div></div>
@@ -173,7 +174,7 @@ function render() {
   document.body.classList.toggle('pages-editor', IS_PAGES);
   const root = $('#admin');
   if (!state.signedIn) { root.innerHTML = signInView(); return; }
-  root.innerHTML = `${topBar()}<main class="wrap">${IS_PAGES && state.view !== 'orders' ? previewTools() : ''}${state.view === 'orders' ? ordersView() : state.view === 'devices' ? (state.editing ? editView() : devicesView()) : state.view === 'categories' ? categoriesView() : settingsView()}</main><p id="flash" class="flash" role="status" hidden></p>`;
+  root.innerHTML = `${topBar()}<main class="wrap">${IS_PAGES && !['orders', 'overview'].includes(state.view) ? previewTools() : ''}${state.view === 'overview' ? overviewView() : state.view === 'orders' ? ordersView() : state.view === 'devices' ? (state.editing ? editView() : devicesView()) : state.view === 'categories' ? categoriesView() : settingsView()}</main><p id="flash" class="flash" role="status" hidden></p>`;
   updateBar();
   if (state.view === 'settings') filterWebsiteTexts();
 }
@@ -190,6 +191,29 @@ function localOrdersNotice() {
 }
 function legacyOrdersExport() {
   return IS_PAGES && state.legacyOrders.length ? `<details class="card"><summary>${esc(t('Previous browser records'))} (${state.legacyOrders.length})</summary><p class="muted">${esc(t('These earlier records exist only in this browser. They are separate from customer checkout orders.'))}</p><div class="btns"><button type="button" class="btn ghost" data-export-legacy-orders>${esc(t('Export previous records'))}</button></div></details>` : '';
+}
+// Overview (like the Flick admin): the numbers that need attention, the latest orders and what is left before launch.
+function overviewView() {
+  const products = state.draft?.products || [];
+  const shown = products.filter((p) => !p.hidden);
+  const out = shown.filter((p) => availabilitySummary(p).state === 'out').length;
+  const offers = shown.filter((p) => inOffers(p)).length;
+  const fresh = state.orders.filter((o) => o.status === 'new').length;
+  const card = (label, value, view) => `<button type="button" class="ov-card" data-overview-go="${view}"><span>${esc(t(label))}</span><strong>${esc(String(value))}</strong></button>`;
+  const recent = state.orders.slice(0, 5);
+  const settings = state.draft?.settings || {};
+  const checks = [
+    { label: 'Replace the example prices with real ones', done: false },
+    { label: 'Check stock for every device', done: false, extra: out ? t('Out of stock: {n}', { n: out }) : '' },
+    { label: 'Confirm contact and address details with the shop', done: false },
+    { label: 'Turn on ordering from the website', done: MODE === 'live' && settings.ordersOn !== false },
+    { label: 'Hosting and a domain in the shop’s name', done: MODE === 'live' },
+  ];
+  return `<div class="head"><h1>${esc(t('Overview'))}</h1></div>
+  <div class="ov-cards">${card('New orders', fresh, 'orders')}${card('Devices shown', shown.length, 'devices')}${card('Devices on offer', offers, 'devices')}${card('Out of stock devices', out, 'devices')}</div>
+  <div class="ov-grid"><section class="card"><div class="ov-head"><h2>${esc(t('Latest orders'))}</h2><button type="button" class="text-link" data-overview-go="orders">${esc(t('All orders'))}</button></div>
+  ${recent.length ? `<ul class="ov-orders">${recent.map((o) => `<li><button type="button" data-overview-go="orders" data-order="${esc(o.number)}"><span class="ov-o-main"><strong><span dir="ltr">${esc(o.number)}</span> <span class="muted">${esc(o.customer.name)}</span></strong><small dir="ltr">${esc(fmtDate(o.createdAt))}</small></span><span class="ov-o-side"><strong>${esc(fils(o.totalFils))}</strong><span class="status s-${esc(o.status)}">${esc(t(o.status))}</span></span></button></li>`).join('')}</ul>` : `<p class="muted">${esc(t('No orders yet. The first order from the site shows up here.'))}</p>`}</section>
+  <section class="card"><h2>${esc(t('Before the site goes live'))}</h2><ul class="ov-checks">${checks.map((c) => `<li class="${c.done ? 'is-done' : ''}"><span class="ov-tick" aria-hidden="true">${c.done ? '✓' : ''}</span><span>${esc(t(c.label))}${c.extra ? ` <small class="muted">(${esc(c.extra)})</small>` : ''}</span></li>`).join('')}</ul></section></div>`;
 }
 function ordersView() {
   const notice = IS_PAGES ? localOrdersNotice() : MODE === 'live' ? `<aside class="preview-notice order-notice"><div><strong>${esc(t('Customer orders'))}</strong><p>${esc(t('Customer checkout orders arrive here automatically. This list refreshes every 15 seconds while the panel is visible.'))}</p></div></aside>` : '';
@@ -609,7 +633,7 @@ document.addEventListener('click', async (e) => {
   const el = e.target instanceof Element ? e.target : null; if (!el) return;
   const hit = (s) => el.closest(s);
   if (hit('#lang')) { readCurrentForm(); lang = lang === 'ar' ? 'en' : 'ar'; local.write('trio-admin-lang', lang); render(); return; }
-  if (hit('[data-view]')) { const view = hit('[data-view]').dataset.view; if (!['devices', 'categories', 'orders', 'settings'].includes(view)) return; readCurrentForm(); if (view === 'settings') { state.textMode = 'main'; state.textQuery = ''; state.textAdvanced = false; } state.view = view; state.editing = null; state.orderOpen = null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); if (state.view === 'orders') await loadOrders(); render(); return; }
+  if (hit('[data-view]')) { const view = hit('[data-view]').dataset.view; if (!['overview', 'devices', 'categories', 'orders', 'settings'].includes(view)) return; readCurrentForm(); if (view === 'settings') { state.textMode = 'main'; state.textQuery = ''; state.textAdvanced = false; } state.view = view; state.editing = null; state.orderOpen = null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); if (['orders', 'overview'].includes(state.view)) await loadOrders(); render(); return; }
   if (hit('#publish')) { publish(); return; }
   if (hit('[data-stock-edit]')) {
     state.editing = { index: Number(hit('[data-stock-edit]').dataset.stockEdit) }; render();
@@ -671,6 +695,7 @@ document.addEventListener('click', async (e) => {
   if (IS_PAGES && hit('[data-export-orders]')) { await exportOrders(); return; }
   if (IS_PAGES && hit('[data-export-legacy-orders]')) { await exportOrders({ legacy: true }); return; }
   if (hit('[data-refresh-orders]')) { await loadOrders(); render(); return; }
+  if (hit('[data-overview-go]')) { const view = hit('[data-overview-go]').dataset.overviewGo; readCurrentForm(); state.view = view; state.editing = null; state.orderOpen = hit('[data-overview-go]').dataset.order || null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); render(); window.scrollTo(0, 0); return; }
   if (hit('[data-open-order]')) { state.orderOpen = hit('[data-open-order]').dataset.openOrder; render(); window.scrollTo(0, 0); return; }
   if (hit('[data-close-order]')) { state.orderOpen = null; await loadOrders(); render(); return; }
   if (hit('[data-add-category]')) {
@@ -843,7 +868,7 @@ async function pollOrders() {
   try {
     if (!await loadOrders()) return;
     const count = state.orders.filter((order) => order.status === 'new').length;
-    if (state.view === 'orders' && previous !== JSON.stringify(state.orders)) {
+    if (['orders', 'overview'].includes(state.view) && previous !== JSON.stringify(state.orders)) {
       render();
       if (focused) { const field = $('#order-search'); field?.focus(); if (position !== null) field?.setSelectionRange(position, position); }
     } else {

@@ -113,3 +113,20 @@ code{font-size:12px;background:var(--ink);padding:2px 6px;border-radius:6px}
 @media(max-width:600px){.text-entry{padding:12px}.text-editor-tools{grid-template-columns:minmax(0,1fr);gap:14px;padding:12px}.text-entry-head>div{min-width:0;flex-basis:calc(100% - 80px)}.text-entry-head .btn{margin-inline-start:0;min-height:44px}.text-entry .grid2{gap:12px}.website-texts textarea,.website-texts input,.text-editor-tools select{font-size:16px}.text-more .btn{width:100%;min-height:44px}.device-row .d-actions:has(.battery-shortcut){grid-template-columns:minmax(0,1fr) repeat(3,44px)}.device-row .battery-shortcut{grid-column:1/-1;grid-row:2;justify-self:start}.home-presentation .btns{display:grid;grid-template-columns:minmax(0,1fr)}.home-presentation .btn{justify-content:center;text-align:center}}
 .flags{align-items:center;flex-wrap:wrap}.stock-flag.is-out{background:#ff8a7a22;color:#ffb4a8}.stock-flag.is-partial{background:#ffd2751a;color:#ffd275}.stock-shortcut{min-height:32px}.device-stock-controls{display:grid;gap:12px;border:1px solid var(--line);border-radius:12px;padding:16px;margin:16px 0;background:var(--ink)}.device-stock-controls h3{margin:0 0 8px;font-size:16px}.device-stock-controls p{line-height:1.8}.device-stock-controls .btn{white-space:normal;text-align:start;min-height:44px}.device-stock-controls .flag{display:inline-block;margin-inline-end:8px}
 @media(max-width:600px){.device-stock-controls{padding:12px}.device-stock-controls .btns{display:grid}.stock-shortcut{min-height:44px}}
+
+/* Overview */
+.ov-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.ov-card{display:grid;gap:6px;text-align:start;padding:16px 18px;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:inherit;font:inherit;cursor:pointer;min-width:0}
+.ov-card:hover,.ov-card:focus-visible{border-color:var(--accent)}
+.ov-card span{font-size:13px;color:var(--muted)}.ov-card strong{font-size:28px;line-height:1.1}
+.ov-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:start}
+.ov-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}.ov-head h2{margin:0}
+.text-link{background:none;border:0;padding:4px 0;color:var(--accent);font:inherit;font-weight:700;cursor:pointer}
+.ov-orders{list-style:none;margin:0;padding:0}.ov-orders li+li{border-top:1px solid var(--line)}
+.ov-orders button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:12px 0;background:none;border:0;color:inherit;font:inherit;text-align:start;cursor:pointer;flex-wrap:wrap}
+.ov-o-main{display:grid;gap:3px;min-width:0}.ov-o-main small{color:var(--muted);font-size:12px}.ov-o-side{display:flex;align-items:center;gap:10px}
+.ov-checks{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.ov-checks li{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.ov-tick{flex:none;width:17px;height:17px;margin-top:2px;border:1.5px solid var(--muted);border-radius:50%;display:grid;place-items:center;font-size:11px}
+.ov-checks li.is-done{color:var(--muted);text-decoration:line-through}.ov-checks li.is-done .ov-tick{border-color:var(--accent);color:var(--accent)}
+@media(max-width:900px){.ov-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.ov-grid{grid-template-columns:minmax(0,1fr)}}
