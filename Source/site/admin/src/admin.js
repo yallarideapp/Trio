@@ -204,6 +204,17 @@ function setHeroSlot(id, patch) {
   state.draft.heroSlots = normalizeHeroSlots(slots);
   saveDraft();
 }
+// Picking a device for a banner tab also makes it that category's home device
+// (category tile picture and "featured" order); Automatic releases it.
+function pickHeroDevice(id, deviceId) {
+  const products = state.draft.products;
+  const previous = (state.draft.heroSlots || []).find((slot) => slot.id === id)?.device;
+  const old = previous && products.find((p) => p.id === previous);
+  if (old && old.id !== deviceId) applyHomePlacement(old, products, { featured: false, category: old.category, hidden: old.hidden });
+  const product = deviceId && products.find((p) => p.id === deviceId && p.category === id);
+  if (product) { applyHomePlacement(product, products, { featured: true, category: product.category, hidden: product.hidden }); state.draft.settings.heroMode = 'selected'; }
+  setHeroSlot(id, { device: product ? product.id : '' });
+}
 function bannerView() {
   const c = state.draft, slots = c.heroSlots || [];
   const cards = HERO_SLOT_IDS.map((id) => {
@@ -214,7 +225,7 @@ function bannerView() {
     const src = slot.photo ? uploadedSrc(slot.photo) : picked ? photoSrc(picked) : '';
     const now = slot.photo ? t('Uploaded picture') : picked ? L(picked.name) : t('Automatic');
     return `<section class="card banner-slot"><div class="banner-preview">${src ? `<img src="${esc(src)}" alt="" loading="lazy">` : `<span class="banner-auto">${esc(t('Automatic'))}</span>`}</div><div class="banner-fields"><h2>${esc(L(category.name))}</h2><p class="muted small">${esc(t('Shows now'))}: <strong dir="auto">${esc(now)}</strong></p>
-      <label class="f"><span>${esc(t('Device to show'))}</span><select data-hero-device="${id}"><option value="">${esc(t('Automatic'))}</option>${devices.map((p) => `<option value="${esc(p.id)}"${slot.device === p.id ? ' selected' : ''}>${esc(L(p.name))}</option>`).join('')}</select></label>${devices.length ? '' : `<p class="muted small">${esc(t('No devices in this category yet.'))}</p>`}
+      <p class="f-label">${esc(t('Device to show'))}</p><div class="banner-pick" role="radiogroup" aria-label="${esc(`${t('Device to show')}: ${L(category.name)}`)}"><button type="button" class="pick-tile pick-auto" role="radio" aria-checked="${!slot.device && !slot.photo}" data-hero-pick="${id}" data-device=""><span class="pick-img">${esc(t('Automatic'))}</span><span class="pick-name">${esc(t('Automatic'))}</span></button>${devices.map((p) => `<button type="button" class="pick-tile" role="radio" aria-checked="${slot.device === p.id}" data-hero-pick="${id}" data-device="${esc(p.id)}"><span class="pick-img">${thumb(p)}</span><span class="pick-name" dir="auto">${esc(L(p.name))}</span></button>`).join('')}</div>${devices.length ? '' : `<p class="muted small">${esc(t('No devices in this category yet.'))}</p>`}
       <div class="btns"><label class="btn small">${esc(t(slot.photo ? 'Replace picture' : 'Upload a picture'))}<input type="file" class="file-input" accept="image/jpeg,image/png,image/webp" data-hero-photo="${id}"></label>${slot.photo ? `<button type="button" class="btn ghost small" data-hero-photo-clear="${id}">${esc(t('Remove picture'))}</button>` : ''}</div></div></section>`;
   }).join('');
   return `<div class="head"><h1>${esc(t('Home banner'))}</h1></div><p class="muted">${esc(t('Choose what each tab of the home banner shows: a device from your list, or a picture you upload. Automatic keeps the current choice.'))}</p><div class="banner-slots">${cards}</div>`;
@@ -343,7 +354,7 @@ function editView() {
   ${p.variants.some((v) => conditionGroup(v.condition) === 'like-new') ? `<aside class="battery-edit-hint"><p>${esc(t('Used options include optional battery health and cycle readings below.'))}</p><button type="button" class="btn ghost small" data-focus-battery>${esc(t('Battery details'))}</button></aside>` : ''}
   <form id="device-form" class="edit" autocomplete="off">${optionsSection}<div class="grid2"><section class="card"><div class="grid2 tight">${field('Name (Arabic)', 'name.ar', p.name.ar, { dir: 'auto' })}${field('Name (English)', 'name.en', p.name.en, { dir: 'ltr' })}${field('Brand', 'brand', p.brand, { dir: 'ltr' })}<label class="f"><span>${esc(t('Category'))}</span>${sel('category', p.category, state.draft.categories.map((c) => [c.id, L(c.name)]))}</label></div>
   ${USE_TECHNICAL ? `${field('Summary (Arabic)', 'technical.summary.ar', p.technical?.summary?.ar || '', { type: 'textarea', dir: 'rtl', attrs: 'maxlength="1200"' })}${field('Summary (English)', 'technical.summary.en', p.technical?.summary?.en || '', { type: 'textarea', dir: 'ltr', attrs: 'maxlength="1200"' })}` : `${field('Short line (Arabic)', 'tagline.ar', p.tagline?.ar || '')}${field('Short line (English)', 'tagline.en', p.tagline?.en || '', { dir: 'ltr' })}${field('About (Arabic)', 'about.ar', p.about?.ar || '', { type: 'textarea' })}${field('About (English)', 'about.en', p.about?.en || '', { type: 'textarea', dir: 'ltr' })}`}
-  <div class="checks"><label><input type="checkbox" name="offer"${p.offer ? ' checked' : ''}> ${esc(t('Show in offers'))}</label><label><input type="checkbox" name="featured"${p.featured ? ' checked' : ''}> ${esc(t('Show on home page'))}</label><label><input type="checkbox" name="hidden"${p.hidden ? ' checked' : ''}> ${esc(t('Hide from the site'))}</label></div>
+  <div class="checks"><label><input type="checkbox" name="offer"${p.offer ? ' checked' : ''}> ${esc(t('Show in offers'))}</label><label><input type="checkbox" name="hidden"${p.hidden ? ' checked' : ''}> ${esc(t('Hide from the site'))}</label></div>
   <p class="muted small">${esc(t('A device with an offer price shows in offers automatically. Tick this to show it there without one.'))}</p>
   <p class="muted small">${esc(t('The latest selected device leads its category in the home showcase for Phones, Laptops, Watches and Audio. Selecting a device also makes it visible.'))} ${esc(t(IS_PAGES ? 'Save preview to see your home selections.' : 'Publish to show your home selections.'))}</p>
   ${USE_TECHNICAL ? '' : field('Instagram post link (optional)', 'source', p.source || '', { type: 'url', dir: 'ltr' })}<p class="muted small">${esc(t('Device id'))}: <code dir="ltr">${esc(p.id)}</code></p></section>
@@ -358,9 +369,10 @@ function readDeviceForm(form) {
   const get = (n) => form.elements[n];
   p.name = { ar: get('name.ar').value.trim(), en: get('name.en').value.trim() };
   p.brand = get('brand').value.trim();
-  const newlySelected = get('featured').checked && (!p.featured || p.category !== get('category').value);
-  applyHomePlacement(p, state.draft.products, { category: get('category').value, featured: get('featured').checked, hidden: get('hidden').checked });
-  if (newlySelected) state.draft.settings.heroMode = 'selected';
+  // The home banner choice now lives in the Banner tab; moving a device to another category drops it.
+  const sameCategory = p.category === get('category').value;
+  applyHomePlacement(p, state.draft.products, { category: get('category').value, featured: p.featured === true && sameCategory, hidden: get('hidden').checked });
+  if (!sameCategory) state.draft.heroSlots = (state.draft.heroSlots || []).filter((slot) => slot.device !== p.id);
   get('hidden').checked = p.hidden;
   if (USE_TECHNICAL) {
     p.technical ||= { summary: { ar: '', en: '' }, specs: [] };
@@ -726,6 +738,7 @@ document.addEventListener('click', async (e) => {
   if (IS_PAGES && hit('[data-export-orders]')) { await exportOrders(); return; }
   if (IS_PAGES && hit('[data-export-legacy-orders]')) { await exportOrders({ legacy: true }); return; }
   if (hit('[data-refresh-orders]')) { await loadOrders(); render(); return; }
+  if (hit('[data-hero-pick]')) { const el = hit('[data-hero-pick]'); pickHeroDevice(el.dataset.heroPick, el.dataset.device); render(); document.querySelector(`[data-hero-pick="${el.dataset.heroPick}"][data-device="${CSS.escape(el.dataset.device)}"]`)?.focus(); flash(t('Banner updated. Save your changes to apply it.')); return; }
   if (hit('[data-hero-photo-clear]')) { setHeroSlot(hit('[data-hero-photo-clear]').dataset.heroPhotoClear, {}); render(); flash(t('Banner updated. Save your changes to apply it.')); return; }
   if (hit('[data-overview-go]')) { const view = hit('[data-overview-go]').dataset.overviewGo; readCurrentForm(); state.view = view; state.editing = null; state.orderOpen = hit('[data-overview-go]').dataset.order || null; if (IS_PAGES) history.replaceState(null, '', `#${view}`); render(); window.scrollTo(0, 0); return; }
   if (hit('[data-open-order]')) { state.orderOpen = hit('[data-open-order]').dataset.openOrder; render(); window.scrollTo(0, 0); return; }
@@ -793,7 +806,6 @@ document.addEventListener('change', async (e) => {
     filterWebsiteTexts(); return;
   }
   const form = e.target.closest && e.target.closest('form');
-  if (e.target.dataset?.heroDevice !== undefined) { setHeroSlot(e.target.dataset.heroDevice, { device: e.target.value }); render(); flash(t('Banner updated. Save your changes to apply it.')); return; }
   if (e.target.dataset?.heroPhoto !== undefined && e.target.files?.[0]) {
     const id = e.target.dataset.heroPhoto; if (!state.signedIn || !HERO_SLOT_IDS.includes(id)) return;
     const input = e.target; const file = input.files[0];

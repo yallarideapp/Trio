@@ -265,3 +265,9 @@ This release replaces the source/date/disclaimer sections described above with r
 - New Banner tab: for each home banner tab (phones, laptops, watches, audio) the owner picks a device, uploads a picture, or leaves it on Automatic.
 - Checked: `npm test` (new storefront checks for a picked device, an uploaded picture, and refused slot data); all three builds with no warnings.
 - Browser: picked a laptop and uploaded a picture for audio in the preview admin, saved, and confirmed both on the storefront banner at 1280 px; admin layout checked at 390 and 1280 px; no console errors.
+
+## 2026-10-29 — Banner replaces "Show on home page"
+
+- Removed the "Show on home page" checkbox from the device form. The Banner tab now picks each tab's device from a grid of the existing devices (photo and name); the picked device also becomes that category's home device, and Automatic releases it. Moving a device to another category drops its banner choice.
+- Fixed the banner upload button's hidden file field covering the whole card.
+- Checked: `npm test`, all three builds with no warnings; in the browser at 390 and 1280 px, picked iPhone 17, saved the preview, and the storefront banner linked to iPhone 17; the device form no longer has the checkbox; no console errors.
