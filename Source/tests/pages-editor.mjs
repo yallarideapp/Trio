@@ -580,11 +580,14 @@ async function verifyEditorViews(content, orders, legacyOrders, api) {
       if (view === 'settings') {
         assert(!html.includes('data-text-entry=') && !html.includes('name="siteText.'), `${language}: website texts have their own tab, apart from settings`);
         assert(!html.includes('name="phone"') && html.includes('data-hero-mode="default"') && html.includes('data-hero-mode="selected"'), `${language}: the default animation choice stays in settings; contact moved to its own tab`);
+        assert(html.includes('id="alerts-form"') && html.includes('data-alert-find') && html.includes('name="tgToken"') && html.includes('name="waKey"'), `${language}: order alerts are set up in settings`);
+        assert(html.includes('id="tracking-form"') && html.includes('name="tracking.gaId"'), `${language}: Google measurement is in settings`);
+        const order = ['id="export-draft"', 'class="card home-presentation"', 'id="alerts-form"', 'id="tracking-form"'].map((needle) => html.indexOf(needle));
+        assert(order.every((index, i) => index >= 0 && (i === 0 || index > order[i - 1])), `${language}: settings order is backup, home, alerts, measurement`);
       }
       if (view === 'contact') {
         for (const name of ['phone', 'whatsapp', 'instagram', 'maps', 'address.ar', 'fee.amman', 'fee.other']) assert(html.includes(`name="${name}"`), `${language}: contact & delivery has ${name}`);
-        assert(html.includes('id="alerts-form"') && html.includes('data-alert-find') && html.includes('name="tgToken"') && html.includes('name="waKey"'), `${language}: preview order alerts can be set up`);
-        assert(!html.includes('data-hero-mode'), `${language}: contact & delivery holds only contact, delivery and alerts`);
+        assert(!html.includes('data-hero-mode') && !html.includes('id="alerts-form"') && !html.includes('id="tracking-form"'), `${language}: contact & delivery holds only contact and delivery`);
       }
       if (view === 'texts') {
         assert(!html.includes('name="phone"') && !html.includes('class="card home-presentation"'), `${language}: the texts tab holds only website texts`);

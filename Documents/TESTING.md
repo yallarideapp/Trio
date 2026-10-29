@@ -312,3 +312,8 @@ This release replaces the source/date/disclaimer sections described above with r
 
 - Export JSON / Import JSON / Reset preview and their note now sit in a "Preview backup" card at the top of Settings only; the browser-only preview notice stays on the editing tabs.
 - Checked: `npm test` (tools present in Settings only, in both languages), all three builds; browser at 390 and 1280 px: not on Devices, present in Settings; no console errors.
+
+## 2026-10-29 — Order alerts and Google measurement moved to Settings
+
+- Settings order: Preview backup, Home presentation, Order alerts, Google measurement, then (live) Prices note and password. Contact & delivery keeps only contact details and delivery fees (plus the live orders switch and delivery note).
+- Checked: `npm test` (alerts and measurement only in Settings, in that order, both languages), all three builds with no warnings; browser at 390 and 1280 px: not on Contact & delivery, present in Settings, WhatsApp fields toggle, a Google ID survives switching tabs; no console errors, no outside requests.

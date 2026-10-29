@@ -629,7 +629,8 @@ function settingsView() {
   const s = state.draft.settings;
   const pair = (label, key, sub) => field(`${label} (Arabic)`, `${key}.ar`, s[key]?.ar || '', { type: sub }) + field(`${label} (English)`, `${key}.en`, s[key]?.en || '', { type: sub, dir: 'ltr' });
   const defaultHero = s.heroMode === 'default';
-  return `<div class="head"><h1>${esc(t('Settings'))}</h1></div>${IS_PAGES ? previewTools() : ''}<form id="settings-form" class="edit"><section class="card home-presentation"><h2>${esc(t('Home presentation'))}</h2><p class="muted">${esc(t('Restore the original animated showcase without deleting devices, uploaded pictures or home selections. Selecting a device again switches back to your selected devices.'))}</p><div class="btns"><button type="button" class="btn${defaultHero ? ' primary' : ' ghost'}" data-hero-mode="default" aria-pressed="${defaultHero}">${esc(t('Restore default animations and pictures'))}</button><button type="button" class="btn${!defaultHero ? ' primary' : ' ghost'}" data-hero-mode="selected" aria-pressed="${!defaultHero}">${esc(t('Use selected devices'))}</button></div><p class="muted small" role="status">${esc(t(defaultHero ? 'Default animations and pictures are active.' : 'Your selected devices are active.'))}</p></section>${IS_PAGES ? '' : `<section class="card"><h2>${esc(t('Prices'))}</h2>${pair('Prices note', 'pricesNote', 'textarea')}</section>`}</form>
+  return `<div class="head"><h1>${esc(t('Settings'))}</h1></div>${IS_PAGES ? previewTools() : ''}<form id="settings-form" class="edit"><section class="card home-presentation"><h2>${esc(t('Home presentation'))}</h2><p class="muted">${esc(t('Restore the original animated showcase without deleting devices, uploaded pictures or home selections. Selecting a device again switches back to your selected devices.'))}</p><div class="btns"><button type="button" class="btn${defaultHero ? ' primary' : ' ghost'}" data-hero-mode="default" aria-pressed="${defaultHero}">${esc(t('Restore default animations and pictures'))}</button><button type="button" class="btn${!defaultHero ? ' primary' : ' ghost'}" data-hero-mode="selected" aria-pressed="${!defaultHero}">${esc(t('Use selected devices'))}</button></div><p class="muted small" role="status">${esc(t(defaultHero ? 'Default animations and pictures are active.' : 'Your selected devices are active.'))}</p></section></form>
+  ${alertsPanel()}${trackingPanel()}${IS_PAGES ? '' : `<form id="prices-form" class="edit"><section class="card"><h2>${esc(t('Prices'))}</h2>${pair('Prices note', 'pricesNote', 'textarea')}</section></form>`}
   ${MODE === 'demo' || IS_PAGES ? '' : `<form id="password-form" class="card narrow"><h2>${esc(t('Change password'))}</h2><label class="f"><span>${esc(t('Current password'))}</span><input name="current" type="password" autocomplete="current-password" required></label><label class="f"><span>${esc(t('New password'))}</span><input name="password" type="password" autocomplete="new-password" minlength="16" required><small>${esc(t('At least 16 characters.'))}</small></label><button class="btn" type="submit">${esc(t('Change password'))}</button></form>`}`;
 }
 // Contact details, delivery fees and order alerts, like the OneStyle admin.
@@ -641,7 +642,7 @@ function contactView() {
   const fee = (label, name, value) => field(label, name, String(jod(value)), { type: 'number', dir: 'ltr', attrs: 'min="0" max="100" step="0.01" inputmode="decimal" required' });
   return `<div class="head"><h1>${esc(t('Contact & delivery'))}</h1></div><p class="muted">${esc(t('Edit the shop details and delivery fees.'))}</p><form id="contact-form" class="edit"><div class="grid2"><section class="card"><h2>${esc(t('Contact'))}</h2>${field('Shop phone', 'phone', s.phone, { type: 'tel', dir: 'ltr' })}${field('WhatsApp number (with 962)', 'whatsapp', s.whatsapp, { type: 'tel', dir: 'ltr' })}${field(IS_PAGES ? 'Social link for the Repair and Visit us pages' : 'Instagram link', 'instagram', s.instagram, { type: 'url', dir: 'ltr' })}${field('Facebook link', 'facebook', s.facebook, { type: 'url', dir: 'ltr' })}${field('Map link', 'maps', s.maps, { type: 'url', dir: 'ltr' })}${field('Address (Arabic)', 'address.ar', s.address.ar)}${field('Address (English)', 'address.en', s.address.en, { dir: 'ltr' })}</section>
   <section class="card"><h2>${esc(t('Delivery fees'))}</h2><p class="muted small">${esc(t('Shown in the bag and checkout and added to delivery orders. Pickup is free. Leave 0 to confirm the fee by phone, as before.'))}</p>${fee(t('Amman · JOD'), 'fee.amman', fees.amman)}${fee(t('Other governorates · JOD'), 'fee.other', fees.other)}${IS_PAGES ? '' : `<div class="checks"><label><input type="checkbox" name="ordersOn"${s.ordersOn !== false ? ' checked' : ''}> ${esc(t('Take orders on the site'))}</label></div>${pair('Delivery note', 'deliveryNote', 'textarea')}`}</section></div></form>
-  ${trackingPanel()}${alertsPanel()}`;
+`;
 }
 function trackingPanel() {
   const g = state.draft.settings.tracking || {};
@@ -691,7 +692,7 @@ function readWebsiteTexts(form) {
 }
 function readSettings(form) {
   const s = state.draft.settings; const g = (n) => form.elements[n];
-  if (!IS_PAGES) s.pricesNote = { ar: g('pricesNote.ar').value.trim(), en: g('pricesNote.en').value.trim() };
+  if (!IS_PAGES && g('pricesNote.ar')) s.pricesNote = { ar: g('pricesNote.ar').value.trim(), en: g('pricesNote.en').value.trim() };
   saveDraft();
 }
 function readContact(form) {
@@ -768,6 +769,8 @@ async function loadContent({ keepDraft = true } = {}) {
 function readCurrentForm() {
   const device = $('#device-form');
   const settings = $('#settings-form');
+  const prices = $('#prices-form');
+  if (prices) readSettings(prices);
   if (device && state.editing) readDeviceForm(device);
   if (settings) readSettings(settings);
   const texts = $('#texts-form');
@@ -1011,7 +1014,7 @@ document.addEventListener('change', async (e) => {
     return;
   }
   if (form && form.id === 'device-form') { readDeviceForm(form); updateDeviceStockSummary(); }
-  if (form && form.id === 'settings-form') readSettings(form);
+  if (form && (form.id === 'settings-form' || form.id === 'prices-form')) readSettings(form);
   if (form && form.id === 'contact-form') readContact(form);
   if (form && form.id === 'tracking-form') readTracking(form);
   if (form && form.id === 'alerts-form' && e.target.name === 'channel') { state.alertChannel = e.target.value; for (const group of $$('[data-alert-fields]', form)) group.hidden = group.dataset.alertFields !== e.target.value; }
@@ -1024,7 +1027,7 @@ document.addEventListener('input', (e) => {
   if (e.target.id === 'order-search') { state.orderQuery = e.target.value; const pos = e.target.selectionStart; render(); const box = $('#order-search'); box.focus(); if (pos !== null) box.setSelectionRange(pos, pos); }
   const form = e.target.closest && e.target.closest('form');
   if (form && form.id === 'device-form' && e.target.type !== 'file') { readDeviceForm(form); updateDeviceStockSummary(); }
-  if (form && form.id === 'settings-form') readSettings(form);
+  if (form && (form.id === 'settings-form' || form.id === 'prices-form')) readSettings(form);
   if (form && form.id === 'contact-form') readContact(form);
   if (form && form.id === 'tracking-form') readTracking(form);
   if (form && form.id === 'texts-form') {
